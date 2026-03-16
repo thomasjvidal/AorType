@@ -571,7 +571,7 @@
             </div>
 
             <h1 class="text-5xl font-black text-white tracking-tighter mb-4 text-center">Macro AI</h1>
-            <p class="text-gray-400 text-center text-lg font-medium max-w-xs leading-relaxed">
+            <p class="text-gray-400 text-center text-lg font-medium max-w-xs leading-relaxed" data-translate="transform_body_mind">
                 Transforme seu corpo e sua mente com o poder da inteligência artificial.
             </p>
         </div>
@@ -579,11 +579,13 @@
         <!-- Bottom Actions -->
         <div class="p-8 pb-16 w-full max-w-sm mx-auto space-y-4 relative z-10">
             <button onclick="app.showAuth('login')"
-                class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(204,255,0,0.3)] hover:shadow-[0_0_30px_rgba(204,255,0,0.5)] hover:scale-[1.02] active:scale-95 transition-all duration-300 text-lg uppercase tracking-wide">
+                class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(204,255,0,0.3)] hover:shadow-[0_0_30px_rgba(204,255,0,0.5)] hover:scale-[1.02] active:scale-95 transition-all duration-300 text-lg uppercase tracking-wide"
+                data-translate="login_button">
                 Entrar
             </button>
             <button onclick="app.showAuth('register')"
-                class="w-full bg-[#1C1C1E] border border-white/10 text-white font-black py-4 rounded-2xl hover:bg-white/5 active:scale-95 transition-all duration-300 text-lg uppercase tracking-wide">
+                class="w-full bg-[#1C1C1E] border border-white/10 text-white font-black py-4 rounded-2xl hover:bg-white/5 active:scale-95 transition-all duration-300 text-lg uppercase tracking-wide"
+                data-translate="create_account">
                 Criar Conta
             </button>
         </div>
@@ -621,7 +623,7 @@
                         <h1
                             class="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 drop-shadow-lg">
                             Macro AI</h1>
-                        <p class="text-brand-neon font-bold text-sm tracking-widest uppercase mt-2">Seu Personal de
+                        <p class="text-brand-neon font-bold text-sm tracking-widest uppercase mt-2" data-translate="pocket_personal">Seu Personal de
                             Bolso</p>
                     </div>
                 </div>
@@ -635,8 +637,8 @@
                     </div>
 
                     <div class="relative z-10 text-center space-y-1">
-                        <h1 class="text-3xl font-black tracking-tight text-white">Criar Conta</h1>
-                        <p class="text-white/60 text-sm font-medium">Comece sua jornada</p>
+                        <h1 class="text-3xl font-black tracking-tight text-white" data-translate="create_account">Criar Conta</h1>
+                        <p class="text-white/60 text-sm font-medium" data-translate="start_journey">Comece sua jornada</p>
                     </div>
                 </div>
             </div>
@@ -981,10 +983,6 @@
                                             id="dash-cals-remaining">--</span>
                                         <span class="text-sm font-bold text-ios-gray">kcal</span>
                                     </div>
-                                </div>
-                                <div class="bg-brand-neon/20 px-3 py-1 rounded-full">
-                                    <span class="text-[10px] font-black text-brand-neon uppercase">Meta: <span
-                                            id="dash-cals-goal">--</span></span>
                                 </div>
                             </div>
 
@@ -1565,22 +1563,22 @@
                     <h3 class="font-bold text-lg mb-4" data-translate="total_stats">Estatísticas Totais</h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="text-center p-4 bg-ios-bg dark:bg-dark-elevated rounded-2xl">
-                            <div class="text-2xl font-black text-brand-neon">156</div>
+                            <div class="text-2xl font-black text-brand-neon" id="profile-stats-workouts">0</div>
                             <div class="text-xs text-ios-gray font-bold uppercase" data-translate="workouts_count">
                                 Treinos</div>
                         </div>
                         <div class="text-center p-4 bg-ios-bg dark:bg-dark-elevated rounded-2xl">
-                            <div class="text-2xl font-black text-blue-500">4,200</div>
+                            <div class="text-2xl font-black text-blue-500" id="profile-stats-meals">0</div>
                             <div class="text-xs text-ios-gray font-bold uppercase" data-translate="meals_count">
                                 Refeições</div>
                         </div>
                         <div class="text-center p-4 bg-ios-bg dark:bg-dark-elevated rounded-2xl">
-                            <div class="text-2xl font-black text-purple-500">890k</div>
+                            <div class="text-2xl font-black text-purple-500" id="profile-stats-volume">0</div>
                             <div class="text-xs text-ios-gray font-bold uppercase" data-translate="lifted_weight">Kg
                                 levantados</div>
                         </div>
                         <div class="text-center p-4 bg-ios-bg dark:bg-dark-elevated rounded-2xl">
-                            <div class="text-2xl font-black text-orange-500">45</div>
+                            <div class="text-2xl font-black text-orange-500" id="profile-stats-streak">0</div>
                             <div class="text-xs text-ios-gray font-bold uppercase" data-translate="streak">Dias seguidos
                             </div>
                         </div>
@@ -1708,7 +1706,7 @@
                             <div class="flex items-center gap-4 mb-6">
                                 <div class="flex items-center gap-2">
                                     <i data-lucide="flame" class="w-6 h-6 text-black dark:text-white"></i>
-                                    <span class="text-xs text-ios-gray font-bold uppercase">Calorias</span>
+                                    <span class="text-xs text-ios-gray font-bold uppercase" data-translate="calories">Calorias</span>
                                 </div>
                                 <div class="text-5xl font-black" id="detail-meal-cal">0</div>
                             </div>
@@ -1839,46 +1837,63 @@
                     </button>
                 </div>
 
-                <div class="absolute bottom-0 left-0 right-0 p-6 pointer-events-auto">
+                <div class="absolute bottom-0 left-0 right-0 p-0 pointer-events-auto">
                     <div id="analysis-panel"
-                        class="glass-panel bg-black/80 backdrop-blur-xl rounded-2xl p-4 mb-20 border border-white/10 hidden max-h-[60vh] overflow-y-auto">
-                        <div
-                            class="flex justify-between items-center mb-3 sticky top-0 bg-black/50 backdrop-blur-md -mx-4 -mt-4 p-4 border-b border-white/10 z-10">
-                            <div>
-                                <h3 id="analysis-title" class="text-white font-bold text-lg">Análise pronta</h3>
-                                <p id="analysis-confidence" class="text-white/60 text-xs">Confiança 90%</p>
+                        class="fixed inset-0 z-[60] bg-black/95 backdrop-blur-xl p-6 overflow-y-auto hidden flex flex-col">
+                        
+                        <div class="w-full max-w-md mx-auto space-y-6">
+                            <div class="flex justify-between items-center sticky top-0 bg-black/80 backdrop-blur-md -mx-6 -mt-6 p-6 border-b border-white/10 z-10">
+                                <div>
+                                    <h3 id="analysis-title" class="text-white font-bold text-xl">Análise Pronta</h3>
+                                    <p id="analysis-confidence" class="text-white/60 text-xs">Confiança 90%</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="app.readjustAnalysis()"
+                                        class="bg-white/10 text-white px-4 py-2 rounded-xl font-bold text-xs border border-white/10 btn-press hover:bg-white/20 transition-colors">
+                                        Reajustar
+                                    </button>
+                                    <button onclick="app.confirmAllAnalysis(event)"
+                                        class="bg-brand-neon text-black px-6 py-2 rounded-xl font-bold text-sm btn-press shadow-neon hover:scale-105 transition-transform">
+                                        Confirmar
+                                    </button>
+                                </div>
                             </div>
-                            <div class="flex gap-2">
-                                <button onclick="app.readjustAnalysis()"
-                                    class="bg-white/10 text-white px-4 py-2 rounded-xl font-bold text-sm border border-white/10 btn-press">
-                                    Reajustar
-                                </button>
-                                <button onclick="app.confirmAllAnalysis(event)"
-                                    class="bg-brand-neon text-black px-4 py-2 rounded-xl font-bold text-sm btn-press">
-                                    Confirmar
-                                </button>
+
+                            <!-- Preview Image -->
+                            <img id="analysis-preview-img" class="w-full h-64 object-cover rounded-2xl border border-white/10 shadow-2xl hidden bg-white/5">
+
+                            <!-- Macros Grid -->
+                            <div class="grid grid-cols-4 gap-4 bg-white/5 rounded-2xl p-4 border border-white/5">
+                                <div class="text-center">
+                                    <div class="text-2xl font-black text-white" id="preview-cals">--</div>
+                                    <div class="text-[10px] text-white/60 uppercase font-bold tracking-wider">Kcal</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-black text-brand-neon" id="preview-prot">--</div>
+                                    <div class="text-[10px] text-white/60 uppercase font-bold tracking-wider">Prot</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-black text-brand-electric" id="preview-carbs">--</div>
+                                    <div class="text-[10px] text-white/60 uppercase font-bold tracking-wider">Carb</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-black text-brand-hot" id="preview-fat">--</div>
+                                    <div class="text-[10px] text-white/60 uppercase font-bold tracking-wider">Gord</div>
+                                </div>
+                            </div>
+
+                            <!-- Items List -->
+                            <div>
+                                <h4 class="text-white/40 text-xs font-bold uppercase tracking-widest mb-3">Itens Detectados</h4>
+                                <div id="analysis-items" class="flex flex-wrap gap-2"></div>
+                            </div>
+
+                            <!-- Editor -->
+                            <div>
+                                <h4 class="text-white/40 text-xs font-bold uppercase tracking-widest mb-3">Editor Rápido</h4>
+                                <div id="analysis-editor" class="space-y-3"></div>
                             </div>
                         </div>
-                        <div class="flex justify-between text-center">
-                            <div>
-                                <div class="text-lg font-black text-white" id="preview-cals">--</div>
-                                <div class="text-[10px] text-white/60 uppercase">Kcal</div>
-                            </div>
-                            <div>
-                                <div class="text-lg font-black text-brand-neon" id="preview-prot">--</div>
-                                <div class="text-[10px] text-white/60 uppercase">Prot</div>
-                            </div>
-                            <div>
-                                <div class="text-lg font-black text-brand-electric" id="preview-carbs">--</div>
-                                <div class="text-[10px] text-white/60 uppercase">Carb</div>
-                            </div>
-                            <div>
-                                <div class="text-lg font-black text-brand-hot" id="preview-fat">--</div>
-                                <div class="text-[10px] text-white/60 uppercase">Gord</div>
-                            </div>
-                        </div>
-                        <div id="analysis-items" class="mt-3 flex flex-wrap gap-2"></div>
-                        <div id="analysis-editor" class="mt-3 space-y-2"></div>
                     </div>
                 </div>
             </div>
@@ -3130,6 +3145,7 @@
                 'in_ranking': 'No Ranking',
                 'group_status': 'Status do Grupo',
                 'active_friends': 'Amigos Ativos',
+                'calendar_label': 'Calendário',
                 'afternoon_snack_label': 'Lanche da Tarde:',
                 'ok': 'OK',
                 'goal_label': 'Meta',
@@ -3183,7 +3199,63 @@
                 'meal_lunch': 'Almoço',
                 'meal_snack': 'Lanche',
                 'meal_dinner': 'Jantar',
-                'meal_supper': 'Ceia',
+                'meal_supper': 'Supper',
+                'ingredients': 'Ingredients',
+                'analysis_ready': 'Analysis Ready',
+                'analysis_confidence': 'Confidence',
+                'start_journey': 'Start your journey',
+                'add_photo_profile': 'Add a photo to your profile.',
+                'tap_choose_photo': 'Tap to choose a photo',
+                'choose_focus': 'Choose a focus. We adjust calories and macros automatically.',
+                'image_sent': '[Sent a photo]',
+                'file_sent': '[Sent a file]',
+                'offline_error': 'You are offline. Check your internet connection.',
+                'speech_not_supported': 'Seu navegador não suporta reconhecimento de voz.',
+                'level': 'Nível',
+                'days': 'dias',
+                'precise_metabolism': 'Para cálculo metabólico preciso.',
+                'full_years': 'Anos completos.',
+                'calc_metabolism': 'Para calcular seu metabolismo.',
+                'calc_calories': 'Para o cálculo calórico.',
+                'how_many_times_week': 'Quantas vezes por semana?',
+                'body_response': 'Como seu corpo responde?',
+                'diet_adaptation': 'Adaptamos o plano à sua dieta.',
+                'barriers_question': 'O que te impede de evoluir? (Múltipla escolha)',
+                'select_apply': 'Selecione todos que se aplicam.',
+                'define_schedule': 'Defina seus horários principais.',
+                'supplements_question': 'O que você já usa?',
+                'reminders_question': 'O que podemos te lembrar?',
+                'connect_health_apps': 'Conectar com apps de saúde?',
+                'processing_profile': 'Processando seu perfil biométrico...',
+                'plan_defined': 'Plano Definido',
+                'personalized_biotype': 'Personalizado para seu biotipo.',
+                'daily_goal_recommended': 'Meta diária recomendada',
+                'what_is_your_goal': 'Qual seu objetivo?',
+                'your_gender': 'Seu Gênero',
+                'your_age': 'Sua Idade',
+                'your_height': 'Sua Altura',
+                'current_weight_title': 'Peso Atual',
+                'frequency': 'Frequência',
+                'your_biotype': 'Seu Biotipo',
+                'food_preference': 'Preferência Alimentar',
+                'barriers': 'Barreiras',
+                'what_you_seek': 'O que você busca?',
+                'routine': 'Rotina',
+                'supplements': 'Suplementos',
+                'notifications_title': 'Notificações',
+                'integrations': 'Integrações',
+                'macro_ai': 'Macro AI',
+                'select_all_apply': 'Selecione todos que se aplicam.',
+                'daily_goal_label': 'Meta Diária',
+                'optimized_burn': 'Queima Otimizada',
+                'carbs_short': 'Carbo',
+                'kilograms': 'Quilogramas',
+                'transform_body_mind': 'Transforme seu corpo e sua mente com o poder da inteligência artificial.',
+                'pocket_personal': 'Seu Personal de Bolso',
+                'start_journey': 'Comece sua jornada',
+                'keep_training': 'Continue treinando!',
+                'you_registered_meals': 'Você registrou {count} refeições hoje!',
+                'this_month': 'este mês',
             },
             'en': {
                 'language': 'Language',
@@ -3333,6 +3405,7 @@
                 'in_ranking': 'In Ranking',
                 'group_status': 'Group Status',
                 'active_friends': 'Active Friends',
+                'calendar_label': 'Calendar',
                 'afternoon_snack_label': 'Afternoon Snack:',
                 'ok': 'OK',
                 'goal_label': 'Goal',
@@ -3389,7 +3462,62 @@
                 'pro': 'PRO',
                 'rank_3_days': '3 days',
                 'rank_2': '#2',
-                'toast_alert_sent': 'You sent an alert to'
+                'toast_alert_sent': 'You sent an alert to',
+                'ingredients': 'Ingredients',
+                'analysis_ready': 'Analysis Ready',
+                'analysis_confidence': 'Confidence',
+                'start_journey': 'Start your journey',
+                'add_photo_profile': 'Add a photo to your profile.',
+                'tap_choose_photo': 'Tap to choose a photo',
+                'choose_focus': 'Choose a focus. We adjust calories and macros automatically.',
+                'precise_metabolism': 'For precise metabolic calculation.',
+                'full_years': 'Full years.',
+                'calc_metabolism': 'To calculate your metabolism.',
+                'calc_calories': 'For calorie calculation.',
+                'how_many_times_week': 'How many times a week?',
+                'body_response': 'How does your body respond?',
+                'diet_adaptation': 'We adapt the plan to your diet.',
+                'barriers_question': 'What stops you from evolving? (Multiple choice)',
+                'select_apply': 'Select all that apply.',
+                'define_schedule': 'Define your main schedules.',
+                'supplements_question': 'What do you already use?',
+                'reminders_question': 'What can we remind you of?',
+                'connect_health_apps': 'Connect with health apps?',
+                'processing_profile': 'Processing your biometric profile...',
+                'plan_defined': 'Plan Defined',
+                'personalized_biotype': 'Personalized for your biotype.',
+                'daily_goal_recommended': 'Recommended daily goal',
+                'what_is_your_goal': 'What is your goal?',
+                'your_gender': 'Your Gender',
+                'your_age': 'Your Age',
+                'your_height': 'Your Height',
+                'current_weight_title': 'Current Weight',
+                'frequency': 'Frequency',
+                'your_biotype': 'Your Biotype',
+                'food_preference': 'Food Preference',
+                'barriers': 'Barriers',
+                'what_you_seek': 'What do you seek?',
+                'routine': 'Routine',
+                'supplements': 'Supplements',
+                'notifications_title': 'Notifications',
+                'integrations': 'Integrations',
+                'macro_ai': 'Macro AI',
+                'select_all_apply': 'Select all that apply.',
+                'viewing_date': 'Viewing: {date}',
+                'no_meals_today': 'No meals today',
+                'no_records_date': 'No records on this day',
+                'kilograms': 'Kilograms',
+                'daily_goal_label': 'Daily Goal',
+                'status_today': 'Status Today:',
+                'remaining': 'Remaining',
+                'optimized_burn': 'Optimized Burn',
+                'carbs_short': 'Carbs',
+                'transform_body_mind': 'Transform your body and mind with the power of artificial intelligence.',
+                'pocket_personal': 'Your Pocket Personal Trainer',
+                'start_journey': 'Start your journey',
+                'keep_training': 'Keep training!',
+                'you_registered_meals': 'You registered {count} meals today!',
+                'this_month': 'this month',
             },
             'zh': {
                 'language': '语言',
@@ -4550,6 +4678,7 @@
                 this.calculateWeeklyConsistency();
                 this.calculateMonthlyActivity();
                 this.updateBodyStats();
+                this.renderUserStats();
 
                 // Simulate camera 
                 this.initCamera();
@@ -4558,6 +4687,68 @@
             },
 
             // REAL STATS & TRACKING METHODS
+            renderUserStats() {
+                try {
+                    // 1. Workouts Count
+                    const workoutsCount = Object.keys(this.state.workoutProgress || {}).length;
+
+                    // 2. Meals Count
+                    let totalMeals = (this.state.mealsToday || []).length;
+                    Object.values(this.state.mealHistory || {}).forEach(dayMeals => {
+                        totalMeals += dayMeals.length;
+                    });
+
+                    // 3. Lifted Weight (Volume)
+                    let totalVolume = 0;
+                    const progress = this.state.workoutProgress || {};
+                    Object.keys(progress).forEach(date => {
+                        const dayData = progress[date];
+                        Object.keys(dayData).forEach(workoutId => {
+                            // Find workout definition
+                            const workoutDef = (this.workouts || {})[workoutId];
+                            if (!workoutDef) return;
+
+                            const wData = dayData[workoutId];
+                            Object.keys(wData).forEach(exKey => {
+                                const exIndex = parseInt(exKey.split('-')[1]);
+                                const setsDone = wData[exKey]; // array of booleans
+
+                                const exDef = workoutDef.exercises[exIndex];
+                                if (!exDef) return;
+
+                                let weight = parseFloat(exDef.weight) || 0;
+                                const completedSets = setsDone.filter(Boolean).length;
+                                
+                                let reps = 10;
+                                if (typeof exDef.reps === 'string') {
+                                    const parts = exDef.reps.split('-');
+                                    reps = parseInt(parts[parts.length-1]) || 10;
+                                } else {
+                                    reps = exDef.reps || 10;
+                                }
+
+                                totalVolume += (completedSets * reps * weight);
+                            });
+                        });
+                    });
+
+                    // 4. Streak
+                    const streak = this.state.userProfile.streak || 0;
+
+                    // Update DOM
+                    const elWorkouts = document.getElementById('profile-stats-workouts');
+                    const elMeals = document.getElementById('profile-stats-meals');
+                    const elVolume = document.getElementById('profile-stats-volume');
+                    const elStreak = document.getElementById('profile-stats-streak');
+
+                    if (elWorkouts) elWorkouts.textContent = workoutsCount;
+                    if (elMeals) elMeals.textContent = totalMeals.toLocaleString();
+                    if (elVolume) elVolume.textContent = (totalVolume > 1000) ? `${(totalVolume/1000).toFixed(1)}k` : totalVolume;
+                    if (elStreak) elStreak.textContent = streak;
+
+                } catch (e) { console.error('Error rendering user stats:', e); }
+            },
+
             calculateStreak() {
                 try {
                     const today = new Date().toLocaleDateString('pt-BR');
@@ -4589,7 +4780,7 @@
 
                     // Update UI
                     const el = document.getElementById('dash-streak-value');
-                    if (el) el.textContent = `${streak} dias`;
+                    if (el) el.textContent = `${streak} ${this.t('days')}`;
 
                 } catch (e) { console.error('Streak error', e); }
             },
@@ -4631,7 +4822,7 @@
                     });
 
                     const summary = document.getElementById('stats-activity-summary');
-                    if (summary) summary.textContent = `Você registrou ${mealsCount} refeições hoje!`;
+                    if (summary) summary.textContent = this.t('you_registered_meals').replace('{count}', mealsCount);
 
                 } catch (e) { console.error('Activity error', e); }
             },
@@ -4671,13 +4862,13 @@
                     if (volEl) volEl.textContent = `${volume.toLocaleString()} kg`;
 
                     const prEl = document.getElementById('stats-prs-count');
-                    if (prEl) prEl.textContent = `${prs} este mês`;
+                    if (prEl) prEl.textContent = `${prs} ${this.t('this_month')}`;
 
                     const listEl = document.getElementById('stats-prs-list');
                     if (listEl) {
                         listEl.innerHTML = '';
                         if (prList.length === 0) {
-                            listEl.innerHTML = '<span class="text-xs text-gray-500">Continue treinando!</span>';
+                            listEl.innerHTML = `<span class="text-xs text-gray-500">${this.t('keep_training')}</span>`;
                         } else {
                             prList.slice(0, 2).forEach(pr => {
                                 const tag = document.createElement('span');
@@ -4696,7 +4887,6 @@
                     if (!container) return;
                     container.innerHTML = '';
 
-                    const days = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
                     // Use activity log
                     let log = JSON.parse(localStorage.getItem('wb_activity_log') || '{}');
 
@@ -4708,7 +4898,7 @@
 
                         // Height based on max reasonable meals (5)
                         const h = Math.min(100, (score / 5) * 100);
-                        const dayName = days[d.getDay()];
+                        const dayName = d.toLocaleDateString(this.state.locale || 'pt-BR', { weekday: 'narrow' }).toUpperCase();
 
                         const div = document.createElement('div');
                         div.className = 'flex flex-col items-center gap-2 flex-1';
@@ -4729,12 +4919,10 @@
                     if (!container) return;
                     container.innerHTML = '';
 
-                    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-
                     for (let i = 3; i >= 0; i--) { // Show last 4 months
                         const d = new Date();
                         d.setMonth(d.getMonth() - i);
-                        const mName = months[d.getMonth()];
+                        const mName = d.toLocaleDateString(this.state.locale || 'pt-BR', { month: 'short' });
 
                         // Mock height for visual consistency as we don't have months of data yet
                         let h = i === 0 ? 60 : Math.floor(Math.random() * 40);
@@ -4745,7 +4933,7 @@
                             <div class="w-full bg-gray-100 dark:bg-dark-elevated rounded-2xl relative h-32 overflow-hidden">
                                 <div class="absolute bottom-0 w-full ${i === 0 ? 'bg-brand-neon' : 'bg-gray-200 dark:bg-gray-800'} rounded-2xl transition-all duration-1000 chart-bar" style="height: ${h}%"></div>
                             </div>
-                            <span class="text-xs font-bold text-ios-gray">${mName}</span>
+                            <span class="text-xs font-bold text-ios-gray capitalize">${mName}</span>
                        `;
                         container.appendChild(div);
                     }
@@ -4767,10 +4955,10 @@
                     const pBar = document.getElementById('stats-body-progress');
 
                     if (wEl) wEl.textContent = `${weight} kg`;
-                    if (gEl) gEl.textContent = `Meta: ${goalWeight}kg`;
+                    if (gEl) gEl.textContent = `${this.t('goal')} ${goalWeight}kg`;
 
                     const diff = Math.abs(weight - goalWeight).toFixed(1);
-                    if (rEl) rEl.textContent = `${diff}kg restantes`;
+                    if (rEl) rEl.textContent = `${diff}kg ${this.t('remaining').toLowerCase()}`;
 
                     if (pBar) pBar.style.width = '65%';
 
@@ -5347,13 +5535,28 @@
 
                 // Reset daily data in storage
                 localStorage.removeItem('wb_meals_today');
+                localStorage.removeItem('macro_ai_meals');
+                localStorage.removeItem('macro_ai_workouts');
+                localStorage.removeItem('macro_ai_checkins');
 
-                this.showToast('Plano gerado com sucesso!');
-
-                setTimeout(() => {
-                    this.navigate('dashboard');
-                    this.loadUserProfile(); // Update UI
-                }, 500);
+                // Reset Server Data (ensure new account starts fresh on server too)
+                fetch('/api/reset', { method: 'POST' })
+                    .then(() => {
+                        // Push new profile to server
+                        return fetch('/api/profile', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.state.userProfile)
+                        });
+                    })
+                    .catch(e => console.error('Server sync error:', e))
+                    .finally(() => {
+                        this.showToast('Plano gerado com sucesso!');
+                        setTimeout(() => {
+                            this.navigate('dashboard');
+                            this.loadUserProfile(); // Update UI
+                        }, 500);
+                    });
             },
 
             startOnboardingFlow() {
@@ -5497,8 +5700,8 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-y-auto">
                                 ${backBtn}
                                 <div class="flex-1">
-                                    <h2 class="text-5xl font-black tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">Qual seu objetivo?</h2>
-                                    <p class="text-ios-gray mb-8 text-[15px]">Escolha um foco. Ajustamos calorias e macros automaticamente.</p>
+                                    <h2 class="text-5xl font-black tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent" data-translate="what_is_your_goal">Qual seu objetivo?</h2>
+                                    <p class="text-ios-gray mb-8 text-[15px]" data-translate="choose_focus">Escolha um foco. Ajustamos calorias e macros automaticamente.</p>
                                     
                                     <div class="space-y-4 pb-24">
                                         ${[
@@ -5551,8 +5754,8 @@
                                 ${backBtn}
                                 <div class="flex-1 flex flex-col">
                                     <div class="text-center mt-4 mb-2">
-                                        <h2 class="text-4xl font-black tracking-tight mb-2">Seu Gênero</h2>
-                                        <p class="text-ios-gray text-base font-medium">Para cálculo metabólico preciso.</p>
+                                        <h2 class="text-4xl font-black tracking-tight mb-2" data-translate="your_gender">Seu Gênero</h2>
+                                        <p class="text-ios-gray text-base font-medium" data-translate="precise_metabolism">Para cálculo metabólico preciso.</p>
                                     </div>
                                     
                                     <div class="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto pb-20">
@@ -5600,8 +5803,8 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-hidden">
                                 ${backBtn}
                                 <div>
-                                    <h2 class="text-3xl font-black mb-2">Sua Idade</h2>
-                                    <p class="text-ios-gray mb-8">Anos completos.</p>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="your_age">Sua Idade</h2>
+                                    <p class="text-ios-gray mb-8" data-translate="full_years">Anos completos.</p>
                                 </div>
                                 
                                 <div class="flex-1 flex items-center justify-center relative">
@@ -5629,8 +5832,8 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-hidden">
                                 ${backBtn}
                                 <div>
-                                    <h2 class="text-3xl font-black mb-2">Sua Altura</h2>
-                                    <p class="text-ios-gray mb-8">Para calcular seu metabolismo.</p>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="your_height">Sua Altura</h2>
+                                    <p class="text-ios-gray mb-8" data-translate="calc_metabolism">Para calcular seu metabolismo.</p>
                                 </div>
                                 
                                 <div class="flex-1 flex flex-col items-center justify-center relative">
@@ -5675,8 +5878,8 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-hidden">
                                 ${backBtn}
                                 <div>
-                                    <h2 class="text-3xl font-black mb-2">Peso Atual</h2>
-                                    <p class="text-ios-gray mb-8">Para o cálculo calórico.</p>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="current_weight_title">Peso Atual</h2>
+                                    <p class="text-ios-gray mb-8" data-translate="calc_calories">Para o cálculo calórico.</p>
                                 </div>
                                 
                                 <div class="flex-1 flex flex-col items-center justify-center relative">
@@ -5710,7 +5913,7 @@
                                     </div>
                                     
                                     <div class="mt-8 px-6 py-2 bg-brand-neon/10 rounded-full border border-brand-neon/20">
-                                        <span class="text-brand-neon font-bold text-sm uppercase tracking-wider">Quilogramas</span>
+                                        <span class="text-brand-neon font-bold text-sm uppercase tracking-wider" data-translate="kilograms">Quilogramas</span>
                                     </div>
                                 </div>
                                 
@@ -6334,8 +6537,8 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-hidden">
                                 ${backBtn}
                                 <div>
-                                    <h2 class="text-3xl font-black mb-2">Frequência</h2>
-                                    <p class="text-ios-gray mb-4">Quantas vezes por semana?</p>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="frequency">Frequência</h2>
+                                    <p class="text-ios-gray mb-4" data-translate="how_many_times_week">Quantas vezes por semana?</p>
                                 </div>
                                 
                                 <div class="flex-1 flex flex-col items-center justify-center relative w-full">
@@ -6367,8 +6570,8 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-hidden">
                                 ${backBtn}
                                 <div>
-                                    <h2 class="text-3xl font-black mb-2">Seu Biotipo</h2>
-                                    <p class="text-ios-gray mb-4">Como seu corpo responde?</p>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="your_biotype">Seu Biotipo</h2>
+                                    <p class="text-ios-gray mb-4" data-translate="body_response">Como seu corpo responde?</p>
                                 </div>
                                 
                                 <div class="flex-1 flex flex-col items-center justify-center relative w-full">
@@ -6400,7 +6603,7 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-y-auto">
                                 ${backBtn}
                                 <div class="flex-1">
-                                    <h2 class="text-3xl font-black mb-2">Preferência Alimentar</h2>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="food_preference">Preferência Alimentar</h2>
                                     <p class="text-ios-gray mb-8">Adaptamos o plano à sua dieta.</p>
                                     
                                     <div class="space-y-4 pb-20">
@@ -6452,7 +6655,7 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-y-auto">
                                 ${backBtn}
                                 <div class="flex-1">
-                                    <h2 class="text-3xl font-black mb-2">Barreiras</h2>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="barriers">Barreiras</h2>
                                     <p class="text-ios-gray mb-8">O que te impede de evoluir? (Múltipla escolha)</p>
                                     
                                     <div class="space-y-4 pb-20">
@@ -6509,7 +6712,7 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-y-auto">
                                 ${backBtn}
                                 <div class="flex-1">
-                                    <h2 class="text-3xl font-black mb-2">O que você busca?</h2>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="what_you_seek">O que você busca?</h2>
                                     <p class="text-ios-gray mb-8">Selecione todos que se aplicam.</p>
                                     
                                     <div class="space-y-4 pb-20">
@@ -6588,7 +6791,7 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-y-auto">
                                 ${backBtn}
                                 <div>
-                                    <h2 class="text-3xl font-black mb-2">Rotina</h2>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="routine">Rotina</h2>
                                     <p class="text-ios-gray mb-8 text-lg">Defina seus horários principais.</p>
                                 </div>
                                 
@@ -6636,7 +6839,7 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-y-auto">
                                 ${backBtn}
                                 <div class="flex-1">
-                                    <h2 class="text-3xl font-black mb-2">Suplementos</h2>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="supplements">Suplementos</h2>
                                     <p class="text-ios-gray mb-8 text-lg">O que você já usa?</p>
                                     
                                     <div class="grid grid-cols-2 gap-4 pb-24">
@@ -6681,7 +6884,7 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-y-auto">
                                 ${backBtn}
                                 <div class="flex-1">
-                                    <h2 class="text-3xl font-black mb-2">Notificações</h2>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="notifications_title">Notificações</h2>
                                     <p class="text-ios-gray mb-8">O que podemos te lembrar?</p>
                                     
                                     <div class="space-y-4 pb-20">
@@ -6715,7 +6918,7 @@
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-y-auto">
                                 ${backBtn}
                                 <div class="flex-1">
-                                    <h2 class="text-3xl font-black mb-2">Integrações</h2>
+                                    <h2 class="text-3xl font-black mb-2" data-translate="integrations">Integrações</h2>
                                     <p class="text-ios-gray mb-8">Conectar com apps de saúde?</p>
                                     
                                     <div class="space-y-4 pb-20">
@@ -6781,7 +6984,7 @@
                                 </div>
 
                                 <div class="relative z-10 max-w-sm mx-auto w-full">
-                                    <h2 class="text-4xl font-black mb-2 text-gray-900 dark:text-white tracking-tighter">Macro AI</h2>
+                                    <h2 class="text-4xl font-black mb-2 text-gray-900 dark:text-white tracking-tighter" data-translate="macro_ai">Macro AI</h2>
                                     <p class="text-gray-500 dark:text-gray-400 font-medium mb-8">Processando seu perfil biométrico...</p>
                                     
                                     <!-- Dynamic Status Cards -->
@@ -6830,8 +7033,8 @@
                                     <div class="w-20 h-20 mx-auto bg-brand-neon/10 rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(204,255,0,0.2)] animate-pulse-ring">
                                         <i data-lucide="trophy" class="w-10 h-10 text-brand-neon"></i>
                                     </div>
-                                    <h2 class="text-3xl font-black mb-1 tracking-tight text-gray-900 dark:text-white">Plano Definido</h2>
-                                    <p class="text-ios-gray text-lg">Personalizado para seu biotipo.</p>
+                                    <h2 class="text-3xl font-black mb-1 tracking-tight text-gray-900 dark:text-white" data-translate="plan_defined">Plano Definido</h2>
+                                    <p class="text-ios-gray text-lg" data-translate="personalized_biotype">Personalizado para seu biotipo.</p>
                                 </div>
 
                                 <!-- Main Stats Card (Calories) -->
@@ -6859,7 +7062,7 @@
                                             <i data-lucide="beef" class="w-5 h-5 text-blue-500"></i>
                                         </div>
                                         <span class="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">${macros.protein}<span class="text-sm text-gray-400 font-bold ml-0.5">g</span></span>
-                                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Proteína</span>
+                                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider" data-translate="protein">Proteína</span>
                                         <div class="w-full h-1.5 bg-gray-100 dark:bg-white/5 rounded-full mt-3 overflow-hidden">
                                             <div class="h-full bg-blue-500 rounded-full" style="width: 40%"></div>
                                         </div>
@@ -6871,7 +7074,7 @@
                                             <i data-lucide="wheat" class="w-5 h-5 text-brand-neon"></i>
                                         </div>
                                         <span class="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">${macros.carbs}<span class="text-sm text-gray-400 font-bold ml-0.5">g</span></span>
-                                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Carbo</span>
+                                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider" data-translate="carbs_short">Carbo</span>
                                          <div class="w-full h-1.5 bg-gray-100 dark:bg-white/5 rounded-full mt-3 overflow-hidden">
                                             <div class="h-full bg-brand-neon rounded-full" style="width: 50%"></div>
                                         </div>
@@ -6898,8 +7101,8 @@
                                             <span class="relative z-10">💧</span>
                                         </div>
                                         <div>
-                                            <h4 class="font-bold text-lg text-gray-900 dark:text-white">Hidratação</h4>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">Meta diária recomendada</p>
+                                            <h4 class="font-bold text-lg text-gray-900 dark:text-white" data-translate="hydration">Hidratação</h4>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400" data-translate="daily_goal_recommended">Meta diária recomendada</p>
                                         </div>
                                     </div>
                                     <div class="text-right">
@@ -7043,18 +7246,48 @@
 
             logout() {
                 this.state.isLoggedIn = false;
+                
+                // Clear all persistence
                 localStorage.removeItem('macro_ai_auth');
+                localStorage.removeItem('macro_ai_profile');
+                localStorage.removeItem('macro_ai_goals');
+                localStorage.removeItem('macro_ai_meals');
+                localStorage.removeItem('macro_ai_workouts');
+                localStorage.removeItem('macro_ai_checkins');
+                localStorage.removeItem('wb_meals_today');
+
+                // Reset State
+                this.state.userProfile = {
+                    name: 'Usuário',
+                    username: '@usuario',
+                    avatar: 'assets/images/avatar-placeholder.png',
+                    height: 170,
+                    weight: 70,
+                    age: 25,
+                    gender: 'male',
+                    activity: 1.2,
+                    goal: 'maintain',
+                    mealTimes: {}
+                };
+                this.state.goals = null;
+                this.state.recentMeals = [];
+                this.state.mealsToday = [];
+                this.state.checkins = [];
+                this.state.workouts = [];
+                this.state.totals = { protein: 0, carbs: 0, fat: 0, calories: 0 };
+
+                // Reset UI elements
+                const headerAvatar = document.getElementById('user-avatar');
+                if (headerAvatar) headerAvatar.src = 'assets/images/avatar-placeholder.png';
 
                 const authScreen = document.getElementById('screen-auth');
                 if (authScreen) {
                     authScreen.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
-                    // Ensure it's on top and visible
                     authScreen.style.display = 'flex';
                 }
 
                 this.showToast('Sessão encerrada');
 
-                // Reset state slightly?
                 this.state.currentScreen = 'auth';
             },
 
@@ -7287,7 +7520,7 @@
                 if (!file) return;
 
                 const isImage = file.type.startsWith('image/');
-                const text = isImage ? '[Enviou uma foto]' : '[Enviou um arquivo]';
+                const text = isImage ? this.t('image_sent') : this.t('file_sent');
 
                 // Render and save
                 this.renderCoachMessage('user', text);
@@ -7969,16 +8202,13 @@ Instruções:
                 const lower = userText.toLowerCase();
 
                 // --- INTENT: SUGGEST_DIET ---
-                if (actionType === 'suggest_diet' || lower.includes('sugira') || lower.includes('dieta')) {
-                    const favs = ctx.favorites.slice(0, 3).join(', ');
-                    if (ctx.metrics.calories.remaining < 200) {
-                        response = `Você está com poucas calorias disponíveis (${ctx.metrics.calories.remaining} kcal). Que tal um chá ou gelatina zero para não ultrapassar? Se tiver muita fome, ${ctx.favorites[2]} (proteína) é a melhor opção.`;
-                    } else {
-                        response = `Você ainda tem **${ctx.metrics.calories.remaining} kcal** disponíveis hoje.\nFaltam **${ctx.metrics.protein.remaining}g** de proteína.\n\nCom base nos seus favoritos, sugiro:\n\n• 150g ${ctx.favorites[0]}\n• 100g ${ctx.favorites[4]}\n• Salada à vontade\n\nIsso daria ~450kcal e ajudaria a bater a meta de proteína. O que acha?`;
-                    }
-                }
+                /* 
+                   REMOVED: Hardcoded logic replaced by LLM call for better variety
+                   Old logic: if (actionType === 'suggest_diet' ...)
+                */
+                
                 // --- INTENT: ANALYZE_7_DAYS ---
-                else if (actionType === 'analyze_7days' || lower.includes('analise') || lower.includes('semana')) {
+                if (actionType === 'analyze_7days' || lower.includes('analise') || lower.includes('semana')) {
                     response = `📊 **Análise Semanal**\n\nSua consistência nos últimos 7 dias foi de **${ctx.status.consistency7d}%**.\n\n• Maior sequência: ${ctx.status.streak} dias\n• Proteína média: Estável\n• Ponto de atenção: Fim de semana\n\nSeu maior gargalo parece ser a hidratação nos dias de descanso. Vamos focar nisso?`;
                 }
                 // --- INTENT: FAVORITES ---
@@ -8045,7 +8275,7 @@ Your job is to:
 
 Rules:
 - If greeting: Respond with current contextual data summary (Window: ${ctx.status.currentWindow}, Calories Left: ${ctx.metrics.calories.remaining}).
-- If suggest diet: Use remaining macros and favorite foods.
+- If suggest diet: Provide 3 distinct meal options (Varieties) that fit the remaining macros. Use favorite foods if possible.
 - If analyze: Generate consistency summary.
 - If free question: Answer directly and helpfully, using context if relevant.
 - Tone: Human, Direct, Motivational, Data-driven. No robotic responses.
@@ -8686,6 +8916,7 @@ Rules:
                         [dateKey]: this.state.workoutProgress[dateKey]
                     })
                 }).catch(e => console.error('Error syncing workout:', e));
+                this.renderUserStats();
             },
 
             updateCameraToggleUI() {
@@ -9125,7 +9356,7 @@ Rules:
                 this.navigate('scanner');
                 // Allow UI to update
                 setTimeout(() => {
-                    this.applyVisionResult(item.pendingResult);
+                    this.applyVisionResult(item.pendingResult, item.image, item.id);
                     this.showToast('Análise carregada. Adicione áudio se desejar.');
                 }, 200);
             },
@@ -9401,11 +9632,23 @@ Rules:
                     return;
                 }
 
+                // Stop camera to save resources and focus on analysis
+                this.stopCamera();
+
                 // Show panel
                 const panel = document.getElementById('analysis-panel');
                 const actions = document.getElementById('scanner-action-bar');
                 if (panel) panel.classList.remove('hidden');
                 if (actions) actions.classList.add('opacity-0', 'pointer-events-none');
+
+                // Set Preview Image
+                const imgPreview = document.getElementById('analysis-preview-img');
+                if (imgPreview && (image || result.image)) {
+                    imgPreview.src = image || result.image;
+                    imgPreview.classList.remove('hidden');
+                } else if (imgPreview) {
+                    imgPreview.classList.add('hidden');
+                }
 
                 const db = this.getFoodDB();
                 const pickRef = (foodName) => {
@@ -9568,13 +9811,19 @@ Rules:
                 this.calculateWeeklyConsistency();
                 this.updateHealthScore();
                 this.renderTodayMeals();
+                this.renderUserStats();
 
                 this.showToast('Refeição registrada!');
 
                 // Close panel and navigate back
                 const panel = document.getElementById('analysis-panel');
                 if (panel) panel.classList.add('hidden');
+                
+                const imgPreview = document.getElementById('analysis-preview-img');
+                if (imgPreview) imgPreview.classList.add('hidden');
+
                 this.navigate('dashboard');
+                this.renderRecents();
 
                 // Clean state
                 this.state.lastAnalysis = null;
@@ -10144,7 +10393,8 @@ Rules:
                 }
 
                 // Header Info
-                const monthName = startOfWeek.toLocaleDateString('pt-BR', { month: 'long' });
+                const locale = this.state.language === 'en' ? 'en-US' : 'pt-BR';
+                const monthName = startOfWeek.toLocaleDateString(locale, { month: 'long' });
                 const year = startOfWeek.getFullYear();
                 const todayStr = new Date().toLocaleDateString('pt-BR');
 
@@ -10152,7 +10402,7 @@ Rules:
                 let html = `
                     <div class="flex justify-between items-end mb-4">
                         <div class="flex flex-col">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Calendário</span>
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5" data-translate="calendar_label">${this.t('calendar_label')}</span>
                             <h3 class="text-xl font-black capitalize text-black dark:text-white leading-none flex items-baseline gap-2">
                                 ${monthName} <span class="font-medium text-gray-400 text-base">${year}</span>
                             </h3>
@@ -10175,7 +10425,7 @@ Rules:
                     const isToday = dateStr === todayStr;
 
                     // Short day name (D, S, T, Q...) - using first letter for clean look
-                    const dayName = d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').charAt(0).toUpperCase();
+                    const dayName = d.toLocaleDateString(locale, { weekday: 'short' }).replace('.', '').charAt(0).toUpperCase();
                     const dayNum = d.getDate();
 
                     let btnClass = `

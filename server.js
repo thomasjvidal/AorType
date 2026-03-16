@@ -139,6 +139,21 @@ app.post('/api/chat/history', (req, res) => {
     res.json({ success: true });
 });
 
+// 6. Reset Data (New Account)
+app.post('/api/reset', (req, res) => {
+    const db = {
+        profile: {},
+        meals: [],
+        checkins: {},
+        workouts: [],
+        workoutProgress: {},
+        chatHistory: [],
+        onboarding: {}
+    };
+    writeDB(db);
+    res.json({ success: true });
+});
+
 // Endpoint para verificar status das chaves de API
 app.get('/api/health', (req, res) => {
     res.json({
@@ -182,7 +197,7 @@ Your job is to:
 
 Rules:
 - If greeting: Respond with current contextual data summary.
-- If suggest diet: Use remaining macros and favorite foods.
+- If suggest diet: Provide 3 distinct meal options (Varieties) that fit the remaining macros. Use favorite foods if possible.
 - If analyze: Generate consistency summary.
 - Tone: Human, Direct, Motivational, Data-driven. No robotic responses.
 - Language: Portuguese (Brazil).
