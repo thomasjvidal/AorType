@@ -5,7 +5,6 @@ import fetch from 'node-fetch';
 import bodyParser from 'body-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -15,10 +14,15 @@ const DB_FILE = path.join(__dirname, 'database.json');
 // Helper DB
 const readDB = () => {
     try {
-        if (!fs.existsSync(DB_FILE)) return { profile: {}, meals: [], onboarding: {} };
-        return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+        if (!fs.existsSync(DB_FILE)) return { users: {} };
+        const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+        // Migrate old flat structure to new user-isolated structure
+        if (!data.users) {
+            return { users: { default: { profile: data.profile || {}, meals: data.meals || [], checkins: data.checkins || {}, chatHistory: data.chatHistory || [], workoutProgress: data.workoutProgress || {}, onboarding: data.onboarding || {} } } };
+        }
+        return data;
     } catch (e) {
-        return { profile: {}, meals: [], onboarding: {} };
+        return { users: {} };
     }
 };
 
@@ -28,6 +32,20 @@ const writeDB = (data) => {
     } catch (e) {
         console.error('Erro ao salvar DB:', e);
     }
+};
+
+const getUserEmail = (req) => (req.headers['x-user-email'] || req.query.email || req.body?.email || 'default');
+
+const readUserDB = (email) => {
+    const db = readDB();
+    return db.users?.[email] || { profile: {}, meals: [], checkins: {}, chatHistory: [], workoutProgress: {}, onboarding: {} };
+};
+
+const writeUserDB = (email, data) => {
+    const db = readDB();
+    if (!db.users) db.users = {};
+    db.users[email] = data;
+    writeDB(db);
 };
 
 const app = express();
@@ -41,116 +59,118 @@ const PORT = process.env.PORT || 3000;
 
 // 1. Perfil
 app.get('/api/profile', (req, res) => {
-    const db = readDB();
-    res.json(db.profile || {});
+    const email = getUserEmail(req);
+    const userData = readUserDB(email);
+    res.json(userData.profile || {});
 });
 
 app.post('/api/profile', (req, res) => {
-    const db = readDB();
-    db.profile = { ...db.profile, ...req.body };
-    writeDB(db);
-    res.json({ success: true, profile: db.profile });
+    const email = getUserEmail(req);
+    const userData = readUserDB(email);
+    userData.profile = { ...userData.profile, ...req.body };
+    writeUserDB(email, userData);
+    res.json({ success: true, profile: userData.profile });
 });
 
 // 2. Onboarding
 app.post('/api/onboarding', (req, res) => {
-    const db = readDB();
-    db.onboarding = req.body;
+    const email = getUserEmail(req);
+    const userData = readUserDB(email);
+    userData.onboarding = req.body;
     // Também atualiza perfil básico se disponível
     if (req.body.data) {
         const d = req.body.data;
-        db.profile = {
-            ...db.profile,
-            name: d.name || db.profile.name,
-            email: d.email || db.profile.email,
-            weight: d.weight || db.profile.weight,
-            height: d.height || db.profile.height,
-            age: d.age || db.profile.age,
-            gender: d.gender || db.profile.gender,
-            goal: d.goal || db.profile.goal
+        userData.profile = {
+            ...userData.profile,
+            name: d.name || userData.profile.name,
+            email: d.email || userData.profile.email,
+            weight: d.weight || userData.profile.weight,
+            height: d.height || userData.profile.height,
+            age: d.age || userData.profile.age,
+            gender: d.gender || userData.profile.gender,
+            goal: d.goal || userData.profile.goal
         };
     }
-    writeDB(db);
+    writeUserDB(email, userData);
     res.json({ success: true });
 });
 
 // 3. Refeições
 app.get('/api/meals', (req, res) => {
-    const db = readDB();
-    res.json(db.meals || []);
+    const email = getUserEmail(req);
+    const userData = readUserDB(email);
+    res.json(userData.meals || []);
 });
 
 app.post('/api/meals', (req, res) => {
-    const db = readDB();
-    db.meals = db.meals || [];
-    
+    const email = getUserEmail(req);
+    const userData = readUserDB(email);
+    userData.meals = userData.meals || [];
+
     let meal;
     if (req.body.id) {
-        const index = db.meals.findIndex(m => m.id === req.body.id);
+        const index = userData.meals.findIndex(m => m.id === req.body.id);
         if (index !== -1) {
-            // Update existing
-            db.meals[index] = { ...db.meals[index], ...req.body, timestamp: new Date().toISOString() };
-            meal = db.meals[index];
+            userData.meals[index] = { ...userData.meals[index], ...req.body, timestamp: new Date().toISOString() };
+            meal = userData.meals[index];
         } else {
-            // Create new with provided ID (rare but possible if syncing)
             meal = { ...req.body, timestamp: new Date().toISOString() };
-            db.meals.unshift(meal);
+            userData.meals.unshift(meal);
         }
     } else {
-        // Create new
         meal = { id: Date.now().toString(), ...req.body, timestamp: new Date().toISOString() };
-        db.meals.unshift(meal);
+        userData.meals.unshift(meal);
     }
 
     // Manter apenas últimas 100
-    if (db.meals.length > 100) db.meals = db.meals.slice(0, 100);
-    writeDB(db);
+    if (userData.meals.length > 100) userData.meals = userData.meals.slice(0, 100);
+    writeUserDB(email, userData);
     res.json({ success: true, meal });
 });
 
 // 4. Check-ins
 app.get('/api/checkins', (req, res) => {
-    const db = readDB();
-    res.json(db.checkins || {});
+    const email = getUserEmail(req);
+    const userData = readUserDB(email);
+    res.json(userData.checkins || {});
 });
 
 app.post('/api/checkins', (req, res) => {
-    const db = readDB();
-    db.checkins = db.checkins || {};
-    // Merge new checkins with existing
-    db.checkins = { ...db.checkins, ...req.body };
-    writeDB(db);
+    const email = getUserEmail(req);
+    const userData = readUserDB(email);
+    userData.checkins = userData.checkins || {};
+    userData.checkins = { ...userData.checkins, ...req.body };
+    writeUserDB(email, userData);
     res.json({ success: true });
 });
 
 // 5. Chat History
 app.get('/api/chat/history', (req, res) => {
-    const db = readDB();
-    res.json(db.chatHistory || []);
+    const email = getUserEmail(req);
+    const userData = readUserDB(email);
+    res.json(userData.chatHistory || []);
 });
 
 app.post('/api/chat/history', (req, res) => {
-    const db = readDB();
-    // Expects array of messages or single message? Let's say full array for simplicity or sync
-    // Or maybe append?
-    // Let's replace for now as client holds source of truth for session
-    db.chatHistory = req.body.messages || [];
-    writeDB(db);
+    const email = getUserEmail(req);
+    const userData = readUserDB(email);
+    userData.chatHistory = req.body.messages || [];
+    writeUserDB(email, userData);
     res.json({ success: true });
 });
 
 // 6. Reset Data (New Account)
 app.post('/api/reset', (req, res) => {
-    const db = {
+    const email = getUserEmail(req);
+    const emptyUser = {
         profile: {},
         meals: [],
         checkins: {},
-        workouts: [],
-        workoutProgress: {},
         chatHistory: [],
+        workoutProgress: {},
         onboarding: {}
     };
-    writeDB(db);
+    writeUserDB(email, emptyUser);
     res.json({ success: true });
 });
 
@@ -159,6 +179,7 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'online',
         providers: {
+            groq: !!process.env.GROQ_API_KEY,
             gemini: !!process.env.GEMINI_API_KEY,
             openai: !!process.env.OPENAI_API_KEY,
             huggingface: !!process.env.HF_API_KEY
@@ -166,24 +187,17 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Endpoint de Chat (Proxy para Gemini)
+// Endpoint de Chat (Proxy para Groq)
 app.post('/api/chat', async (req, res) => {
     try {
         const { message, context, history } = req.body;
-        const apiKey = process.env.GEMINI_API_KEY;
+        const groqKey = process.env.GROQ_API_KEY;
 
-        if (!apiKey) {
-            return res.status(401).json({ error: 'Chave Gemini não configurada no servidor (.env)' });
+        if (!groqKey) {
+            return res.status(401).json({ error: 'Chave Groq não configurada no servidor (.env)' });
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-        let chatHistory = [];
-
-        // System Prompt (Injected as context)
-        const systemPrompt = `
-You are the conversational engine of the app "Macro AI".
+        const systemPrompt = `You are the conversational engine of the app "Macro AI".
 You are connected to the internal user data system.
 
 USER DATA CONTEXT:
@@ -200,31 +214,45 @@ Rules:
 - If suggest diet: Provide 3 distinct meal options (Varieties) that fit the remaining macros. Use favorite foods if possible.
 - If analyze: Generate consistency summary.
 - Tone: Human, Direct, Motivational, Data-driven. No robotic responses.
-- Language: Portuguese (Brazil).
-        `;
+- Language: Portuguese (Brazil).`;
+
+        const messages = [
+            { role: 'system', content: systemPrompt }
+        ];
 
         if (history && Array.isArray(history)) {
-             chatHistory = history.map(h => ({
-                 role: h.role === 'assistant' ? 'model' : 'user',
-                 parts: [{ text: h.text }]
-             }));
+            const recent = history.slice(-10);
+            for (const h of recent) {
+                messages.push({
+                    role: h.role === 'assistant' ? 'assistant' : 'user',
+                    content: h.text
+                });
+            }
         }
 
-        const chat = model.startChat({
-            history: [
-                { role: 'user', parts: [{ text: systemPrompt }] },
-                { role: 'model', parts: [{ text: "Entendido. Estou conectado aos dados do usuário e pronto para responder como Coach." }] },
-                ...chatHistory.slice(-10)
-            ],
-            generationConfig: {
-                maxOutputTokens: 500,
-                temperature: 0.7,
+        messages.push({ role: 'user', content: message });
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${groqKey}`
             },
+            body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile',
+                messages,
+                max_tokens: 500,
+                temperature: 0.7
+            })
         });
 
-        const result = await chat.sendMessage(message);
-        const response = result.response;
-        const text = response.text();
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Erro Groq API: ${response.status} - ${errText}`);
+        }
+
+        const json = await response.json();
+        const text = json.choices?.[0]?.message?.content || '';
 
         res.json({ text });
 
@@ -297,35 +325,80 @@ app.post('/api/analyze-image', async (req, res) => {
     try {
         let { image, audio, apiKey, provider, endpoint } = req.body;
 
-        // Prioriza chaves do ambiente se não fornecidas pelo cliente
-        if (!apiKey) {
-            if (provider === 'openai') apiKey = process.env.OPENAI_API_KEY;
+        // Auto-detecção com prioridade: Groq > Gemini > OpenAI > HuggingFace
+        if (!provider) {
+            if (process.env.GROQ_API_KEY) {
+                provider = 'groq';
+                apiKey = process.env.GROQ_API_KEY;
+            } else if (process.env.GEMINI_API_KEY) {
+                provider = 'gemini';
+                apiKey = process.env.GEMINI_API_KEY;
+            } else if (process.env.OPENAI_API_KEY) {
+                provider = 'openai';
+                apiKey = process.env.OPENAI_API_KEY;
+            } else {
+                provider = 'huggingface';
+                apiKey = process.env.HF_API_KEY;
+            }
+        } else if (!apiKey) {
+            if (provider === 'groq') apiKey = process.env.GROQ_API_KEY;
+            else if (provider === 'openai') apiKey = process.env.OPENAI_API_KEY;
             else if (provider === 'gemini') apiKey = process.env.GEMINI_API_KEY;
             else if (provider === 'huggingface') apiKey = process.env.HF_API_KEY;
-
-            // Auto-detecção
-            if (!provider) {
-                if (process.env.GEMINI_API_KEY) {
-                    provider = 'gemini';
-                    apiKey = process.env.GEMINI_API_KEY;
-                } else if (process.env.OPENAI_API_KEY) {
-                    provider = 'openai';
-                    apiKey = process.env.OPENAI_API_KEY;
-                } else {
-                    provider = 'huggingface';
-                    apiKey = process.env.HF_API_KEY;
-                }
-            }
         }
 
         console.log(`Analisando com ${provider}...`);
 
-        // --- GOOGLE GEMINI (Grátis e Inteligente) ---
+        // --- GROQ VISION ---
+        if (provider === 'groq') {
+            if (!apiKey) throw new Error('Chave Groq não configurada (.env)');
+
+            let prompt = 'Você é um nutricionista. Analise a imagem e identifique os alimentos, estime o peso (em gramas) e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
+
+            const base64Data = image && image.includes('base64,') ? image.split('base64,')[1] : image;
+            const imageUrl = image && image.startsWith('data:') ? image : `data:image/jpeg;base64,${base64Data}`;
+
+            const payload = {
+                model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: prompt },
+                            { type: 'image_url', image_url: { url: imageUrl } }
+                        ]
+                    }
+                ],
+                max_tokens: 500
+            };
+
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Erro Groq Vision API: ${response.status} - ${errText}`);
+            }
+
+            const json = await response.json();
+            const content = json.choices?.[0]?.message?.content || '{}';
+            const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            return res.json({ provider: 'groq', result: JSON.parse(cleanContent) });
+        }
+
+        // --- GOOGLE GEMINI ---
         if (provider === 'gemini') {
             if (!apiKey) throw new Error('Chave Gemini não configurada (.env)');
 
+            const { GoogleGenerativeAI } = await import('@google/generative-ai');
             const genAI = new GoogleGenerativeAI(apiKey);
-            // Gemini 1.5 Flash é ótimo para multimodais e rápido
             let modelName = "gemini-1.5-flash";
             let model = genAI.getGenerativeModel({ model: modelName });
 
@@ -340,23 +413,11 @@ app.post('/api/analyze-image', async (req, res) => {
                     prompt = 'Você é um nutricionista. Analise o áudio com a descrição da refeição. Identifique os alimentos mencionados, estime o peso (em gramas) se não especificado (use porções médias), e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
                 }
                 parts.push(prompt);
-
-                parts.push({
-                    inlineData: {
-                        data: audio,
-                        mimeType: "audio/webm"
-                    }
-                });
+                parts.push({ inlineData: { data: audio, mimeType: "audio/webm" } });
             } else if (image) {
-                // Remove header do base64 se existir
                 const base64Data = image.includes('base64,') ? image.split('base64,')[1] : image;
                 parts.push(prompt);
-                parts.push({
-                    inlineData: {
-                        data: base64Data,
-                        mimeType: "image/jpeg"
-                    }
-                });
+                parts.push({ inlineData: { data: base64Data, mimeType: "image/jpeg" } });
             } else {
                 throw new Error('Nenhuma imagem ou áudio fornecido.');
             }
@@ -366,9 +427,6 @@ app.post('/api/analyze-image', async (req, res) => {
                 result = await model.generateContent(parts);
             } catch (e) {
                 console.log(`Erro com ${modelName}: ${e.message}`);
-
-                // Fallback strategies logic retained if needed, but simplified for brevity
-                // If 1.5 fails, we might try pro or earlier versions, but 1.5 is standard now.
                 if (e.message.includes('404') || e.message.includes('not found')) {
                     const fallback = "gemini-1.5-flash";
                     console.log(`Tentando fallback ${fallback}`);
@@ -381,7 +439,6 @@ app.post('/api/analyze-image', async (req, res) => {
 
             const response = await result.response;
             const text = response.text();
-
             const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
             return res.json({ provider: 'gemini', result: JSON.parse(cleanText) });
         }
@@ -430,10 +487,7 @@ app.post('/api/analyze-image', async (req, res) => {
             const content = json.choices?.[0]?.message?.content || '{}';
             const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
 
-            return res.json({
-                provider: provider,
-                result: JSON.parse(cleanContent)
-            });
+            return res.json({ provider: provider, result: JSON.parse(cleanContent) });
         }
 
         // --- HUGGING FACE (Fallback) ---
@@ -443,7 +497,6 @@ app.post('/api/analyze-image', async (req, res) => {
             ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
         };
 
-        // Classificação Food101
         const clsRes = await fetch('https://api-inference.huggingface.co/models/nateraw/food101', {
             method: 'POST',
             headers,
@@ -455,16 +508,14 @@ app.post('/api/analyze-image', async (req, res) => {
 
         if (clsRes.ok) {
             const classification = await clsRes.json().catch(() => []);
-            // Pega o top 3
             const top3 = Array.isArray(classification) ? classification.slice(0, 3) : [];
 
             if (top3.length > 0) {
                 confidence = top3[0].score;
                 items = top3.map(item => {
                     const label = item.label;
-                    // Tenta achar macros aproximados ou usa default
                     const ref = Object.entries(FOOD_DB).find(([k]) => label.includes(k))?.[1] || FOOD_DB.default;
-                    const grams = 100; // Estimativa padrão
+                    const grams = 100;
 
                     return {
                         name: label.replace(/_/g, ' '),
@@ -480,7 +531,6 @@ app.post('/api/analyze-image', async (req, res) => {
             console.warn('HF Food101 falhou, tentando apenas caption...');
         }
 
-        // Se não conseguiu nada com Food101, tenta captioning para pelo menos dar um nome
         if (items.length === 0) {
             const blipRes = await fetch('https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large', {
                 method: 'POST',
@@ -492,11 +542,7 @@ app.post('/api/analyze-image', async (req, res) => {
                 const blipJson = await blipRes.json();
                 const text = Array.isArray(blipJson) ? blipJson[0]?.generated_text : blipJson?.generated_text;
                 if (text) {
-                    items.push({
-                        name: text,
-                        grams: 100,
-                        ...FOOD_DB.default
-                    });
+                    items.push({ name: text, grams: 100, ...FOOD_DB.default });
                 }
             }
         }
@@ -505,13 +551,7 @@ app.post('/api/analyze-image', async (req, res) => {
             throw new Error('Não foi possível identificar alimentos na imagem.');
         }
 
-        res.json({
-            provider: 'huggingface',
-            result: {
-                items: items,
-                confidence: confidence
-            }
-        });
+        res.json({ provider: 'huggingface', result: { items: items, confidence: confidence } });
 
     } catch (error) {
         console.error('Erro no proxy:', error);
@@ -521,26 +561,24 @@ app.post('/api/analyze-image', async (req, res) => {
 
 // --- WORKOUT PROGRESS ENDPOINTS ---
 app.get('/api/workouts/progress', (req, res) => {
-    const db = readDB();
-    res.json(db.workoutProgress || {});
+    const email = getUserEmail(req);
+    const userData = readUserDB(email);
+    res.json(userData.workoutProgress || {});
 });
 
 app.post('/api/workouts/progress', (req, res) => {
-    const db = readDB();
-    // Merge new progress with existing
-    // Structure: { "2023-10-27": { "chest-triceps": { "exercise-0": { sets: [...] } } } }
-    db.workoutProgress = db.workoutProgress || {};
-    
-    // Deep merge or just replace keys? 
-    // Since we likely send the whole day's progress or specific updates, let's merge at top level
+    const email = getUserEmail(req);
+    const userData = readUserDB(email);
+    userData.workoutProgress = userData.workoutProgress || {};
+
     Object.keys(req.body).forEach(date => {
-        db.workoutProgress[date] = { 
-            ...(db.workoutProgress[date] || {}), 
-            ...req.body[date] 
+        userData.workoutProgress[date] = {
+            ...(userData.workoutProgress[date] || {}),
+            ...req.body[date]
         };
     });
-    
-    writeDB(db);
+
+    writeUserDB(email, userData);
     res.json({ success: true });
 });
 

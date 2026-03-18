@@ -1309,7 +1309,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <button
+                                    <button onclick="app.openSupplementModal()"
                                         class="w-full bg-ios-purple text-white py-1 rounded-lg flex items-center justify-center gap-1.5 shadow-lg active:scale-95 transition-all relative z-10">
                                         <i data-lucide="plus" class="w-3 h-3"></i>
                                         <span class="text-[8px] font-black uppercase tracking-widest"
@@ -2925,6 +2925,48 @@
         </div>
     </div>
 
+    <!-- WATER MODAL -->
+    <div id="water-modal" class="fixed inset-0 z-[110] hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="app.closeWaterModal()"></div>
+        <div id="water-modal-content" class="absolute bottom-0 left-0 right-0 max-w-[420px] mx-auto bg-ios-bg dark:bg-dark-card rounded-t-[32px] p-6 transform transition-transform duration-300 translate-y-full">
+            <div class="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-6"></div>
+            <h3 class="text-2xl font-black mb-2">💧 Adicionar Água</h3>
+            <p class="text-ios-gray text-sm mb-6">Selecione a quantidade em ml</p>
+            <div class="grid grid-cols-3 gap-3 mb-6">
+                <button onclick="app.selectWaterAmount(150)" class="water-amount-btn py-4 rounded-2xl bg-white dark:bg-zinc-800 border-2 border-transparent font-bold text-center active:scale-95 transition-all" data-amount="150"><span class="text-xl font-black text-ios-blue">150</span><br><span class="text-xs text-ios-gray">ml</span></button>
+                <button onclick="app.selectWaterAmount(250)" class="water-amount-btn py-4 rounded-2xl bg-white dark:bg-zinc-800 border-2 border-ios-blue font-bold text-center active:scale-95 transition-all" data-amount="250"><span class="text-xl font-black text-ios-blue">250</span><br><span class="text-xs text-ios-gray">ml</span></button>
+                <button onclick="app.selectWaterAmount(350)" class="water-amount-btn py-4 rounded-2xl bg-white dark:bg-zinc-800 border-2 border-transparent font-bold text-center active:scale-95 transition-all" data-amount="350"><span class="text-xl font-black text-ios-blue">350</span><br><span class="text-xs text-ios-gray">ml</span></button>
+                <button onclick="app.selectWaterAmount(500)" class="water-amount-btn py-4 rounded-2xl bg-white dark:bg-zinc-800 border-2 border-transparent font-bold text-center active:scale-95 transition-all" data-amount="500"><span class="text-xl font-black text-ios-blue">500</span><br><span class="text-xs text-ios-gray">ml</span></button>
+                <button onclick="app.selectWaterAmount(750)" class="water-amount-btn py-4 rounded-2xl bg-white dark:bg-zinc-800 border-2 border-transparent font-bold text-center active:scale-95 transition-all" data-amount="750"><span class="text-xl font-black text-ios-blue">750</span><br><span class="text-xs text-ios-gray">ml</span></button>
+                <button onclick="app.selectWaterAmount(1000)" class="water-amount-btn py-4 rounded-2xl bg-white dark:bg-zinc-800 border-2 border-transparent font-bold text-center active:scale-95 transition-all" data-amount="1000"><span class="text-xl font-black text-ios-blue">1L</span><br><span class="text-xs text-ios-gray">ml</span></button>
+            </div>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="text-ios-gray text-sm font-medium">Personalizado:</span>
+                <input type="number" id="water-custom-amount" placeholder="ex: 400" min="50" max="3000" class="flex-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-base font-bold focus:outline-none focus:border-ios-blue">
+                <span class="text-ios-gray text-sm">ml</span>
+            </div>
+            <button onclick="app.confirmWaterAdd()" class="w-full py-4 bg-ios-blue text-white rounded-2xl font-bold text-lg active:scale-95 transition-transform">Adicionar</button>
+        </div>
+    </div>
+
+    <!-- SUPPLEMENT MODAL -->
+    <div id="supplement-modal" class="fixed inset-0 z-[110] hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="app.closeSupplementModal()"></div>
+        <div id="supplement-modal-content" class="absolute bottom-0 left-0 right-0 max-w-[420px] mx-auto bg-ios-bg dark:bg-dark-card rounded-t-[32px] p-6 transform transition-transform duration-300 translate-y-full">
+            <div class="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-6"></div>
+            <h3 class="text-2xl font-black mb-2">💊 Registrar Dose</h3>
+            <p class="text-ios-gray text-sm mb-6">Qual suplemento você tomou?</p>
+            <div class="space-y-3 mb-6" id="supplement-list">
+                <button onclick="app.logSupplement('Creatina')" class="w-full flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-100 dark:border-zinc-700 active:scale-95 transition-all"><span class="text-2xl">💪</span><div class="text-left"><div class="font-bold">Creatina</div><div class="text-xs text-ios-gray">5g — Força e recuperação</div></div></button>
+                <button onclick="app.logSupplement('Whey Protein')" class="w-full flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-100 dark:border-zinc-700 active:scale-95 transition-all"><span class="text-2xl">🥛</span><div class="text-left"><div class="font-bold">Whey Protein</div><div class="text-xs text-ios-gray">30g — Proteína pós-treino</div></div></button>
+                <button onclick="app.logSupplement('Ômega 3')" class="w-full flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-100 dark:border-zinc-700 active:scale-95 transition-all"><span class="text-2xl">🐟</span><div class="text-left"><div class="font-bold">Ômega 3</div><div class="text-xs text-ios-gray">1 cápsula — Anti-inflamatório</div></div></button>
+                <button onclick="app.logSupplement('Vitamina D')" class="w-full flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-100 dark:border-zinc-700 active:scale-95 transition-all"><span class="text-2xl">☀️</span><div class="text-left"><div class="font-bold">Vitamina D</div><div class="text-xs text-ios-gray">2000UI — Imunidade e ossos</div></div></button>
+                <button onclick="app.logSupplement('Cafeína')" class="w-full flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-100 dark:border-zinc-700 active:scale-95 transition-all"><span class="text-2xl">⚡</span><div class="text-left"><div class="font-bold">Cafeína / Pré-treino</div><div class="text-xs text-ios-gray">200mg — Energia e foco</div></div></button>
+            </div>
+            <button onclick="app.closeSupplementModal()" class="w-full py-3 bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 rounded-2xl font-bold active:scale-95 transition-transform">Cancelar</button>
+        </div>
+    </div>
+
     <!-- EDIT PROFILE MODAL -->
     <div id="edit-profile-modal" class="fixed inset-0 z-[100] hidden">
         <!-- Backdrop -->
@@ -3199,8 +3241,9 @@
                 'meal_lunch': 'Almoço',
                 'meal_snack': 'Lanche',
                 'meal_dinner': 'Jantar',
-                'meal_supper': 'Supper',
-                'ingredients': 'Ingredients',
+                'meal_supper': 'Ceia',
+                'next_meal_soon': 'Próxima refeição em breve',
+                'ingredients': 'Ingredientes',
                 'analysis_ready': 'Analysis Ready',
                 'analysis_confidence': 'Confidence',
                 'start_journey': 'Start your journey',
@@ -4156,27 +4199,88 @@
             },
 
             addWater() {
-                const amount = 250; // ml
+                const modal = document.getElementById('water-modal');
+                const content = document.getElementById('water-modal-content');
+                if (!modal || !content) return;
+                modal.classList.remove('hidden');
+                setTimeout(() => content.classList.remove('translate-y-full'), 10);
+                this._selectedWaterAmount = 250;
+                // Reset selections
+                document.querySelectorAll('.water-amount-btn').forEach(b => {
+                    b.classList.remove('border-ios-blue');
+                    b.classList.add('border-transparent');
+                    if (parseInt(b.dataset.amount) === 250) {
+                        b.classList.add('border-ios-blue');
+                        b.classList.remove('border-transparent');
+                    }
+                });
+                const customInput = document.getElementById('water-custom-amount');
+                if (customInput) customInput.value = '';
+            },
 
-                // Add to daily meals as a water entry
+            selectWaterAmount(amount) {
+                this._selectedWaterAmount = amount;
+                document.querySelectorAll('.water-amount-btn').forEach(b => {
+                    b.classList.remove('border-ios-blue');
+                    b.classList.add('border-transparent');
+                });
+                event.currentTarget.classList.add('border-ios-blue');
+                event.currentTarget.classList.remove('border-transparent');
+                const customInput = document.getElementById('water-custom-amount');
+                if (customInput) customInput.value = '';
+            },
+
+            confirmWaterAdd() {
+                const customInput = document.getElementById('water-custom-amount');
+                const amount = (customInput && customInput.value) ? parseInt(customInput.value) : (this._selectedWaterAmount || 250);
+                if (!amount || amount < 50) { this.showToast('Informe uma quantidade válida'); return; }
                 const meal = {
                     id: Math.random().toString(36).substr(2, 9),
                     name: 'Água',
-                    calories: 0,
-                    protein: 0,
-                    carbs: 0,
-                    fat: 0,
-                    image: null,
-                    type: 'water',
-                    amount: amount,
+                    calories: 0, protein: 0, carbs: 0, fat: 0,
+                    image: null, type: 'water', amount,
                     timestamp: new Date().toISOString()
                 };
-
                 this.state.mealsToday.push(meal);
                 this.saveState();
-
+                this.closeWaterModal();
                 this.showToast(`+${amount}ml de água adicionado! 💧`);
                 this.renderTodayMeals();
+            },
+
+            closeWaterModal() {
+                const modal = document.getElementById('water-modal');
+                const content = document.getElementById('water-modal-content');
+                if (content) content.classList.add('translate-y-full');
+                setTimeout(() => { if (modal) modal.classList.add('hidden'); }, 300);
+            },
+
+            openSupplementModal() {
+                const modal = document.getElementById('supplement-modal');
+                const content = document.getElementById('supplement-modal-content');
+                if (!modal || !content) return;
+                modal.classList.remove('hidden');
+                setTimeout(() => content.classList.remove('translate-y-full'), 10);
+            },
+
+            closeSupplementModal() {
+                const modal = document.getElementById('supplement-modal');
+                const content = document.getElementById('supplement-modal-content');
+                if (content) content.classList.add('translate-y-full');
+                setTimeout(() => { if (modal) modal.classList.add('hidden'); }, 300);
+            },
+
+            logSupplement(name) {
+                const today = new Date().toDateString();
+                const key = 'wb_supplements_' + today;
+                const doses = JSON.parse(localStorage.getItem(key) || '[]');
+                doses.push({ name, time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) });
+                localStorage.setItem(key, JSON.stringify(doses));
+                this.closeSupplementModal();
+                this.showToast(`✅ ${name} registrado!`);
+                // Update doses count display
+                const dosesEl = document.querySelector('[data-translate="doses"] + div .text-lg');
+                if (dosesEl) { dosesEl.textContent = doses.length; }
             },
 
             // HEALTH CHECKIN METHODS
@@ -4523,7 +4627,7 @@
 
                 // Load Meals History
                 try {
-                    const res = await fetch('/api/meals');
+                    const res = await fetch('/api/meals', { headers: { 'X-User-Email': this.state.userProfile?.email || '' } });
                     if (res.ok) {
                         const meals = await res.json();
                         this.state.mealHistory = {};
@@ -4572,7 +4676,7 @@
 
                 // Load Checkins
                 try {
-                    const res = await fetch('/api/checkins');
+                    const res = await fetch('/api/checkins', { headers: { 'X-User-Email': this.state.userProfile?.email || '' } });
                     if (res.ok) {
                         this.state.dailyCheckins = await res.json();
                         console.log('Checkins loaded');
@@ -4655,8 +4759,8 @@
                         this.state.aiStatus = data;
                         this.updateAIStatus(); // Update UI with real status
 
-                        if (!data.providers.gemini && !data.providers.openai) {
-                            this.showToast('⚠️ Nenhuma IA configurada. Adicione a chave no arquivo .env', 5000);
+                        if (!data.providers.groq && !data.providers.gemini && !data.providers.openai) {
+                            this.showToast('⚠️ Nenhuma IA configurada. Adicione GROQ_API_KEY no arquivo .env', 5000);
                         }
                     })
                     .catch(e => {
@@ -4771,7 +4875,8 @@
                         // Update State & Server
                         this.state.userProfile.lastOpenDate = today;
                         this.state.userProfile.streak = streak;
-                        this.saveProfile(); // Sync to server
+                        localStorage.setItem('macro_ai_profile', JSON.stringify(this.state.userProfile));
+                        fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Email': this.state.userProfile?.email || '' }, body: JSON.stringify(this.state.userProfile) }).catch(() => {});
 
                         // Keep localStorage for backup/offline
                         localStorage.setItem('wb_last_open_date', today);
@@ -4985,7 +5090,7 @@
 
             loadTodayMeals() {
                 // Background Sync
-                fetch('/api/meals')
+                fetch('/api/meals', { headers: { 'X-User-Email': this.state.userProfile?.email || '' } })
                     .then(res => res.json())
                     .then(data => {
                         if (Array.isArray(data)) {
@@ -5320,6 +5425,12 @@
                         }
 
                         const authScreen = document.getElementById('screen-auth');
+                        // Hide main content immediately to prevent dashboard flash during registration
+                        if (type === 'register') {
+                            const mainContent = document.getElementById('main-content');
+                            if (mainContent) mainContent.classList.add('hidden');
+                            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+                        }
                         if (authScreen) {
                             authScreen.classList.add('opacity-0', 'pointer-events-none');
                             setTimeout(() => {
@@ -5513,6 +5624,7 @@
                 this.state.userProfile.gender = gender;
                 this.state.userProfile.goal = goal;
                 this.state.userProfile.activity = activity;
+                this.state.userProfile.unitSystem = data.unitSystem || 'metric';
 
                 // Meal Times from onboarding
                 this.state.userProfile.mealTimes = {
@@ -5540,12 +5652,12 @@
                 localStorage.removeItem('macro_ai_checkins');
 
                 // Reset Server Data (ensure new account starts fresh on server too)
-                fetch('/api/reset', { method: 'POST' })
+                fetch('/api/reset', { method: 'POST', headers: { 'X-User-Email': this.state.userProfile?.email || '' } })
                     .then(() => {
                         // Push new profile to server
                         return fetch('/api/profile', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', 'X-User-Email': this.state.userProfile?.email || '' },
                             body: JSON.stringify(this.state.userProfile)
                         });
                     })
@@ -5567,6 +5679,8 @@
 
                 setTimeout(() => screen.classList.remove('opacity-0'), 10);
 
+                // Reset avatar for new user - prevent previous user's photo from showing
+                this.state.userProfile.avatar = '';
                 this.state.onboarding.currentStep = 0;
                 this.renderOnboardingStep();
             },
@@ -5840,8 +5954,8 @@
                                     <!-- Value Display -->
                                     <div class="mb-10 text-center">
                                         <div class="flex items-end justify-center gap-2">
-                                            <span id="height-display" class="text-7xl font-black text-brand-neon tracking-tighter">${data.height}</span>
-                                            <span class="text-xl font-bold text-gray-400 pb-4">cm</span>
+                                            <span id="height-display" class="text-7xl font-black text-brand-neon tracking-tighter">${(data.unitSystem === 'imperial') ? (() => { const totalIn = Math.round(data.height / 2.54); const ft = Math.floor(totalIn/12); const inch = totalIn%12; return `${ft}'${inch}"`; })() : data.height}</span>
+                                            <span id="height-unit-label" class="text-xl font-bold text-gray-400 pb-4">${(data.unitSystem||'metric')==='imperial'?'ft':'cm'}</span>
                                         </div>
                                     </div>
 
@@ -5854,15 +5968,17 @@
                                         </div>
 
                                         <!-- Scrollable Area -->
-                                        <div id="height-picker-container" 
+                                        <div id="height-picker-container"
                                              class="flex overflow-x-auto py-10 no-scrollbar w-full relative z-10 cursor-grab active:cursor-grabbing"
                                              style="-webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent); mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);">
                                             <!-- JS Generated Ruler -->
                                         </div>
                                     </div>
-                                    
-                                    <div class="mt-8 px-6 py-2 bg-brand-neon/10 rounded-full border border-brand-neon/20">
-                                        <span class="text-brand-neon font-bold text-sm uppercase tracking-wider">Centímetros</span>
+
+                                    <!-- Unit Toggle -->
+                                    <div class="mt-8 flex gap-3 items-center">
+                                        <button onclick="app.setHeightUnit('cm')" id="height-unit-cm" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='metric'?'bg-brand-neon text-black':'bg-white/10 text-gray-400'}">cm</button>
+                                        <button onclick="app.setHeightUnit('imperial')" id="height-unit-ft" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='imperial'?'bg-brand-neon text-black':'bg-white/10 text-gray-400'}">ft / in</button>
                                     </div>
                                 </div>
                                 
@@ -5891,8 +6007,8 @@
                                     <!-- Value Display -->
                                     <div class="mb-10 text-center">
                                         <div class="flex items-end justify-center gap-2">
-                                            <span id="weight-display" class="text-7xl font-black text-brand-neon tracking-tighter">${data.weight}</span>
-                                            <span class="text-xl font-bold text-gray-400 pb-4">kg</span>
+                                            <span id="weight-display" class="text-7xl font-black text-brand-neon tracking-tighter">${(data.unitSystem === 'imperial') ? Math.round(data.weight * 2.20462) : data.weight}</span>
+                                            <span id="weight-unit-label" class="text-xl font-bold text-gray-400 pb-4">${(data.unitSystem||'metric')==='imperial'?'lbs':'kg'}</span>
                                         </div>
                                     </div>
 
@@ -5905,15 +6021,17 @@
                                         </div>
 
                                         <!-- Scrollable Area -->
-                                        <div id="weight-picker-container" 
+                                        <div id="weight-picker-container"
                                              class="flex overflow-x-auto py-10 no-scrollbar w-full relative z-10 cursor-grab active:cursor-grabbing"
                                              style="-webkit-mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent); mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);">
                                             <!-- JS Generated Ruler -->
                                         </div>
                                     </div>
-                                    
-                                    <div class="mt-8 px-6 py-2 bg-brand-neon/10 rounded-full border border-brand-neon/20">
-                                        <span class="text-brand-neon font-bold text-sm uppercase tracking-wider" data-translate="kilograms">Quilogramas</span>
+
+                                    <!-- Unit Toggle -->
+                                    <div class="mt-8 flex gap-3 items-center">
+                                        <button onclick="app.setWeightUnit('metric')" id="weight-unit-kg" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='metric'?'bg-brand-neon text-black':'bg-white/10 text-gray-400'}">kg</button>
+                                        <button onclick="app.setWeightUnit('imperial')" id="weight-unit-lbs" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='imperial'?'bg-brand-neon text-black':'bg-white/10 text-gray-400'}">lbs</button>
                                     </div>
                                 </div>
                                 
@@ -6271,6 +6389,17 @@
                     const scrollPos = offset * pixelsPerUnit;
                     container.scrollLeft = scrollPos;
                 }, 100);
+            },
+
+            setHeightUnit(unit) {
+                this.state.onboarding.data.unitSystem = unit;
+                // Re-render the step
+                this.renderOnboardingStep();
+            },
+
+            setWeightUnit(unit) {
+                this.state.onboarding.data.unitSystem = unit;
+                this.renderOnboardingStep();
             },
 
             initWorkoutPicker() {
@@ -7200,6 +7329,12 @@
                     })
                 }).catch(err => console.error('Error syncing onboarding:', err));
 
+                // Clear any stale meal/session data from previous users
+                localStorage.removeItem('wb_meals_today');
+                localStorage.removeItem('wb_meals_recent');
+                localStorage.removeItem('wb_meals_date');
+                localStorage.removeItem('wb_meal_history');
+
                 // Force navigation to dashboard
                 const screen = document.getElementById('screen-onboarding-flow');
                 if (screen) {
@@ -7255,6 +7390,9 @@
                 localStorage.removeItem('macro_ai_workouts');
                 localStorage.removeItem('macro_ai_checkins');
                 localStorage.removeItem('wb_meals_today');
+                localStorage.removeItem('wb_meals_recent');
+                localStorage.removeItem('wb_meals_date');
+                localStorage.removeItem('wb_meal_history');
 
                 // Reset State
                 this.state.userProfile = {
@@ -7293,7 +7431,7 @@
 
             loadUserProfile() {
                 // Background Sync
-                fetch('/api/profile')
+                fetch('/api/profile', { headers: { 'X-User-Email': this.state.userProfile?.email || '' } })
                     .then(res => res.json())
                     .then(data => {
                         if (data && data.name) {
@@ -7327,8 +7465,16 @@
                         if (headerAvatar && p.avatar) headerAvatar.src = p.avatar;
 
                         // Update Profile Stats
-                        if (p.weight && document.getElementById('profile-weight')) document.getElementById('profile-weight').textContent = `${p.weight} kg`;
-                        if (p.height && document.getElementById('profile-height')) document.getElementById('profile-height').textContent = `${p.height} cm`;
+                        if (p.weight && document.getElementById('profile-weight')) {
+                            const wDisplay = p.unitSystem === 'imperial' ? Math.round(p.weight * 2.20462) + ' lbs' : p.weight + ' kg';
+                            document.getElementById('profile-weight').textContent = wDisplay;
+                        }
+                        if (p.height && document.getElementById('profile-height')) {
+                            const hDisplay = p.unitSystem === 'imperial'
+                                ? (() => { const totalIn = Math.round(p.height / 2.54); const ft = Math.floor(totalIn/12); const inch = totalIn%12; return `${ft}'${inch}"`; })()
+                                : p.height + ' cm';
+                            document.getElementById('profile-height').textContent = hDisplay;
+                        }
                         if (p.goal && document.getElementById('profile-goal-type')) {
                             const goalLabels = { 'lose': 'Perder', 'gain': 'Ganhar', 'maintain': 'Manter', 'health': 'Saúde' };
                             document.getElementById('profile-goal-type').textContent = goalLabels[p.goal] || p.goal;
@@ -7462,7 +7608,7 @@
                 // SYNC WITH SERVER
                 fetch('/api/profile', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-User-Email': this.state.userProfile?.email || '' },
                     body: JSON.stringify(this.state.userProfile)
                 }).catch(err => console.error('Error saving profile:', err));
 
@@ -8235,7 +8381,7 @@ Instruções:
 
                 // 4. LLM INTEGRATION (If connected, overwrite response with smarter one)
                 const hasLocalKey = app.config && app.config.geminiApiKey;
-                const hasBackendKey = this.state.aiStatus && this.state.aiStatus.providers && this.state.aiStatus.providers.gemini;
+                const hasBackendKey = this.state.aiStatus && this.state.aiStatus.providers && (this.state.aiStatus.providers.groq || this.state.aiStatus.providers.gemini);
 
                 if ((hasLocalKey || hasBackendKey) && !response) {
                     try {
@@ -8245,7 +8391,7 @@ Instruções:
                             console.log('Using Backend Proxy for Chat...');
                             const res = await fetch('/api/chat', {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: { 'Content-Type': 'application/json', 'X-User-Email': this.state.userProfile?.email || '' },
                                 body: JSON.stringify({
                                     message: userText,
                                     context: ctx,
@@ -8590,7 +8736,8 @@ Rules:
                 const mealHeader = document.getElementById('current-meal-name-header');
                 if (!mealStatus) return;
 
-                const mealTimes = this.state.userProfile.mealTimes || {
+                const _savedTimes = this.state.userProfile.mealTimes;
+                const mealTimes = (_savedTimes && Object.keys(_savedTimes).length > 0) ? _savedTimes : {
                     cafe: { name: this.t('meal_cafe'), start: '06:00', end: '11:00' },
                     almoco: { name: this.t('meal_lunch'), start: '11:00', end: '16:00' },
                     lanche: { name: this.t('meal_snack'), start: '16:00', end: '19:00' },
