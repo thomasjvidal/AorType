@@ -6,10 +6,14 @@ import bodyParser from 'body-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DB_FILE = path.join(__dirname, 'database.json');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'macro_ai_secret_change_in_production';
 
 // Helper DB
 const readDB = () => {
@@ -34,11 +38,9 @@ const writeDB = (data) => {
     }
 };
 
-const getUserEmail = (req) => (req.headers['x-user-email'] || req.query.email || req.body?.email || 'default');
-
 const readUserDB = (email) => {
     const db = readDB();
-    return db.users?.[email] || { profile: {}, meals: [], checkins: {}, chatHistory: [], workoutProgress: {}, onboarding: {} };
+    return db.users?.[email] || { profile: {}, meals: [], checkins: {}, chatHistory: [], workoutProgress: {}, onboarding: {}, passwordHash: null };
 };
 
 const writeUserDB = (email, data) => {
@@ -55,17 +57,95 @@ app.use(express.static(__dirname));
 
 const PORT = process.env.PORT || 3000;
 
+// Auth Middleware
+const authMiddleware = (req, res, next) => {
+    const auth = req.headers['authorization'];
+    if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
+    try {
+        const token = auth.split(' ')[1];
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.userEmail = decoded.email;
+        next();
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+};
+
+// --- AUTH ENDPOINTS (No middleware) ---
+
+// Register
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { email, password, name, username } = req.body;
+        if (!email || !password) return res.status(400).json({ error: 'Email e senha obrigatórios' });
+        const db = readDB();
+        if (db.users?.[email]?.passwordHash) return res.status(409).json({ error: 'Email já cadastrado' });
+        const passwordHash = await bcrypt.hash(password, 10);
+        const userData = readUserDB(email);
+        userData.passwordHash = passwordHash;
+        if (name) userData.profile.name = name;
+        if (username) userData.profile.username = username;
+        userData.profile.email = email;
+        writeUserDB(email, userData);
+        const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ token, email, name: userData.profile.name });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao registrar' });
+    }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) return res.status(400).json({ error: 'Dados inválidos' });
+        const userData = readUserDB(email);
+        if (!userData.passwordHash) return res.status(401).json({ error: 'Credenciais inválidas' });
+        const valid = await bcrypt.compare(password, userData.passwordHash);
+        if (!valid) return res.status(401).json({ error: 'Credenciais inválidas' });
+        const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ token, email, name: userData.profile.name || email });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao autenticar' });
+    }
+});
+
+// OAuth placeholders
+app.get('/auth/google', (req, res) => {
+    res.json({ message: 'Google OAuth not yet configured' });
+});
+
+app.get('/auth/apple', (req, res) => {
+    res.json({ message: 'Apple OAuth not yet configured' });
+});
+
+// Health check (no auth)
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'online',
+        providers: {
+            groq: !!process.env.GROQ_API_KEY,
+            gemini: !!process.env.GEMINI_API_KEY,
+            openai: !!process.env.OPENAI_API_KEY,
+            huggingface: !!process.env.HF_API_KEY
+        }
+    });
+});
+
+// Apply auth middleware to all subsequent routes
+app.use(authMiddleware);
+
 // --- ENDPOINTS DE PERSISTÊNCIA (Sync) ---
 
 // 1. Perfil
 app.get('/api/profile', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const userData = readUserDB(email);
     res.json(userData.profile || {});
 });
 
 app.post('/api/profile', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const userData = readUserDB(email);
     userData.profile = { ...userData.profile, ...req.body };
     writeUserDB(email, userData);
@@ -74,7 +154,7 @@ app.post('/api/profile', (req, res) => {
 
 // 2. Onboarding
 app.post('/api/onboarding', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const userData = readUserDB(email);
     userData.onboarding = req.body;
     // Também atualiza perfil básico se disponível
@@ -97,13 +177,13 @@ app.post('/api/onboarding', (req, res) => {
 
 // 3. Refeições
 app.get('/api/meals', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const userData = readUserDB(email);
     res.json(userData.meals || []);
 });
 
 app.post('/api/meals', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const userData = readUserDB(email);
     userData.meals = userData.meals || [];
 
@@ -130,13 +210,13 @@ app.post('/api/meals', (req, res) => {
 
 // 4. Check-ins
 app.get('/api/checkins', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const userData = readUserDB(email);
     res.json(userData.checkins || {});
 });
 
 app.post('/api/checkins', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const userData = readUserDB(email);
     userData.checkins = userData.checkins || {};
     userData.checkins = { ...userData.checkins, ...req.body };
@@ -146,13 +226,13 @@ app.post('/api/checkins', (req, res) => {
 
 // 5. Chat History
 app.get('/api/chat/history', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const userData = readUserDB(email);
     res.json(userData.chatHistory || []);
 });
 
 app.post('/api/chat/history', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const userData = readUserDB(email);
     userData.chatHistory = req.body.messages || [];
     writeUserDB(email, userData);
@@ -161,7 +241,7 @@ app.post('/api/chat/history', (req, res) => {
 
 // 6. Reset Data (New Account)
 app.post('/api/reset', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const emptyUser = {
         profile: {},
         meals: [],
@@ -174,17 +254,398 @@ app.post('/api/reset', (req, res) => {
     res.json({ success: true });
 });
 
-// Endpoint para verificar status das chaves de API
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'online',
-        providers: {
-            groq: !!process.env.GROQ_API_KEY,
-            gemini: !!process.env.GEMINI_API_KEY,
-            openai: !!process.env.OPENAI_API_KEY,
-            huggingface: !!process.env.HF_API_KEY
+// Extended FOOD_DB with real nutritional values (per 100g unless noted)
+const FOOD_DB = {
+    // Proteins
+    'frango grelhado': { cal: 165, p: 31, c: 0, f: 3.6 },
+    'frango': { cal: 165, p: 31, c: 0, f: 3.6 },
+    'peito de frango': { cal: 165, p: 31, c: 0, f: 3.6 },
+    'carne bovina': { cal: 250, p: 26, c: 0, f: 17 },
+    'patinho': { cal: 219, p: 27, c: 0, f: 11 },
+    'ovos': { cal: 155, p: 13, c: 1.1, f: 11 },
+    'ovo': { cal: 155, p: 13, c: 1.1, f: 11 },
+    'atum': { cal: 116, p: 25.5, c: 0, f: 0.5 },
+    'salmão': { cal: 208, p: 20, c: 0, f: 13 },
+    'tilapia': { cal: 96, p: 20, c: 0, f: 1.7 },
+    'peixe': { cal: 100, p: 20, c: 0, f: 2 },
+    // Carbs
+    'arroz branco': { cal: 130, p: 2.7, c: 28, f: 0.3 },
+    'arroz': { cal: 130, p: 2.7, c: 28, f: 0.3 },
+    'arroz integral': { cal: 111, p: 2.6, c: 23, f: 0.9 },
+    'batata doce': { cal: 86, p: 1.6, c: 20, f: 0.1 },
+    'batata': { cal: 77, p: 2, c: 17, f: 0.1 },
+    'macarrao': { cal: 158, p: 5.8, c: 31, f: 0.9 },
+    'macarrão': { cal: 158, p: 5.8, c: 31, f: 0.9 },
+    'pão': { cal: 265, p: 9, c: 49, f: 3.2 },
+    'tapioca': { cal: 359, p: 0.2, c: 88, f: 0 },
+    'aveia': { cal: 389, p: 17, c: 66, f: 7 },
+    // Vegetables
+    'salada': { cal: 15, p: 1.5, c: 2, f: 0.2 },
+    'alface': { cal: 15, p: 1.5, c: 2, f: 0.2 },
+    'brocolis': { cal: 34, p: 2.8, c: 7, f: 0.4 },
+    'brócolis': { cal: 34, p: 2.8, c: 7, f: 0.4 },
+    'tomate': { cal: 18, p: 0.9, c: 3.9, f: 0.2 },
+    'pepino': { cal: 16, p: 0.7, c: 3.6, f: 0.1 },
+    // Fruits
+    'banana': { cal: 89, p: 1.1, c: 23, f: 0.3 },
+    'maçã': { cal: 52, p: 0.3, c: 14, f: 0.2 },
+    'maca': { cal: 52, p: 0.3, c: 14, f: 0.2 },
+    'laranja': { cal: 47, p: 0.9, c: 12, f: 0.1 },
+    'morango': { cal: 32, p: 0.7, c: 7.7, f: 0.3 },
+    // Dairy
+    'leite': { cal: 61, p: 3.2, c: 4.8, f: 3.3 },
+    'iogurte': { cal: 59, p: 3.5, c: 3.6, f: 3.3 },
+    'queijo': { cal: 402, p: 25, c: 1.3, f: 33 },
+    // Fast food & snacks
+    'pizza': { cal: 266, p: 11, c: 33, f: 10 },
+    'hamburguer': { cal: 295, p: 17, c: 24, f: 14 },
+    'hambúrguer': { cal: 295, p: 17, c: 24, f: 14 },
+    'sushi': { cal: 140, p: 5, c: 28, f: 1 },
+    'chocolate': { cal: 546, p: 5, c: 60, f: 31 },
+    'biscoito': { cal: 450, p: 6, c: 65, f: 18 },
+    // Drinks (per 350ml serving)
+    'red bull': { cal: 45, p: 0, c: 11, f: 0 },
+    'red bull sugar free': { cal: 5, p: 0, c: 1, f: 0 },
+    'coca cola': { cal: 37, p: 0, c: 9.3, f: 0 },
+    'coca cola zero': { cal: 0, p: 0, c: 0, f: 0 },
+    'suco de laranja': { cal: 45, p: 0.7, c: 10, f: 0.2 },
+    // Supplements (per dose)
+    'whey protein': { cal: 120, p: 25, c: 3, f: 2 },
+    'creatina': { cal: 0, p: 0, c: 0, f: 0 },
+    'barra de proteina': { cal: 200, p: 20, c: 20, f: 7 },
+    // Default
+    'default': { cal: 150, p: 10, c: 15, f: 5 }
+};
+
+app.get('/api/foods', (req, res) => {
+    res.json(FOOD_DB);
+});
+
+// Workouts Database
+const WORKOUTS_DB = {
+    'chest-triceps': {
+        title: 'Peito & Tríceps', subtitle: '4 séries • 8-12 reps',
+        exercises: [
+            { name: 'Supino Reto', sets: 4, reps: '8-12', weight: 60, history: [50,55,58,60] },
+            { name: 'Supino Inclinado Halteres', sets: 3, reps: '10-12', weight: 24, history: [20,22,24,24] },
+            { name: 'Crucifixo Máquina', sets: 3, reps: '12-15', weight: 40, history: [35,38,40,40] },
+            { name: 'Tríceps Corda', sets: 4, reps: '12-15', weight: 20, history: [15,18,20,20] },
+            { name: 'Tríceps Francês', sets: 3, reps: '10-12', weight: 18, history: [14,16,18,18] }
+        ]
+    },
+    'back-biceps': {
+        title: 'Costas & Bíceps', subtitle: '4 séries • 8-12 reps',
+        exercises: [
+            { name: 'Puxada Frente', sets: 4, reps: '8-12', weight: 50, history: [40,45,48,50] },
+            { name: 'Remada Curvada', sets: 4, reps: '8-10', weight: 60, history: [50,55,58,60] },
+            { name: 'Pulldown', sets: 3, reps: '12-15', weight: 25, history: [20,22,25,25] },
+            { name: 'Rosca Direta', sets: 4, reps: '10-12', weight: 15, history: [10,12,14,15] },
+            { name: 'Rosca Martelo', sets: 3, reps: '12', weight: 14, history: [10,12,13,14] }
+        ]
+    },
+    'legs': {
+        title: 'Pernas & Panturrilha', subtitle: '4 séries • 10-15 reps',
+        exercises: [
+            { name: 'Agachamento Livre', sets: 4, reps: '8-10', weight: 80, history: [70,75,78,80] },
+            { name: 'Leg Press 45', sets: 4, reps: '10-12', weight: 120, history: [100,110,115,120] },
+            { name: 'Cadeira Extensora', sets: 3, reps: '12-15', weight: 50, history: [40,45,48,50] },
+            { name: 'Mesa Flexora', sets: 3, reps: '12-15', weight: 40, history: [30,35,38,40] },
+            { name: 'Panturrilha Sentado', sets: 4, reps: '15-20', weight: 40, history: [30,35,38,40] }
+        ]
+    },
+    'shoulders': {
+        title: 'Trapézio & Ombro', subtitle: '4 séries • 10-15 reps',
+        exercises: [
+            { name: 'Desenvolvimento c/ Halteres', sets: 4, reps: '8-10', weight: 24, history: [20,22,24,24] },
+            { name: 'Elevação Lateral', sets: 4, reps: '12-15', weight: 12, history: [8,10,11,12] },
+            { name: 'Encolhimento c/ Barra', sets: 4, reps: '10-12', weight: 80, history: [70,75,78,80] },
+            { name: 'Crucifixo Inverso', sets: 3, reps: '12-15', weight: 10, history: [6,8,9,10] },
+            { name: 'Face Pull', sets: 3, reps: '15', weight: 20, history: [15,18,20,20] }
+        ]
+    },
+    'abs': {
+        title: 'Abdominal', subtitle: '3 séries • 15-20 reps',
+        exercises: [
+            { name: 'Crunch na Máquina', sets: 3, reps: '15-20', weight: 40, history: [30,35,38,40] },
+            { name: 'Elevação de Pernas', sets: 3, reps: '12-15', weight: 0, history: [0,0,0,0] },
+            { name: 'Prancha', sets: 3, reps: '60s', weight: 0, history: [0,0,0,0] },
+            { name: 'Russian Twist', sets: 3, reps: '20', weight: 10, history: [5,8,10,10] }
+        ]
+    }
+};
+
+app.get('/api/workouts', (req, res) => {
+    res.json(WORKOUTS_DB);
+});
+
+// Food lookup helper
+const normalizeKey = (str) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, '').trim();
+const matchFood = (name) => {
+    const n = normalizeKey(name);
+    for (const [key, val] of Object.entries(FOOD_DB)) {
+        if (key === 'default') continue;
+        if (n.includes(normalizeKey(key)) || normalizeKey(key).includes(n)) return val;
+    }
+    return null;
+};
+
+app.post('/api/analyze-image', async (req, res) => {
+    try {
+        let { image, audio, apiKey, provider, endpoint } = req.body;
+
+        // Auto-detecção com prioridade: Groq > Gemini > OpenAI > HuggingFace
+        if (!provider) {
+            if (process.env.GROQ_API_KEY) {
+                provider = 'groq';
+                apiKey = process.env.GROQ_API_KEY;
+            } else if (process.env.GEMINI_API_KEY) {
+                provider = 'gemini';
+                apiKey = process.env.GEMINI_API_KEY;
+            } else if (process.env.OPENAI_API_KEY) {
+                provider = 'openai';
+                apiKey = process.env.OPENAI_API_KEY;
+            } else {
+                provider = 'huggingface';
+                apiKey = process.env.HF_API_KEY;
+            }
+        } else if (!apiKey) {
+            if (provider === 'groq') apiKey = process.env.GROQ_API_KEY;
+            else if (provider === 'openai') apiKey = process.env.OPENAI_API_KEY;
+            else if (provider === 'gemini') apiKey = process.env.GEMINI_API_KEY;
+            else if (provider === 'huggingface') apiKey = process.env.HF_API_KEY;
         }
-    });
+
+        console.log(`Analisando com ${provider}...`);
+
+        // Helper to apply FOOD_DB lookup to parsed items
+        const applyFoodDB = (result) => {
+            if (result && result.items && Array.isArray(result.items)) {
+                result.items = result.items.map(item => {
+                    const dbMatch = matchFood(item.name);
+                    if (dbMatch) {
+                        const grams = item.grams || 100;
+                        item.calories = Math.round(dbMatch.cal * grams / 100);
+                        item.protein = Math.round(dbMatch.p * grams / 100);
+                        item.carbs = Math.round(dbMatch.c * grams / 100);
+                        item.fat = Math.round(dbMatch.f * grams / 100);
+                    }
+                    return item;
+                });
+            }
+            return result;
+        };
+
+        // --- GROQ VISION ---
+        if (provider === 'groq') {
+            if (!apiKey) throw new Error('Chave Groq não configurada (.env)');
+
+            let prompt = 'Você é um nutricionista. Analise a imagem e identifique os alimentos, estime o peso (em gramas) e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
+
+            const base64Data = image && image.includes('base64,') ? image.split('base64,')[1] : image;
+            const imageUrl = image && image.startsWith('data:') ? image : `data:image/jpeg;base64,${base64Data}`;
+
+            const payload = {
+                model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: prompt },
+                            { type: 'image_url', image_url: { url: imageUrl } }
+                        ]
+                    }
+                ],
+                max_tokens: 500
+            };
+
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Erro Groq Vision API: ${response.status} - ${errText}`);
+            }
+
+            const json = await response.json();
+            const content = json.choices?.[0]?.message?.content || '{}';
+            const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanContent);
+
+            return res.json({ provider: 'groq', result: applyFoodDB(parsed) });
+        }
+
+        // --- GOOGLE GEMINI ---
+        if (provider === 'gemini') {
+            if (!apiKey) throw new Error('Chave Gemini não configurada (.env)');
+
+            const { GoogleGenerativeAI } = await import('@google/generative-ai');
+            const genAI = new GoogleGenerativeAI(apiKey);
+            let modelName = "gemini-1.5-flash";
+            let model = genAI.getGenerativeModel({ model: modelName });
+
+            let prompt = 'Você é um nutricionista. Analise a imagem e identifique os alimentos, estime o peso (em gramas) e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
+
+            const parts = [];
+
+            if (audio) {
+                if (req.body.search) {
+                    prompt = 'Você é um nutricionista. Analise o áudio. Se o usuário listou vários alimentos (ex: "arroz, feijão e frango"), identifique cada um deles separadamente com seus macros estimados para uma porção média. Se o usuário falou apenas um alimento genérico (ex: "maçã"), forneça 3 a 5 variações ou tamanhos comuns. Retorne APENAS um JSON: {"options":[{"name":"Nome do Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}]}.';
+                } else {
+                    prompt = 'Você é um nutricionista. Analise o áudio com a descrição da refeição. Identifique os alimentos mencionados, estime o peso (em gramas) se não especificado (use porções médias), e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
+                }
+                parts.push(prompt);
+                parts.push({ inlineData: { data: audio, mimeType: "audio/webm" } });
+            } else if (image) {
+                const base64Data = image.includes('base64,') ? image.split('base64,')[1] : image;
+                parts.push(prompt);
+                parts.push({ inlineData: { data: base64Data, mimeType: "image/jpeg" } });
+            } else {
+                throw new Error('Nenhuma imagem ou áudio fornecido.');
+            }
+
+            let result;
+            try {
+                result = await model.generateContent(parts);
+            } catch (e) {
+                console.log(`Erro com ${modelName}: ${e.message}`);
+                if (e.message.includes('404') || e.message.includes('not found')) {
+                    const fallback = "gemini-1.5-flash";
+                    console.log(`Tentando fallback ${fallback}`);
+                    const model2 = genAI.getGenerativeModel({ model: fallback });
+                    result = await model2.generateContent(parts);
+                } else {
+                    throw e;
+                }
+            }
+
+            const response = await result.response;
+            const text = response.text();
+            const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanText);
+            return res.json({ provider: 'gemini', result: applyFoodDB(parsed) });
+        }
+
+        // --- OPENAI / COMPATIBLE ---
+        if (provider === 'openai' || provider === 'custom') {
+            if (!apiKey) throw new Error('Chave de API não configurada no servidor (.env)');
+
+            const apiUrl = endpoint || 'https://api.openai.com/v1/chat/completions';
+            const model = provider === 'openai' ? 'gpt-4o-mini' : (req.body.model || 'gpt-3.5-turbo');
+
+            const payload = {
+                model: model,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'Você é um nutricionista expert. Identifique os alimentos na imagem, estime o peso em gramas visualmente e calcule as calorias e macros. Retorne APENAS um JSON estrito com o seguinte formato, sem markdown ou explicações: {"items":[{"name":"nome do alimento","grams":150,"calories":200,"protein":30,"carbs":10,"fat":5}],"confidence":0.95}'
+                    },
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: 'Analise este prato.' },
+                            { type: 'image_url', image_url: { url: image } }
+                        ]
+                    }
+                ],
+                max_tokens: 500,
+                temperature: 0.1
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Erro API ${provider}: ${response.status} - ${errText}`);
+            }
+
+            const json = await response.json();
+            const content = json.choices?.[0]?.message?.content || '{}';
+            const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanContent);
+
+            return res.json({ provider: provider, result: applyFoodDB(parsed) });
+        }
+
+        // --- HUGGING FACE (Fallback) ---
+        console.log('Usando fallback Hugging Face...');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
+        };
+
+        const clsRes = await fetch('https://api-inference.huggingface.co/models/nateraw/food101', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ inputs: image })
+        });
+
+        let items = [];
+        let confidence = 0.5;
+
+        if (clsRes.ok) {
+            const classification = await clsRes.json().catch(() => []);
+            const top3 = Array.isArray(classification) ? classification.slice(0, 3) : [];
+
+            if (top3.length > 0) {
+                confidence = top3[0].score;
+                items = top3.map(item => {
+                    const label = item.label;
+                    const ref = Object.entries(FOOD_DB).find(([k]) => label.includes(k))?.[1] || FOOD_DB.default;
+                    const grams = 100;
+
+                    return {
+                        name: label.replace(/_/g, ' '),
+                        grams: grams,
+                        calories: Math.round(ref.cal * (grams / 100)),
+                        protein: Math.round(ref.p * (grams / 100)),
+                        carbs: Math.round(ref.c * (grams / 100)),
+                        fat: Math.round(ref.f * (grams / 100))
+                    };
+                });
+            }
+        } else {
+            console.warn('HF Food101 falhou, tentando apenas caption...');
+        }
+
+        if (items.length === 0) {
+            const blipRes = await fetch('https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ inputs: image })
+            });
+
+            if (blipRes.ok) {
+                const blipJson = await blipRes.json();
+                const text = Array.isArray(blipJson) ? blipJson[0]?.generated_text : blipJson?.generated_text;
+                if (text) {
+                    items.push({ name: text, grams: 100, ...FOOD_DB.default });
+                }
+            }
+        }
+
+        if (items.length === 0) {
+            throw new Error('Não foi possível identificar alimentos na imagem.');
+        }
+
+        res.json({ provider: 'huggingface', result: { items: items, confidence: confidence } });
+
+    } catch (error) {
+        console.error('Erro no proxy:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Endpoint de Chat (Proxy para Groq)
@@ -262,312 +723,15 @@ Rules:
     }
 });
 
-// Base de dados simples para fallback (Food101 labels -> Macros aproximados por 100g)
-const FOOD_DB = {
-    'pizza': { cal: 266, p: 11, c: 33, f: 10 },
-    'hamburger': { cal: 295, p: 17, c: 24, f: 14 },
-    'sushi': { cal: 140, p: 5, c: 28, f: 1 },
-    'salad': { cal: 30, p: 1, c: 4, f: 0 },
-    'steak': { cal: 271, p: 26, c: 0, f: 19 },
-    'chicken_wings': { cal: 203, p: 30, c: 0, f: 8 },
-    'spaghetti_bolognese': { cal: 150, p: 7, c: 20, f: 5 },
-    'chocolate_cake': { cal: 371, p: 5, c: 53, f: 15 },
-    'default': { cal: 150, p: 10, c: 15, f: 5 }
-};
-
-app.get('/api/foods', (req, res) => {
-    res.json(FOOD_DB);
-});
-
-// Workouts Database
-const WORKOUTS_DB = {
-    'chest-triceps': {
-        title: 'Peito & Tríceps',
-        subtitle: '4 séries • 8-12 reps',
-        exercises: [
-            { name: 'Supino Reto', sets: 4, reps: '8-12', weight: 60, done: false },
-            { name: 'Supino Inclinado Halteres', sets: 3, reps: '10-12', weight: 24, done: false },
-            { name: 'Crucifixo Máquina', sets: 3, reps: '12-15', weight: 40, done: false },
-            { name: 'Tríceps Corda', sets: 4, reps: '12-15', weight: 20, done: false },
-            { name: 'Tríceps Francês', sets: 3, reps: '10-12', weight: 18, done: false }
-        ]
-    },
-    'back-biceps': {
-        title: 'Costas & Bíceps',
-        subtitle: '4 séries • 8-12 reps',
-        exercises: [
-            { name: 'Puxada Frente', sets: 4, reps: '8-12', weight: 50, done: false },
-            { name: 'Remada Curvada', sets: 4, reps: '8-10', weight: 60, done: false },
-            { name: 'Pulldown', sets: 3, reps: '12-15', weight: 25, done: false },
-            { name: 'Rosca Direta', sets: 4, reps: '10-12', weight: 15, done: false },
-            { name: 'Rosca Martelo', sets: 3, reps: '12', weight: 14, done: false }
-        ]
-    },
-    'legs-shoulders': {
-        title: 'Pernas & Ombros',
-        subtitle: '4 séries • 10-15 reps',
-        exercises: [
-            { name: 'Agachamento Livre', sets: 4, reps: '8-10', weight: 80, done: false },
-            { name: 'Leg Press 45', sets: 4, reps: '10-12', weight: 120, done: false },
-            { name: 'Cadeira Extensora', sets: 3, reps: '12-15', weight: 50, done: false },
-            { name: 'Desenvolvimento Militar', sets: 4, reps: '8-12', weight: 40, done: false },
-            { name: 'Elevação Lateral', sets: 3, reps: '15', weight: 12, done: false }
-        ]
-    }
-};
-
-app.get('/api/workouts', (req, res) => {
-    res.json(WORKOUTS_DB);
-});
-
-
-app.post('/api/analyze-image', async (req, res) => {
-    try {
-        let { image, audio, apiKey, provider, endpoint } = req.body;
-
-        // Auto-detecção com prioridade: Groq > Gemini > OpenAI > HuggingFace
-        if (!provider) {
-            if (process.env.GROQ_API_KEY) {
-                provider = 'groq';
-                apiKey = process.env.GROQ_API_KEY;
-            } else if (process.env.GEMINI_API_KEY) {
-                provider = 'gemini';
-                apiKey = process.env.GEMINI_API_KEY;
-            } else if (process.env.OPENAI_API_KEY) {
-                provider = 'openai';
-                apiKey = process.env.OPENAI_API_KEY;
-            } else {
-                provider = 'huggingface';
-                apiKey = process.env.HF_API_KEY;
-            }
-        } else if (!apiKey) {
-            if (provider === 'groq') apiKey = process.env.GROQ_API_KEY;
-            else if (provider === 'openai') apiKey = process.env.OPENAI_API_KEY;
-            else if (provider === 'gemini') apiKey = process.env.GEMINI_API_KEY;
-            else if (provider === 'huggingface') apiKey = process.env.HF_API_KEY;
-        }
-
-        console.log(`Analisando com ${provider}...`);
-
-        // --- GROQ VISION ---
-        if (provider === 'groq') {
-            if (!apiKey) throw new Error('Chave Groq não configurada (.env)');
-
-            let prompt = 'Você é um nutricionista. Analise a imagem e identifique os alimentos, estime o peso (em gramas) e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
-
-            const base64Data = image && image.includes('base64,') ? image.split('base64,')[1] : image;
-            const imageUrl = image && image.startsWith('data:') ? image : `data:image/jpeg;base64,${base64Data}`;
-
-            const payload = {
-                model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-                messages: [
-                    {
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: prompt },
-                            { type: 'image_url', image_url: { url: imageUrl } }
-                        ]
-                    }
-                ],
-                max_tokens: 500
-            };
-
-            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(`Erro Groq Vision API: ${response.status} - ${errText}`);
-            }
-
-            const json = await response.json();
-            const content = json.choices?.[0]?.message?.content || '{}';
-            const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
-
-            return res.json({ provider: 'groq', result: JSON.parse(cleanContent) });
-        }
-
-        // --- GOOGLE GEMINI ---
-        if (provider === 'gemini') {
-            if (!apiKey) throw new Error('Chave Gemini não configurada (.env)');
-
-            const { GoogleGenerativeAI } = await import('@google/generative-ai');
-            const genAI = new GoogleGenerativeAI(apiKey);
-            let modelName = "gemini-1.5-flash";
-            let model = genAI.getGenerativeModel({ model: modelName });
-
-            let prompt = 'Você é um nutricionista. Analise a imagem e identifique os alimentos, estime o peso (em gramas) e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
-
-            const parts = [];
-
-            if (audio) {
-                if (req.body.search) {
-                    prompt = 'Você é um nutricionista. Analise o áudio. Se o usuário listou vários alimentos (ex: "arroz, feijão e frango"), identifique cada um deles separadamente com seus macros estimados para uma porção média. Se o usuário falou apenas um alimento genérico (ex: "maçã"), forneça 3 a 5 variações ou tamanhos comuns. Retorne APENAS um JSON: {"options":[{"name":"Nome do Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}]}.';
-                } else {
-                    prompt = 'Você é um nutricionista. Analise o áudio com a descrição da refeição. Identifique os alimentos mencionados, estime o peso (em gramas) se não especificado (use porções médias), e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
-                }
-                parts.push(prompt);
-                parts.push({ inlineData: { data: audio, mimeType: "audio/webm" } });
-            } else if (image) {
-                const base64Data = image.includes('base64,') ? image.split('base64,')[1] : image;
-                parts.push(prompt);
-                parts.push({ inlineData: { data: base64Data, mimeType: "image/jpeg" } });
-            } else {
-                throw new Error('Nenhuma imagem ou áudio fornecido.');
-            }
-
-            let result;
-            try {
-                result = await model.generateContent(parts);
-            } catch (e) {
-                console.log(`Erro com ${modelName}: ${e.message}`);
-                if (e.message.includes('404') || e.message.includes('not found')) {
-                    const fallback = "gemini-1.5-flash";
-                    console.log(`Tentando fallback ${fallback}`);
-                    const model2 = genAI.getGenerativeModel({ model: fallback });
-                    result = await model2.generateContent(parts);
-                } else {
-                    throw e;
-                }
-            }
-
-            const response = await result.response;
-            const text = response.text();
-            const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            return res.json({ provider: 'gemini', result: JSON.parse(cleanText) });
-        }
-
-        // --- OPENAI / COMPATIBLE ---
-        if (provider === 'openai' || provider === 'custom') {
-            if (!apiKey) throw new Error('Chave de API não configurada no servidor (.env)');
-
-            const apiUrl = endpoint || 'https://api.openai.com/v1/chat/completions';
-            const model = provider === 'openai' ? 'gpt-4o-mini' : (req.body.model || 'gpt-3.5-turbo');
-
-            const payload = {
-                model: model,
-                messages: [
-                    {
-                        role: 'system',
-                        content: 'Você é um nutricionista expert. Identifique os alimentos na imagem, estime o peso em gramas visualmente e calcule as calorias e macros. Retorne APENAS um JSON estrito com o seguinte formato, sem markdown ou explicações: {"items":[{"name":"nome do alimento","grams":150,"calories":200,"protein":30,"carbs":10,"fat":5}],"confidence":0.95}'
-                    },
-                    {
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: 'Analise este prato.' },
-                            { type: 'image_url', image_url: { url: image } }
-                        ]
-                    }
-                ],
-                max_tokens: 500,
-                temperature: 0.1
-            };
-
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(`Erro API ${provider}: ${response.status} - ${errText}`);
-            }
-
-            const json = await response.json();
-            const content = json.choices?.[0]?.message?.content || '{}';
-            const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
-
-            return res.json({ provider: provider, result: JSON.parse(cleanContent) });
-        }
-
-        // --- HUGGING FACE (Fallback) ---
-        console.log('Usando fallback Hugging Face...');
-        const headers = {
-            'Content-Type': 'application/json',
-            ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
-        };
-
-        const clsRes = await fetch('https://api-inference.huggingface.co/models/nateraw/food101', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ inputs: image })
-        });
-
-        let items = [];
-        let confidence = 0.5;
-
-        if (clsRes.ok) {
-            const classification = await clsRes.json().catch(() => []);
-            const top3 = Array.isArray(classification) ? classification.slice(0, 3) : [];
-
-            if (top3.length > 0) {
-                confidence = top3[0].score;
-                items = top3.map(item => {
-                    const label = item.label;
-                    const ref = Object.entries(FOOD_DB).find(([k]) => label.includes(k))?.[1] || FOOD_DB.default;
-                    const grams = 100;
-
-                    return {
-                        name: label.replace(/_/g, ' '),
-                        grams: grams,
-                        calories: Math.round(ref.cal * (grams / 100)),
-                        protein: Math.round(ref.p * (grams / 100)),
-                        carbs: Math.round(ref.c * (grams / 100)),
-                        fat: Math.round(ref.f * (grams / 100))
-                    };
-                });
-            }
-        } else {
-            console.warn('HF Food101 falhou, tentando apenas caption...');
-        }
-
-        if (items.length === 0) {
-            const blipRes = await fetch('https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ inputs: image })
-            });
-
-            if (blipRes.ok) {
-                const blipJson = await blipRes.json();
-                const text = Array.isArray(blipJson) ? blipJson[0]?.generated_text : blipJson?.generated_text;
-                if (text) {
-                    items.push({ name: text, grams: 100, ...FOOD_DB.default });
-                }
-            }
-        }
-
-        if (items.length === 0) {
-            throw new Error('Não foi possível identificar alimentos na imagem.');
-        }
-
-        res.json({ provider: 'huggingface', result: { items: items, confidence: confidence } });
-
-    } catch (error) {
-        console.error('Erro no proxy:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // --- WORKOUT PROGRESS ENDPOINTS ---
 app.get('/api/workouts/progress', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const userData = readUserDB(email);
     res.json(userData.workoutProgress || {});
 });
 
 app.post('/api/workouts/progress', (req, res) => {
-    const email = getUserEmail(req);
+    const email = req.userEmail;
     const userData = readUserDB(email);
     userData.workoutProgress = userData.workoutProgress || {};
 
