@@ -324,7 +324,9 @@ app.get('/api/meals', async (req, res) => {
 
     const { data, error } = await query;
     if (error) throw error;
-    res.json(data || []);
+    // Map meal_type -> type for frontend compatibility
+    const meals = (data || []).map(m => ({ ...m, type: m.meal_type }));
+    res.json(meals);
   } catch (e) {
     res.status(500).json({ error: 'Erro ao buscar refeições' });
   }
@@ -338,24 +340,25 @@ app.post('/api/meals', async (req, res) => {
       // Atualiza refeição existente
       const { data, error } = await supabase
         .from('meals')
-        .update({ name, type, calories, protein, carbs, fat, grams, ingredients, image_url, meal_window })
+        .update({ name, meal_type: type, calories, protein, carbs, fat, grams, ingredients, image_url, meal_window })
         .eq('id', id)
         .eq('user_id', req.userId)
         .select()
         .single();
       if (error) throw error;
-      return res.json({ success: true, meal: data });
+      // Map meal_type back to type for frontend compatibility
+      return res.json({ success: true, meal: { ...data, type: data.meal_type } });
     }
 
     // Nova refeição
     const { data, error } = await supabase
       .from('meals')
-      .insert({ user_id: req.userId, name, type: type || 'food', calories, protein, carbs, fat, grams, ingredients, image_url, meal_window })
+      .insert({ user_id: req.userId, name, meal_type: type || 'food', calories, protein, carbs, fat, grams, ingredients, image_url, meal_window })
       .select()
       .single();
 
     if (error) throw error;
-    res.json({ success: true, meal: data });
+    res.json({ success: true, meal: { ...data, type: data.meal_type } });
   } catch (e) {
     console.error('Meal save error:', e);
     res.status(500).json({ error: 'Erro ao salvar refeição' });

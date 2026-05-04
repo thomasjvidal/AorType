@@ -48,7 +48,7 @@ create table if not exists meals (
   id          uuid default gen_random_uuid() primary key,
   user_id     uuid references users(id) on delete cascade not null,
   name        text not null,
-  type        text default 'food' check (type in ('food','water','supplement')),
+  meal_type   text default 'food' check (meal_type in ('food','water','supplement')),
   calories    integer default 0,
   protein     numeric default 0,
   carbs       numeric default 0,
