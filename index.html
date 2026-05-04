@@ -771,6 +771,29 @@
                             </div>
                         </div>
 
+                        <!-- Seleção de perfil: Aluno ou Academia -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Eu sou</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="reg-user-type" value="aluno" id="reg-type-aluno" class="sr-only peer" checked>
+                                    <div class="peer-checked:border-brand-neon peer-checked:bg-brand-neon/10 border-2 border-gray-200 dark:border-zinc-800 rounded-2xl p-4 flex flex-col items-center gap-2 transition-all">
+                                        <span class="text-2xl">🏃</span>
+                                        <span class="text-xs font-black text-black dark:text-white">Aluno</span>
+                                        <span class="text-[10px] text-gray-400 text-center leading-tight">Nutrição + Treinos</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="reg-user-type" value="academia" id="reg-type-academia" class="sr-only peer">
+                                    <div class="peer-checked:border-brand-neon peer-checked:bg-brand-neon/10 border-2 border-gray-200 dark:border-zinc-800 rounded-2xl p-4 flex flex-col items-center gap-2 transition-all">
+                                        <span class="text-2xl">🏋️</span>
+                                        <span class="text-xs font-black text-black dark:text-white">Academia</span>
+                                        <span class="text-[10px] text-gray-400 text-center leading-tight">Gerenciar alunos</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
                         <button onclick="app.handleAuth('register')"
                             class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl shadow-neon hover:shadow-xl hover:scale-[1.02]  transition-all duration-300 text-lg tracking-wide uppercase mt-4"
                             data-translate="create_account">
@@ -1330,22 +1353,22 @@
             <div id="screen-stats" class="screen hidden px-5 pt-6 space-y-6">
                 <h2 class="text-3xl font-black mb-4" data-translate="your_progress">Seu Progresso</h2>
 
-                <!-- Missão Única do Dia (Moved) -->
-                <div
+                <!-- Missão do Dia — dados reais via JS -->
+                <div id="daily-mission-card"
                     class="glass-panel bg-white dark:bg-dark-card rounded-3xl p-5 shadow-soft border border-brand-neon/50 relative overflow-hidden mb-4">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="font-bold text-base flex items-center gap-2">
                             <i data-lucide="target" class="w-5 h-5 text-brand-neon"></i>
-                            <span data-translate="daily_mission">Missão do Dia</span>
+                            <span>Missão do Dia</span>
                         </h3>
+                        <span id="daily-mission-badge" class="text-[10px] font-black bg-brand-neon/10 text-brand-neon px-2 py-1 rounded-full"></span>
                     </div>
-                    <p class="text-sm font-medium mb-3" data-translate="daily_mission_description">Bata 120g de proteína
-                        hoje</p>
+                    <p id="daily-mission-text" class="text-sm font-medium mb-3">Carregando...</p>
                     <div class="flex items-center gap-3">
                         <div class="flex-1 h-3 bg-gray-100 dark:bg-dark-elevated rounded-full overflow-hidden">
-                            <div class="h-full bg-brand-neon rounded-full" style="width: 76%"></div>
+                            <div id="daily-mission-bar" class="h-full bg-brand-neon rounded-full transition-all duration-700" style="width: 0%"></div>
                         </div>
-                        <span class="text-xs font-bold text-ios-gray">92g/120g</span>
+                        <span id="daily-mission-label" class="text-xs font-bold text-ios-gray">--</span>
                     </div>
                 </div>
 
@@ -1879,226 +1902,71 @@
                         <i data-lucide="flame"
                             class="absolute inset-0 w-full h-full text-brand-hot fill-brand-hot/20"></i>
                     </div>
-                    <h2 class="text-2xl font-bold" data-translate="streak_count">3 Dias Seguidos!</h2>
-                    <p class="text-ios-gray font-medium" data-translate="streak_message">Você está pegando fogo!</p>
+                    <h2 id="streak-screen-count" class="text-2xl font-bold">3 Dias Seguidos!</h2>
+                    <p id="streak-screen-message" class="text-ios-gray font-medium">Você está pegando fogo!</p>
                 </div>
 
-                <div class="grid grid-cols-7 gap-2">
-                    <!-- Days of the week -->
-                    <div class="flex flex-col items-center gap-3">
-                        <span class="text-[10px] font-bold text-ios-gray">S</span>
-                        <div
-                            class="w-10 h-10 rounded-full bg-brand-hot flex items-center justify-center shadow-lg shadow-brand-hot/20">
-                            <i data-lucide="check" class="w-5 h-5 text-white"></i>
-                        </div>
-                    </div>
-                    <div class="flex flex-col items-center gap-3">
-                        <span class="text-[10px] font-bold text-ios-gray">T</span>
-                        <div
-                            class="w-10 h-10 rounded-full bg-brand-hot flex items-center justify-center shadow-lg shadow-brand-hot/20">
-                            <i data-lucide="check" class="w-5 h-5 text-white"></i>
-                        </div>
-                    </div>
-                    <div class="flex flex-col items-center gap-3">
-                        <span class="text-[10px] font-bold text-ios-gray">Q</span>
-                        <div
-                            class="w-10 h-10 rounded-full bg-brand-hot flex items-center justify-center shadow-lg shadow-brand-hot/20">
-                            <i data-lucide="check" class="w-5 h-5 text-white"></i>
-                        </div>
-                    </div>
-                    <div class="flex flex-col items-center gap-3">
-                        <span class="text-[10px] font-bold text-ios-gray">Q</span>
-                        <div
-                            class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center">
-                        </div>
-                    </div>
-                    <div class="flex flex-col items-center gap-3">
-                        <span class="text-[10px] font-bold text-ios-gray">S</span>
-                        <div
-                            class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center">
-                        </div>
-                    </div>
-                    <div class="flex flex-col items-center gap-3">
-                        <span class="text-[10px] font-bold text-ios-gray">S</span>
-                        <div
-                            class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center">
-                        </div>
-                    </div>
-                    <div class="flex flex-col items-center gap-3">
-                        <span class="text-[10px] font-bold text-ios-gray">D</span>
-                        <div
-                            class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center">
-                        </div>
-                    </div>
+                <div id="streak-week-grid" class="grid grid-cols-7 gap-2">
+                    <!-- Populated dynamically by renderStreakWeek() -->
                 </div>
 
-                <!-- Friends Leaderboard (Premium Gamification) -->
+                <!-- Leaderboard / My Stats -->
                 <div class="space-y-4">
-                    <!-- Header -->
                     <div class="flex items-center justify-between px-1">
                         <div class="flex flex-col">
-                            <h3 class="font-black text-xl tracking-tight text-black dark:text-white"
-                                data-translate="leaderboard_title">Ranking da Galera
-                            </h3>
-                            <span class="text-xs font-medium text-ios-gray" data-translate="weekly_challenge">Disputa
-                                Semanal</span>
+                            <h3 class="font-black text-xl tracking-tight text-black dark:text-white">Minha Semana</h3>
+                            <span class="text-xs font-medium text-ios-gray">Seus dados reais</span>
                         </div>
-                        <div
-                            class="flex items-center gap-1.5 bg-gradient-to-r from-brand-neon/20 to-brand-neon/10 px-3 py-1.5 rounded-full border border-brand-neon/20 backdrop-blur-md">
-                            <i data-lucide="diamond" class="w-3.5 h-3.5 text-brand-neon fill-brand-neon/20"></i>
-                            <span class="text-[10px] font-bold text-brand-neon uppercase tracking-wider"
-                                data-translate="diamond_division">Divisão
-                                Diamante</span>
+                        <div class="flex items-center gap-1.5 bg-gradient-to-r from-brand-neon/20 to-brand-neon/10 px-3 py-1.5 rounded-full border border-brand-neon/20 backdrop-blur-md">
+                            <i data-lucide="flame" class="w-3.5 h-3.5 text-brand-hot fill-brand-hot/50"></i>
+                            <span id="streak-badge-count" class="text-[10px] font-bold text-brand-neon uppercase tracking-wider">0 dias</span>
                         </div>
                     </div>
 
-                    <!-- Leaderboard Container -->
-                    <div
-                        class="bg-white/10 dark:bg-white/5 backdrop-blur-2xl rounded-[2rem] p-1 border border-white/10 shadow-glass overflow-hidden relative">
-                        <!-- Background Glow -->
-                        <div
-                            class="absolute top-0 right-0 w-64 h-64 bg-brand-neon/5 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none">
-                        </div>
-
+                    <!-- You Row -->
+                    <div class="bg-white/10 dark:bg-white/5 backdrop-blur-2xl rounded-[2rem] p-1 border border-white/10 shadow-glass overflow-hidden relative">
+                        <div class="absolute top-0 right-0 w-64 h-64 bg-brand-neon/5 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none"></div>
                         <div class="flex flex-col gap-1 relative z-10">
-
-                            <!-- Friend 1 (Top) -->
-                            <div
-                                class="group flex items-center gap-4 p-4 rounded-[1.5rem] hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer relative overflow-hidden">
-                                <!-- Rank -->
-                                <div class="w-8 flex flex-col items-center justify-center gap-0.5">
-                                    <span class="text-xl font-black text-yellow-500 drop-shadow-sm">1</span>
-                                    <i data-lucide="crown" class="w-3 h-3 text-yellow-500 fill-yellow-500/50"></i>
+                            <!-- Current User Row -->
+                            <div class="flex items-center gap-4 p-4 rounded-[1.5rem] bg-brand-neon/10 border border-brand-neon/20 relative overflow-hidden">
+                                <div class="absolute left-0 top-4 bottom-4 w-1 bg-brand-neon rounded-r-full shadow-[0_0_10px_rgba(204,255,0,0.5)]"></div>
+                                <div class="w-12 h-12 rounded-full bg-brand-neon/20 flex items-center justify-center text-2xl flex-shrink-0">
+                                    <i data-lucide="user" class="w-6 h-6 text-brand-neon"></i>
                                 </div>
-
-                                <!-- Avatar -->
-                                <div class="relative flex-shrink-0">
-                                    <div
-                                        class="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-yellow-400 via-orange-500 to-red-500 shadow-lg shadow-orange-500/20">
-                                        <img src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&h=150&fit=crop&crop=faces"
-                                            class="w-full h-full rounded-full object-cover border-2 border-white dark:border-dark-card">
-                                    </div>
-                                    <div
-                                        class="absolute -bottom-1 -right-1 bg-black text-brand-hot text-[10px] font-black px-1.5 py-0.5 rounded-full border-2 border-white dark:border-dark-card flex items-center gap-0.5 shadow-sm">
-                                        <i data-lucide="flame" class="w-2.5 h-2.5 fill-brand-hot"></i> 42
-                                    </div>
-                                </div>
-
-                                <!-- Info -->
-                                <div class="flex-1 min-w-0">
-                                    <div class="font-bold text-base text-black dark:text-white truncate">Pedro S.</div>
-                                    <div class="flex items-center gap-1.5">
-                                        <div
-                                            class="h-1 flex-1 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden max-w-[80px]">
-                                            <div class="h-full bg-brand-neon w-[90%] rounded-full"></div>
-                                        </div>
-                                        <span class="text-[10px] font-bold text-ios-gray uppercase tracking-wide">3.4k
-                                            XP</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- User (Current) - Highlighted -->
-                            <div
-                                class="flex items-center gap-4 p-4 rounded-[1.5rem] bg-brand-neon/10 border border-brand-neon/20 relative overflow-hidden">
-                                <!-- Active Indicator Bar -->
-                                <div
-                                    class="absolute left-0 top-4 bottom-4 w-1 bg-brand-neon rounded-r-full shadow-[0_0_10px_rgba(204,255,0,0.5)]">
-                                </div>
-
-                                <!-- Rank -->
-                                <div class="w-8 text-center">
-                                    <span
-                                        class="text-xl font-black text-brand-neon drop-shadow-[0_0_10px_rgba(204,255,0,0.3)]">2</span>
-                                </div>
-
-                                <!-- Avatar -->
-                                <div class="relative flex-shrink-0">
-                                    <div
-                                        class="w-12 h-12 rounded-full p-0.5 bg-brand-neon shadow-[0_0_15px_rgba(204,255,0,0.3)]">
-                                        <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=faces"
-                                            class="w-full h-full rounded-full object-cover border-2 border-brand-neon">
-                                    </div>
-                                    <div
-                                        class="absolute -bottom-1 -right-1 bg-brand-neon text-black text-[10px] font-black px-1.5 py-0.5 rounded-full border-2 border-white dark:border-dark-card flex items-center gap-0.5 shadow-sm">
-                                        <i data-lucide="flame" class="w-2.5 h-2.5 fill-black"></i> 3
-                                    </div>
-                                </div>
-
-                                <!-- Info -->
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2">
-                                        <span class="font-black text-base text-black dark:text-white"
-                                            data-translate="you">Você</span>
-                                        <span
-                                            class="bg-brand-neon text-black text-[9px] font-black px-1.5 rounded uppercase tracking-wider">PRO</span>
+                                        <span id="streak-you-name" class="font-black text-base text-black dark:text-white">Você</span>
                                     </div>
-                                    <div class="flex items-center gap-1.5 mt-0.5">
-                                        <div
-                                            class="h-1 flex-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden max-w-[80px]">
-                                            <div
-                                                class="h-full bg-brand-neon w-[45%] rounded-full shadow-[0_0_10px_rgba(204,255,0,0.5)]">
-                                            </div>
-                                        </div>
-                                        <span class="text-[10px] font-bold text-brand-neon uppercase tracking-wide">1.2k
-                                            XP</span>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <i data-lucide="flame" class="w-3.5 h-3.5 text-brand-hot fill-brand-hot/70"></i>
+                                        <span id="streak-you-days" class="text-sm font-bold text-brand-neon">0 dias seguidos</span>
                                     </div>
                                 </div>
-
-                                <!-- Action -->
-                                <div
-                                    class="flex flex-col items-center justify-center w-8 h-8 rounded-full bg-brand-neon/20 text-brand-neon">
-                                    <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                                <div id="streak-you-meals" class="text-right">
+                                    <div class="text-2xl font-black text-brand-neon">0</div>
+                                    <div class="text-[10px] text-ios-gray font-bold uppercase">refeições hoje</div>
                                 </div>
                             </div>
 
-                            <!-- Friend 3 (Inactive) -->
-                            <div
-                                class="group flex items-center gap-4 p-4 rounded-[1.5rem] hover:bg-black/5 dark:hover:bg-white/5 transition-all">
-                                <!-- Rank -->
-                                <div class="w-8 text-center opacity-50">
-                                    <span class="text-lg font-black text-ios-gray">3</span>
+                            <!-- Invite Friends CTA -->
+                            <div class="flex items-center gap-4 p-4 rounded-[1.5rem] hover:bg-black/5 dark:hover:bg-white/5 transition-all opacity-60">
+                                <div class="w-12 h-12 rounded-full border-2 border-dashed border-ios-gray/30 flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="user-plus" class="w-5 h-5 text-ios-gray"></i>
                                 </div>
-
-                                <!-- Avatar -->
-                                <div
-                                    class="relative flex-shrink-0 grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300">
-                                    <div class="w-12 h-12 rounded-full border border-white/10 p-[1px]">
-                                        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=faces"
-                                            class="w-full h-full rounded-full object-cover">
-                                    </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-sm text-ios-gray">Amigos em breve</div>
+                                    <div class="text-[10px] text-ios-gray/70 uppercase tracking-wide">Social features coming soon</div>
                                 </div>
-
-                                <!-- Info -->
-                                <div class="flex-1 min-w-0 opacity-70 group-hover:opacity-100 transition-all">
-                                    <div
-                                        class="font-bold text-base text-ios-gray group-hover:text-black dark:group-hover:text-white transition-colors">
-                                        Ana C.</div>
-                                    <div
-                                        class="text-[10px] font-bold text-ios-gray uppercase tracking-wide flex items-center gap-1">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-ios-gray"></span>
-                                        <span data-translate="sleeping">Dormindo...</span>
-                                    </div>
-                                </div>
-
-                                <!-- Action Button -->
-                                <button
-                                    class="bg-white/20 dark:bg-white/10 hover:bg-brand-neon hover:text-black text-black dark:text-white border border-black/5 dark:border-white/10 px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm  transition-all flex items-center gap-1.5 group-hover:shadow-lg backdrop-blur-md">
-                                    <i data-lucide="bell-ring" class="w-3 h-3"></i>
-                                    <span class="hidden sm:inline" data-translate="wake_up">Acordar</span>
-                                </button>
                             </div>
-
                         </div>
                     </div>
 
-                    <button
+                    <button onclick="app.navigate('social')"
                         class="w-full py-4 rounded-[1.5rem] border border-dashed border-ios-gray/30 text-ios-gray font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-brand-neon/50 hover:text-brand-neon transition-all active:scale-[0.99] group">
-                        <div
-                            class="w-6 h-6 rounded-full bg-ios-gray/10 flex items-center justify-center group-hover:bg-brand-neon/20 transition-colors">
-                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        <div class="w-6 h-6 rounded-full bg-ios-gray/10 flex items-center justify-center group-hover:bg-brand-neon/20 transition-colors">
+                            <i data-lucide="users" class="w-3.5 h-3.5"></i>
                         </div>
-                        <span data-translate="invite_friends">Convidar Amigos</span>
+                        <span>Ver Comunidade</span>
                     </button>
                 </div>
             </div>
@@ -2326,143 +2194,315 @@
             </div>
         </main>
 
-        <!-- SCREEN: STREAK / SOCIAL -->
-        <main id="screen-social"
-            class="hidden flex-col h-full bg-ios-bg dark:bg-dark-bg pt-12 pb-24 px-6 overflow-y-auto">
-            <div class="flex items-center justify-between mb-8">
-                <button onclick="app.navigate('dashboard')"
-                    class="w-10 h-10 rounded-full bg-white dark:bg-dark-card shadow-sm flex items-center justify-center border border-ios-separator/20">
-                    <i data-lucide="chevron-left" class="w-6 h-6"></i>
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- TELA: SOCIAL — Comunidade e Ranking                  -->
+        <!-- ══════════════════════════════════════════════════════ -->
+        <main id="screen-social" class="screen hidden flex-1 bg-ios-bg dark:bg-dark-bg ios-scroll pb-24">
+            <header class="sticky top-0 z-10 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md border-b border-ios-separator/10 dark:border-gray-800 px-5 py-4">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-2xl font-black text-black dark:text-white">Comunidade</h1>
+                    <div class="flex items-center gap-1.5 bg-brand-neon/10 px-3 py-1.5 rounded-full border border-brand-neon/20">
+                        <i data-lucide="users" class="w-3.5 h-3.5 text-brand-neon"></i>
+                        <span class="text-[10px] font-bold text-brand-neon uppercase tracking-wider">Em breve</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="px-5 py-6 space-y-6">
+                <!-- Sua ofensiva card -->
+                <div class="bg-gradient-to-br from-brand-hot/20 to-brand-hot/5 rounded-[2rem] p-6 border border-brand-hot/20 relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 w-28 h-28 bg-brand-hot/10 rounded-full blur-2xl pointer-events-none"></div>
+                    <div class="relative z-10 flex items-center gap-4">
+                        <div class="w-16 h-16 rounded-2xl bg-brand-hot/20 flex items-center justify-center">
+                            <i data-lucide="flame" class="w-8 h-8 text-brand-hot fill-brand-hot/30"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-brand-hot uppercase tracking-widest">Sua Ofensiva</div>
+                            <div class="text-3xl font-black text-black dark:text-white flex items-baseline gap-1">
+                                <span id="social-streak-count">0</span>
+                                <span class="text-base font-bold text-ios-gray">dias</span>
+                            </div>
+                            <div id="social-streak-label" class="text-xs text-ios-gray font-medium">Comece hoje!</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ranking em breve -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between px-1">
+                        <h3 class="font-black text-lg text-black dark:text-white">Ranking da Galera</h3>
+                        <span class="text-xs text-ios-gray font-medium">Em desenvolvimento</span>
+                    </div>
+
+                    <div class="bg-white dark:bg-dark-card rounded-[2rem] border border-ios-separator/20 dark:border-gray-800 overflow-hidden">
+                        <!-- Empty state -->
+                        <div class="flex flex-col items-center justify-center py-14 px-6 text-center gap-4">
+                            <div class="w-20 h-20 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center">
+                                <i data-lucide="trophy" class="w-10 h-10 text-ios-gray/50"></i>
+                            </div>
+                            <div>
+                                <p class="font-black text-base text-black dark:text-white">Ranking social em breve</p>
+                                <p class="text-sm text-ios-gray mt-1 leading-snug">Convide amigos e compita para ver quem<br>mantém a ofensiva mais longa!</p>
+                            </div>
+                            <button onclick="app.showToast('Em breve você poderá convidar amigos e competir no ranking!', 3000)"
+                                class="bg-brand-neon text-black font-black text-sm px-6 py-3 rounded-2xl shadow-neon btn-press flex items-center gap-2">
+                                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                                Convidar Amigos
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desafios semanais -->
+                <div class="space-y-3">
+                    <h3 class="font-black text-lg text-black dark:text-white px-1">Desafios da Semana</h3>
+                    <div class="space-y-3">
+                        <div class="bg-white dark:bg-dark-card rounded-[1.5rem] p-4 border border-ios-separator/20 dark:border-gray-800 flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-brand-neon/10 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="utensils" class="w-6 h-6 text-brand-neon"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-bold text-sm text-black dark:text-white">Registrar 7 dias seguidos</div>
+                                <div class="h-1.5 bg-gray-100 dark:bg-dark-elevated rounded-full mt-2 overflow-hidden">
+                                    <div id="social-challenge-nutrition-bar" class="h-full bg-brand-neon rounded-full transition-all duration-700" style="width:0%"></div>
+                                </div>
+                                <div id="social-challenge-nutrition-label" class="text-[10px] text-ios-gray mt-1">0/7 dias</div>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-dark-card rounded-[1.5rem] p-4 border border-ios-separator/20 dark:border-gray-800 flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-brand-hot/10 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="dumbbell" class="w-6 h-6 text-brand-hot"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-bold text-sm text-black dark:text-white">Completar 3 treinos</div>
+                                <div class="h-1.5 bg-gray-100 dark:bg-dark-elevated rounded-full mt-2 overflow-hidden">
+                                    <div id="social-challenge-workout-bar" class="h-full bg-brand-hot rounded-full transition-all duration-700" style="width:0%"></div>
+                                </div>
+                                <div id="social-challenge-workout-label" class="text-[10px] text-ios-gray mt-1">0/3 treinos</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- TELA: TREINOS (Aluno) — com vídeos YouTube            -->
+        <!-- ══════════════════════════════════════════════════════ -->
+        <div id="screen-treino" class="screen hidden fixed inset-0 z-50 bg-ios-bg dark:bg-dark-bg flex flex-col h-[100dvh]">
+
+            <!-- Header -->
+            <header class="flex items-center justify-between px-4 py-3 border-b border-ios-separator/10 dark:border-gray-800 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md sticky top-0 z-10">
+                <button onclick="app.navigate('dashboard')" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
                 </button>
-                <h1 class="text-xl font-black" data-translate="friends_streak">Ofensiva de Amigos</h1>
-                <div class="w-10"></div>
-            </div>
-
-            <!-- Stats Overview -->
-            <div class="grid grid-cols-2 gap-3 mb-8">
-                <div class="bg-brand-neon/10 dark:bg-brand-neon/20 p-5 rounded-3xl border border-brand-neon/20">
-                    <div class="text-brand-neon text-2xl font-black mb-1">3 dias</div>
-                    <div class="text-[10px] font-bold text-brand-neon/60 uppercase tracking-widest leading-none"
-                        data-translate="my_streak">Minha
-                        Ofensiva</div>
+                <div class="text-center">
+                    <h1 class="text-base font-black">Treino</h1>
+                    <p id="treino-subtitle" class="text-[10px] text-ios-gray font-bold uppercase tracking-widest">Selecione um programa</p>
                 </div>
-                <div class="bg-ios-purple/10 dark:bg-ios-purple/20 p-5 rounded-3xl border border-ios-purple/20">
-                    <div class="text-ios-purple text-2xl font-black mb-1">#2</div>
-                    <div class="text-[10px] font-bold text-ios-purple/60 uppercase tracking-widest leading-none"
-                        data-translate="in_ranking">No
-                        Ranking</div>
-                </div>
-            </div>
+                <button onclick="app.openTreinoHistory()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center">
+                    <i data-lucide="history" class="w-5 h-5"></i>
+                </button>
+            </header>
 
-            <!-- Friends List -->
-            <div class="space-y-4">
-                <div class="flex items-center justify-between px-2">
-                    <h2 class="text-sm font-black uppercase tracking-widest text-ios-gray"
-                        data-translate="group_status">Status do Grupo</h2>
-                    <span
-                        class="text-[10px] font-bold bg-white dark:bg-dark-card px-2 py-1 rounded-full shadow-sm border border-ios-separator/20"><span
-                            class="mr-1">4</span>
-                        <span data-translate="active_friends">Amigos Ativos</span></span>
-                </div>
+            <!-- Content -->
+            <div class="flex-1 overflow-y-auto no-scrollbar pb-8">
 
-                <!-- Friend 1: Active -->
-                <div
-                    class="bg-white dark:bg-dark-card p-4 rounded-3xl border border-ios-separator/30 dark:border-gray-800 shadow-sm flex items-center gap-4">
-                    <div class="relative">
-                        <div
-                            class="w-14 h-14 rounded-2xl bg-ios-blue/10 flex items-center justify-center overflow-hidden border-2 border-brand-neon">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas"
-                                class="w-full h-full object-cover">
+                <!-- Seleção de programa -->
+                <div id="treino-program-list" class="px-4 pt-4 space-y-3">
+                    <p class="text-xs text-ios-gray font-bold uppercase tracking-widest px-1 mb-3">Programas Disponíveis</p>
+                    <!-- Populado por JS -->
+                    <div class="flex items-center justify-center py-16">
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-brand-neon/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i data-lucide="dumbbell" class="w-8 h-8 text-brand-neon"></i>
+                            </div>
+                            <p class="text-sm text-ios-gray">Carregando treinos...</p>
                         </div>
-                        <div
-                            class="absolute -bottom-1 -right-1 bg-brand-neon text-black text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white dark:border-dark-card">
-                            🔥 12</div>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold text-sm">Lucas Silva</span>
-                            <span class="w-1.5 h-1.5 rounded-full bg-brand-neon animate-pulse"></span>
-                        </div>
-                        <div class="text-[10px] text-ios-gray font-bold uppercase mt-0.5"><span
-                                data-translate="afternoon_snack_label">Lanche da Tarde:</span> <span
-                                class="text-brand-neon" data-translate="ok">OK</span></div>
-                        <div
-                            class="mt-2 flex gap-1 h-1 w-full bg-gray-100 dark:bg-dark-elevated rounded-full overflow-hidden">
-                            <div class="bg-brand-neon w-[85%] rounded-full"></div>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-xs font-black text-black dark:text-white">85%</div>
-                        <div class="text-[8px] text-ios-gray font-bold uppercase" data-translate="goal_label">Meta</div>
                     </div>
                 </div>
 
-                <!-- Friend 2: Missing Meal (Lanche da Tarde) -->
-                <div
-                    class="bg-white dark:bg-dark-card p-4 rounded-3xl border border-ios-separator/30 dark:border-gray-800 shadow-sm flex items-center gap-4 border-l-4 border-l-brand-hot">
-                    <div class="relative">
-                        <div
-                            class="w-14 h-14 rounded-2xl bg-ios-purple/10 flex items-center justify-center overflow-hidden grayscale">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Beatriz"
-                                class="w-full h-full object-cover">
+                <!-- Exercícios do programa selecionado (oculto inicialmente) -->
+                <div id="treino-exercises-view" class="hidden px-4 pt-4 space-y-4">
+
+                    <!-- Info do treino -->
+                    <div class="bg-black rounded-3xl p-5 text-white relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-brand-neon/20 rounded-full blur-2xl"></div>
+                        <div class="relative z-10">
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-brand-neon mb-1">Treino de hoje</p>
+                            <h2 id="treino-active-name" class="text-2xl font-black mb-1">Peito & Tríceps</h2>
+                            <p id="treino-active-desc" class="text-white/60 text-sm">5 exercícios</p>
                         </div>
-                        <div
-                            class="absolute -bottom-1 -right-1 bg-ios-gray text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white dark:border-dark-card">
-                            🔥 5</div>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold text-sm">Beatriz Melo</span>
-                        </div>
-                        <div class="text-[10px] text-brand-hot font-black uppercase mt-0.5 flex items-center gap-1">
-                            <i data-lucide="alert-circle" class="w-3 h-3"></i>
-                            <span data-translate="missing_snack">Falta: Lanche da Tarde</span>
-                        </div>
-                        <div
-                            class="mt-2 flex gap-1 h-1 w-full bg-gray-100 dark:bg-dark-elevated rounded-full overflow-hidden">
-                            <div class="bg-brand-hot w-[42%] rounded-full"></div>
+                        <div class="flex items-center gap-3 mt-4 relative z-10">
+                            <div class="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                <div id="treino-progress-bar" class="h-full bg-brand-neon rounded-full transition-all duration-500" style="width:0%"></div>
+                            </div>
+                            <span id="treino-progress-text" class="text-xs font-bold text-brand-neon">0%</span>
                         </div>
                     </div>
-                    <button onclick="app.showToast('Você mandou um alerta para Beatriz! 🔔')"
-                        class="bg-brand-hot text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-xl shadow-lg  transition-transform"
-                        data-translate="alert_action">
-                        Alertar
+
+                    <!-- Lista de exercícios -->
+                    <div id="treino-exercise-list" class="space-y-4">
+                        <!-- Populado por JS -->
+                    </div>
+
+                    <!-- Botão finalizar -->
+                    <button onclick="app.finalizarTreino()" class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl text-base shadow-neon mt-4">
+                        Finalizar Treino ✓
+                    </button>
+
+                    <!-- Voltar para lista -->
+                    <button onclick="app.voltarListaTreino()" class="w-full bg-transparent border border-ios-separator dark:border-gray-700 text-ios-gray font-bold py-3 rounded-2xl text-sm">
+                        Ver outros programas
                     </button>
                 </div>
 
-                <!-- Friend 3 -->
-                <div
-                    class="bg-white dark:bg-dark-card p-4 rounded-3xl border border-ios-separator/30 dark:border-gray-800 shadow-sm flex items-center gap-4">
-                    <div class="relative">
-                        <div
-                            class="w-14 h-14 rounded-2xl bg-ios-orange/10 flex items-center justify-center overflow-hidden">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Gabriel"
-                                class="w-full h-full object-cover">
-                        </div>
-                        <div
-                            class="absolute -bottom-1 -right-1 bg-brand-neon text-black text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white dark:border-dark-card">
-                            🔥 8</div>
+            </div>
+
+            <!-- Modal de vídeo (YouTube embed) -->
+            <div id="treino-video-modal" class="hidden fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+                <div class="w-full max-w-lg bg-black rounded-3xl overflow-hidden shadow-2xl">
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                        <h3 id="treino-video-title" class="text-white font-bold text-sm"></h3>
+                        <button onclick="app.closeTreinoVideo()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
                     </div>
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold text-sm">Gabriel Costa</span>
-                        </div>
-                        <div class="text-[10px] text-ios-gray font-bold uppercase mt-0.5"><span
-                                data-translate="afternoon_snack_label">Lanche da Tarde:</span> <span
-                                class="text-brand-neon" data-translate="ok">OK</span></div>
-                        <div
-                            class="mt-2 flex gap-1 h-1 w-full bg-gray-100 dark:bg-dark-elevated rounded-full overflow-hidden">
-                            <div class="bg-brand-neon w-[70%] rounded-full"></div>
+                    <div class="relative w-full" style="padding-bottom: 56.25%;">
+                        <iframe id="treino-video-iframe" class="absolute inset-0 w-full h-full" src="" frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen></iframe>
+                    </div>
+                    <div class="px-4 py-3">
+                        <p id="treino-video-desc" class="text-white/60 text-xs"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- PAINEL ACADEMIA                                        -->
+        <!-- ══════════════════════════════════════════════════════ -->
+        <div id="screen-academia" class="hidden fixed inset-0 z-[100] bg-ios-bg dark:bg-dark-bg flex flex-col h-[100dvh]">
+
+            <!-- Header Academia -->
+            <header class="px-5 py-4 bg-black text-white flex items-center justify-between">
+                <div>
+                    <h1 class="text-xl font-black">Painel Academia</h1>
+                    <p id="academia-name-display" class="text-brand-neon text-xs font-bold">Carregando...</p>
+                </div>
+                <button onclick="app.logout()" class="text-white/60 text-xs font-bold border border-white/20 px-3 py-1.5 rounded-full">
+                    Sair
+                </button>
+            </header>
+
+            <!-- Tabs Academia -->
+            <div class="flex border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-card">
+                <button onclick="app.switchAcademiaTab('alunos')" id="tab-alunos"
+                    class="flex-1 py-3 text-sm font-black border-b-2 border-brand-neon text-brand-neon transition-all">
+                    Alunos
+                </button>
+                <button onclick="app.switchAcademiaTab('programas')" id="tab-programas"
+                    class="flex-1 py-3 text-sm font-black border-b-2 border-transparent text-ios-gray transition-all">
+                    Treinos
+                </button>
+            </div>
+
+            <!-- Conteúdo das tabs -->
+            <div class="flex-1 overflow-y-auto no-scrollbar">
+
+                <!-- Tab: Alunos -->
+                <div id="academia-tab-alunos" class="p-4 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs font-bold text-ios-gray uppercase tracking-widest">Seus Alunos</p>
+                        <button onclick="app.openAddStudentModal()" class="bg-brand-neon text-black text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1">
+                            <i data-lucide="user-plus" class="w-3 h-3"></i> Adicionar
+                        </button>
+                    </div>
+                    <div id="academia-students-list" class="space-y-3">
+                        <!-- Populado por JS -->
+                        <div class="text-center py-12 text-ios-gray">
+                            <i data-lucide="users" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                            <p class="text-sm">Nenhum aluno ainda</p>
+                            <p class="text-xs mt-1">Adicione alunos pelo email</p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <div class="text-xs font-black text-black dark:text-white">70%</div>
-                        <div class="text-[8px] text-ios-gray font-bold uppercase" data-translate="goal_label">Meta</div>
+                </div>
+
+                <!-- Tab: Programas de Treino (oculta inicialmente) -->
+                <div id="academia-tab-programas" class="hidden p-4 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs font-bold text-ios-gray uppercase tracking-widest">Programas de Treino</p>
+                        <button onclick="app.openCreateProgramModal()" class="bg-brand-neon text-black text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1">
+                            <i data-lucide="plus" class="w-3 h-3"></i> Criar
+                        </button>
+                    </div>
+                    <div id="academia-programs-list" class="space-y-3">
+                        <!-- Populado por JS -->
                     </div>
                 </div>
             </div>
 
-        </main>
+            <!-- Modal: Adicionar Aluno -->
+            <div id="modal-add-student" class="hidden fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end">
+                <div class="w-full bg-white dark:bg-dark-card rounded-t-3xl p-6 space-y-4 animate-slide-up">
+                    <h3 class="text-lg font-black">Adicionar Aluno</h3>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Email do Aluno</label>
+                        <input type="email" id="add-student-email" placeholder="aluno@email.com"
+                            class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:border-brand-neon">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Programa de Treino</label>
+                        <select id="add-student-program"
+                            class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:border-brand-neon">
+                            <option value="">Sem programa atribuído</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="app.closeAddStudentModal()" class="flex-1 border border-gray-200 dark:border-gray-700 py-3 rounded-2xl font-bold text-sm">Cancelar</button>
+                        <button onclick="app.addStudent()" class="flex-1 bg-brand-neon text-black py-3 rounded-2xl font-black text-sm">Adicionar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: Criar Programa -->
+            <div id="modal-create-program" class="hidden fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end">
+                <div class="w-full bg-white dark:bg-dark-card rounded-t-3xl p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto">
+                    <h3 class="text-lg font-black">Criar Programa de Treino</h3>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Nome do Programa</label>
+                        <input type="text" id="prog-name" placeholder="Ex: Hipertrofia A"
+                            class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:border-brand-neon">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Categoria</label>
+                        <select id="prog-category" class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none">
+                            <option value="chest-triceps">Peito & Tríceps</option>
+                            <option value="back-biceps">Costas & Bíceps</option>
+                            <option value="legs">Pernas</option>
+                            <option value="shoulders">Ombros</option>
+                            <option value="abs">Abdômen</option>
+                            <option value="full-body">Corpo Todo</option>
+                            <option value="cardio">Cardio</option>
+                        </select>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Exercícios</label>
+                            <button onclick="app.addExerciseRow()" class="text-brand-neon text-xs font-black">+ Adicionar</button>
+                        </div>
+                        <div id="prog-exercises-list" class="space-y-2">
+                            <!-- Linhas de exercício adicionadas por JS -->
+                        </div>
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="app.closeCreateProgramModal()" class="flex-1 border border-gray-200 dark:border-gray-700 py-3 rounded-2xl font-bold text-sm">Cancelar</button>
+                        <button onclick="app.saveProgram()" class="flex-1 bg-brand-neon text-black py-3 rounded-2xl font-black text-sm">Salvar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- COACH SCREEN -->
         <div id="screen-coach"
@@ -2619,18 +2659,25 @@
                         </button>
                     </div>
 
+                    <button onclick="app.navigate('treino')"
+                        class="nav-btn flex flex-col items-center justify-center w-10 h-12 md:w-12 md:h-14 rounded-full text-ios-gray dark:text-dark-gray transition-all duration-300"
+                        data-screen="treino">
+                        <i data-lucide="dumbbell" class="w-5 h-5 md:w-6 md:h-6 mb-0.5"></i>
+                        <span class="text-[9px] md:text-[10px] font-bold">Treino</span>
+                    </button>
+
                     <button onclick="app.navigate('coach')"
-                        class="nav-btn flex flex-col items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-full text-ios-gray dark:text-dark-gray transition-all duration-300"
+                        class="nav-btn flex flex-col items-center justify-center w-10 h-12 md:w-12 md:h-14 rounded-full text-ios-gray dark:text-dark-gray transition-all duration-300"
                         data-screen="coach">
-                        <i data-lucide="utensils" class="w-5 h-5 md:w-6 md:h-6 mb-0.5"></i>
-                        <span class="text-[9px] md:text-[10px] font-bold" data-translate="coach">IA</span>
+                        <i data-lucide="bot" class="w-5 h-5 md:w-6 md:h-6 mb-0.5"></i>
+                        <span class="text-[9px] md:text-[10px] font-bold">IA</span>
                     </button>
 
                     <button onclick="app.navigate('profile')"
-                        class="nav-btn flex flex-col items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-full text-ios-gray dark:text-dark-gray transition-all duration-300"
+                        class="nav-btn flex flex-col items-center justify-center w-10 h-12 md:w-12 md:h-14 rounded-full text-ios-gray dark:text-dark-gray transition-all duration-300"
                         data-screen="profile">
                         <i data-lucide="user" class="w-5 h-5 md:w-6 md:h-6 mb-0.5"></i>
-                        <span class="text-[9px] md:text-[10px] font-bold" data-translate="profile">Perfil</span>
+                        <span class="text-[9px] md:text-[10px] font-bold">Perfil</span>
                     </button>
                 </div>
             </div>
@@ -4805,6 +4852,7 @@
                 this.calculateActivity();
                 this.calculateStrengthStats();
                 this.updateHealthScore();
+                this.updateDailyMission();
                 this.calculateWeeklyConsistency();
                 this.calculateMonthlyActivity();
                 this.updateBodyStats();
@@ -4883,7 +4931,6 @@
                 try {
                     const today = new Date().toLocaleDateString('pt-BR');
 
-                    // Migration: Check localStorage first if profile is empty
                     let lastOpen = this.state.userProfile.lastOpenDate || localStorage.getItem('wb_last_open_date');
                     let streak = parseInt(this.state.userProfile.streak || localStorage.getItem('wb_streak') || '0');
 
@@ -4898,22 +4945,85 @@
                             streak = 1;
                         }
 
-                        // Update State & Server
                         this.state.userProfile.lastOpenDate = today;
                         this.state.userProfile.streak = streak;
                         localStorage.setItem('macro_ai_profile', JSON.stringify(this.state.userProfile));
                         fetch('/api/profile', { method: 'POST', headers: AUTH.headers(), body: JSON.stringify(this.state.userProfile) }).catch(() => {});
-
-                        // Keep localStorage for backup/offline
                         localStorage.setItem('wb_last_open_date', today);
                         localStorage.setItem('wb_streak', streak.toString());
                     }
 
-                    // Update UI
+                    // Dashboard streak
                     const el = document.getElementById('dash-streak-value');
                     if (el) el.textContent = `${streak} ${this.t('days')}`;
 
+                    // Streak screen
+                    const screenCount = document.getElementById('streak-screen-count');
+                    if (screenCount) screenCount.textContent = `${streak} ${streak === 1 ? 'Dia Seguido!' : 'Dias Seguidos!'}`;
+                    const screenMsg = document.getElementById('streak-screen-message');
+                    if (screenMsg) {
+                        screenMsg.textContent = streak === 0 ? 'Registre hoje para começar!' :
+                            streak < 3 ? 'Continue assim!' :
+                            streak < 7 ? 'Você está pegando fogo!' :
+                            'Você é imparável!';
+                    }
+
+                    // Streak screen leaderboard — Você row
+                    const youDays = document.getElementById('streak-you-days');
+                    if (youDays) youDays.textContent = `${streak} ${streak === 1 ? 'dia seguido' : 'dias seguidos'}`;
+                    const badgeCount = document.getElementById('streak-badge-count');
+                    if (badgeCount) badgeCount.textContent = `${streak} ${streak === 1 ? 'dia' : 'dias'}`;
+                    const youName = document.getElementById('streak-you-name');
+                    const userName = this.state.userProfile.name || localStorage.getItem('macro_ai_user_name') || 'Você';
+                    if (youName) youName.textContent = userName.split(' ')[0];
+                    const youMeals = document.getElementById('streak-you-meals');
+                    if (youMeals) {
+                        const mealsDiv = youMeals.querySelector('div:first-child');
+                        if (mealsDiv) mealsDiv.textContent = this.state.mealsToday.length;
+                    }
+
+                    // Social screen
+                    const socialCount = document.getElementById('social-streak-count');
+                    if (socialCount) socialCount.textContent = streak;
+                    const socialLabel = document.getElementById('social-streak-label');
+                    if (socialLabel) socialLabel.textContent = streak === 0 ? 'Comece hoje!' : streak < 3 ? 'Boa, continue!' : 'Você está mandando bem!';
+
+                    // Social challenges
+                    const pct = Math.min(100, Math.round((streak / 7) * 100));
+                    const nutBar = document.getElementById('social-challenge-nutrition-bar');
+                    if (nutBar) nutBar.style.width = `${pct}%`;
+                    const nutLabel = document.getElementById('social-challenge-nutrition-label');
+                    if (nutLabel) nutLabel.textContent = `${Math.min(streak, 7)}/7 dias`;
+
+                    // Streak screen week grid
+                    this.renderStreakWeek(streak);
+
                 } catch (e) { console.error('Streak error', e); }
+            },
+
+            renderStreakWeek(streak) {
+                const grid = document.getElementById('streak-week-grid');
+                if (!grid) return;
+                const dayLetters = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+                const today = new Date();
+                const todayIdx = today.getDay(); // 0=Sun
+                grid.innerHTML = '';
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(today);
+                    d.setDate(today.getDate() - (6 - i));
+                    const dayLetter = dayLetters[d.getDay()];
+                    const daysAgo = 6 - i;
+                    const active = daysAgo < streak;
+                    const isToday = daysAgo === 0;
+                    grid.innerHTML += `
+                        <div class="flex flex-col items-center gap-3">
+                            <span class="text-[10px] font-bold text-ios-gray">${dayLetter}</span>
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center
+                                ${active ? 'bg-brand-hot shadow-lg shadow-brand-hot/20' : isToday ? 'border-2 border-brand-hot/50 bg-brand-hot/10' : 'bg-gray-100 dark:bg-dark-elevated'}">
+                                ${active ? '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                            </div>
+                        </div>`;
+                }
             },
 
             calculateActivity() {
@@ -4954,6 +5064,21 @@
 
                     const summary = document.getElementById('stats-activity-summary');
                     if (summary) summary.textContent = this.t('you_registered_meals').replace('{count}', mealsCount);
+
+                    // Social screen: workout challenge — count workout checkins this week
+                    const checkins = JSON.parse(localStorage.getItem('macro_ai_checkins') || '{}');
+                    let workoutsThisWeek = 0;
+                    for (let i = 0; i < 7; i++) {
+                        const d = new Date();
+                        d.setDate(d.getDate() - i);
+                        const dStr = d.toLocaleDateString('pt-BR');
+                        if (checkins[dStr] && checkins[dStr].workout_type) workoutsThisWeek++;
+                    }
+                    const wPct = Math.min(100, Math.round((workoutsThisWeek / 3) * 100));
+                    const wBar = document.getElementById('social-challenge-workout-bar');
+                    if (wBar) wBar.style.width = `${wPct}%`;
+                    const wLabel = document.getElementById('social-challenge-workout-label');
+                    if (wLabel) wLabel.textContent = `${Math.min(workoutsThisWeek, 3)}/3 treinos`;
 
                 } catch (e) { console.error('Activity error', e); }
             },
@@ -5097,22 +5222,461 @@
             },
 
             updateHealthScore() {
-                // Simple score based on goal adherence
                 const scoreEl = document.getElementById('dash-health-score');
                 if (!scoreEl) return;
-
-                // Calculate basic score
-                const goalCals = this.state.goals.calories;
-                const currentCals = this.state.totals.calories;
+                const goalCals = this.state.goals.calories || 2000;
+                const currentCals = this.state.totals.calories || 0;
                 const ratio = Math.min(100, (currentCals / goalCals) * 100);
-
-                // 100 if close to goal, drops if too far or 0
-                let score = 85; // Base
-                if (currentCals > 0) score += 5;
-                if (ratio > 50 && ratio < 110) score += 10;
-
-                scoreEl.textContent = score;
+                let score = 70;
+                if (currentCals > 0) score += 10;
+                if (ratio > 50 && ratio < 115) score += 15;
+                if ((this.state.userProfile.streak || 0) >= 3) score += 5;
+                scoreEl.textContent = Math.min(100, score);
             },
+
+            updateDailyMission() {
+                const missionText = document.getElementById('daily-mission-text');
+                const missionBar = document.getElementById('daily-mission-bar');
+                const missionLabel = document.getElementById('daily-mission-label');
+                const missionBadge = document.getElementById('daily-mission-badge');
+                if (!missionText) return;
+
+                const goals = this.state.goals || {};
+                const totals = this.state.totals || {};
+                const protGoal = goals.protein || 120;
+                const protDone = totals.protein || 0;
+                const calGoal = goals.calories || 2000;
+                const calDone = totals.calories || 0;
+                const checkins = this.state.dailyCheckins || {};
+                const today = new Date().toISOString().split('T')[0];
+                const todayCheckin = checkins[today] || {};
+                const waterDone = todayCheckin.water_ml || 0;
+                const waterGoal = 2000;
+                const hadWorkout = !!todayCheckin.workout_type;
+
+                // Determina a missão mais urgente com base no que falta
+                let mission = null;
+
+                if (protDone < protGoal * 0.5) {
+                    const remaining = Math.round(protGoal - protDone);
+                    const pct = Math.round((protDone / protGoal) * 100);
+                    mission = { text: `Bata ${protGoal}g de proteína hoje`, current: Math.round(protDone), goal: protGoal, unit: 'g', pct, badge: '💪 Proteína' };
+                } else if (calDone < calGoal * 0.4 && calGoal > 0) {
+                    const pct = Math.round((calDone / calGoal) * 100);
+                    mission = { text: `Registre suas refeições e bata ${calGoal} kcal`, current: Math.round(calDone), goal: calGoal, unit: 'kcal', pct, badge: '🔥 Calorias' };
+                } else if (!hadWorkout) {
+                    const streak = this.state.userProfile.streak || 0;
+                    mission = { text: `Complete seu treino de hoje`, current: 0, goal: 1, unit: 'treino', pct: 0, badge: '🏋️ Treino' };
+                } else if (waterDone < waterGoal) {
+                    const pct = Math.round((waterDone / waterGoal) * 100);
+                    mission = { text: `Beba ${waterGoal}ml de água hoje`, current: waterDone, goal: waterGoal, unit: 'ml', pct, badge: '💧 Hidratação' };
+                } else {
+                    // Tudo ok!
+                    mission = { text: `Missão cumprida! Continue assim amanhã 🎉`, current: 1, goal: 1, unit: '', pct: 100, badge: '✅ Completo' };
+                }
+
+                if (missionText) missionText.textContent = mission.text;
+                if (missionBar) missionBar.style.width = `${Math.min(100, mission.pct)}%`;
+                if (missionLabel) missionLabel.textContent = mission.unit ? `${mission.current}${mission.unit}/${mission.goal}${mission.unit}` : '';
+                if (missionBadge) missionBadge.textContent = mission.badge;
+            },
+
+            // ══════════════════════════════════════════════════════
+            // TREINO COM VÍDEOS
+            // ══════════════════════════════════════════════════════
+
+            async loadTreinoScreen() {
+                const listEl = document.getElementById('treino-program-list');
+                if (!listEl) return;
+                listEl.innerHTML = '<div class="text-center py-12 text-ios-gray"><p class="text-sm">Carregando treinos...</p></div>';
+                try {
+                    const res = await fetch('/api/workouts', { headers: AUTH.headers() });
+                    const programs = await res.json();
+                    this.state.workoutPrograms = programs;
+                    this.renderTreinoProgramList(programs);
+                } catch {
+                    listEl.innerHTML = '<div class="text-center py-12 text-red-400"><p class="text-sm">Erro ao carregar treinos</p></div>';
+                }
+            },
+
+            renderTreinoProgramList(programs) {
+                const listEl = document.getElementById('treino-program-list');
+                if (!listEl) return;
+                const categoryIcons = {
+                    'chest-triceps': '💪', 'back-biceps': '🦾', 'legs': '🦵',
+                    'shoulders': '🏋️', 'abs': '🔥', 'cardio': '🏃', 'full-body': '⚡', 'default': '🏅'
+                };
+                listEl.innerHTML = `
+                    <p class="text-xs text-ios-gray font-bold uppercase tracking-widest px-1 mb-3">Programas Disponíveis</p>
+                    <div class="space-y-3">
+                        ${programs.map(p => `
+                            <button onclick="app.selectTreinoProgram('${p.id}')"
+                                class="w-full bg-white dark:bg-dark-card rounded-3xl p-5 border border-ios-separator/30 dark:border-gray-800 shadow-sm text-left flex items-center gap-4 hover:border-brand-neon/50 transition-all">
+                                <div class="w-14 h-14 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
+                                    ${categoryIcons[p.category] || categoryIcons.default}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-black text-base">${p.name}</h3>
+                                    <p class="text-xs text-ios-gray mt-0.5">${Array.isArray(p.exercises) ? p.exercises.length : 0} exercícios</p>
+                                    ${p.description ? `<p class="text-xs text-ios-gray truncate">${p.description}</p>` : ''}
+                                </div>
+                                <i data-lucide="chevron-right" class="w-5 h-5 text-ios-gray flex-shrink-0"></i>
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+            },
+
+            selectTreinoProgram(programId) {
+                const programs = this.state.workoutPrograms || [];
+                const program = programs.find(p => p.id === programId);
+                if (!program) return;
+                this.state.activeTreinoProgram = program;
+                this.state.treinoSetsCompleted = {};
+
+                document.getElementById('treino-program-list').classList.add('hidden');
+                const exView = document.getElementById('treino-exercises-view');
+                exView.classList.remove('hidden');
+
+                document.getElementById('treino-active-name').textContent = program.name;
+                const exCount = Array.isArray(program.exercises) ? program.exercises.length : 0;
+                document.getElementById('treino-active-desc').textContent = `${exCount} exercícios`;
+                document.getElementById('treino-subtitle').textContent = program.name;
+
+                this.renderTreinoExercises(program.exercises);
+                this.updateTreinoProgress();
+            },
+
+            renderTreinoExercises(exercises) {
+                const listEl = document.getElementById('treino-exercise-list');
+                if (!listEl || !exercises) return;
+
+                listEl.innerHTML = exercises.map((ex, idx) => {
+                    const hasVideo = !!ex.video_url;
+                    const sets = Array.from({ length: ex.sets || 3 }, (_, si) => si);
+                    return `
+                        <div class="bg-white dark:bg-dark-card rounded-3xl p-5 border border-ios-separator/30 dark:border-gray-800 shadow-sm">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex-1">
+                                    <h4 class="font-black text-base">${ex.name}</h4>
+                                    <p class="text-xs text-ios-gray mt-0.5">${ex.sets} séries × ${ex.reps} reps${ex.target_weight ? ` • ${ex.target_weight}kg` : ''}</p>
+                                </div>
+                                ${hasVideo ? `
+                                    <button onclick="app.openTreinoVideo('${ex.video_url}', '${ex.name}', '${ex.reps} reps')"
+                                        class="flex items-center gap-1.5 bg-red-500 text-white text-xs font-black px-3 py-1.5 rounded-full ml-3 flex-shrink-0">
+                                        <i data-lucide="play" class="w-3 h-3 fill-white"></i> Vídeo
+                                    </button>
+                                ` : `
+                                    <span class="text-[10px] text-ios-gray border border-ios-separator dark:border-gray-700 px-2 py-1 rounded-full ml-3 flex-shrink-0">Sem vídeo</span>
+                                `}
+                            </div>
+                            <div class="grid grid-cols-${Math.min(ex.sets, 4)} gap-2">
+                                ${sets.map(si => `
+                                    <button onclick="app.toggleTreinoSet(${idx}, ${si}, this)"
+                                        data-ex="${idx}" data-set="${si}"
+                                        class="treino-set-btn flex flex-col items-center justify-center py-3 rounded-2xl border-2 border-gray-200 dark:border-gray-700 text-xs font-black transition-all">
+                                        <span class="text-[10px] font-bold text-ios-gray">Série ${si + 1}</span>
+                                        <span class="text-base mt-0.5 text-ios-gray">○</span>
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                if (window.lucide) lucide.createIcons();
+            },
+
+            toggleTreinoSet(exIdx, setIdx, btn) {
+                if (!this.state.treinoSetsCompleted) this.state.treinoSetsCompleted = {};
+                const key = `${exIdx}-${setIdx}`;
+                const done = !this.state.treinoSetsCompleted[key];
+                this.state.treinoSetsCompleted[key] = done;
+
+                if (done) {
+                    btn.classList.remove('border-gray-200', 'dark:border-gray-700');
+                    btn.classList.add('border-brand-neon', 'bg-brand-neon/10');
+                    btn.querySelector('span:last-child').textContent = '✓';
+                    btn.querySelector('span:last-child').classList.add('text-brand-neon');
+                } else {
+                    btn.classList.add('border-gray-200', 'dark:border-gray-700');
+                    btn.classList.remove('border-brand-neon', 'bg-brand-neon/10');
+                    btn.querySelector('span:last-child').textContent = '○';
+                    btn.querySelector('span:last-child').classList.remove('text-brand-neon');
+                }
+                this.updateTreinoProgress();
+            },
+
+            updateTreinoProgress() {
+                const program = this.state.activeTreinoProgram;
+                if (!program || !program.exercises) return;
+                const totalSets = program.exercises.reduce((t, ex) => t + (ex.sets || 3), 0);
+                const doneSets = Object.values(this.state.treinoSetsCompleted || {}).filter(Boolean).length;
+                const pct = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
+                const bar = document.getElementById('treino-progress-bar');
+                const txt = document.getElementById('treino-progress-text');
+                if (bar) bar.style.width = `${pct}%`;
+                if (txt) txt.textContent = `${pct}%`;
+            },
+
+            async finalizarTreino() {
+                const program = this.state.activeTreinoProgram;
+                if (!program) return;
+                const today = new Date().toISOString().split('T')[0];
+                const completedSets = this.state.treinoSetsCompleted || {};
+                const doneCount = Object.values(completedSets).filter(Boolean).length;
+                if (doneCount === 0) { this.showToast('Complete ao menos uma série antes de finalizar!'); return; }
+
+                try {
+                    const body = { [today]: { [program.id]: completedSets } };
+                    await fetch('/api/workouts/progress', { method: 'POST', headers: AUTH.headers(), body: JSON.stringify(body) });
+                    await fetch('/api/checkins', { method: 'POST', headers: AUTH.headers(), body: JSON.stringify([{ date: today, workout_type: program.category || 'strength', workout_duration: 60 }]) });
+                    this.showToast('Treino finalizado! 💪');
+                    setTimeout(() => this.navigate('dashboard'), 1200);
+                } catch {
+                    this.showToast('Erro ao salvar treino');
+                }
+            },
+
+            voltarListaTreino() {
+                document.getElementById('treino-exercises-view').classList.add('hidden');
+                document.getElementById('treino-program-list').classList.remove('hidden');
+                document.getElementById('treino-subtitle').textContent = 'Selecione um programa';
+                this.state.activeTreinoProgram = null;
+            },
+
+            openTreinoVideo(videoUrl, title, desc) {
+                const modal = document.getElementById('treino-video-modal');
+                const iframe = document.getElementById('treino-video-iframe');
+                const titleEl = document.getElementById('treino-video-title');
+                const descEl = document.getElementById('treino-video-desc');
+                if (!modal || !iframe) return;
+
+                let embedUrl = videoUrl;
+                const ytMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?/]+)/);
+                if (ytMatch) embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`;
+
+                if (titleEl) titleEl.textContent = title;
+                if (descEl) descEl.textContent = desc || '';
+                iframe.src = embedUrl;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            },
+
+            closeTreinoVideo() {
+                const modal = document.getElementById('treino-video-modal');
+                const iframe = document.getElementById('treino-video-iframe');
+                if (iframe) iframe.src = '';
+                if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+            },
+
+            openTreinoHistory() {
+                this.showToast('Histórico em breve!');
+            },
+
+            // ══════════════════════════════════════════════════════
+            // PAINEL ACADEMIA
+            // ══════════════════════════════════════════════════════
+
+            async showAcademiaPanel() {
+                document.querySelectorAll('#screen-auth, #screen-onboarding-flow').forEach(s => s.classList.add('hidden'));
+                const panel = document.getElementById('screen-academia');
+                if (panel) panel.classList.remove('hidden');
+
+                const nameEl = document.getElementById('academia-name-display');
+                if (nameEl) nameEl.textContent = this.state.userProfile.name || 'Academia';
+
+                await this.loadAcademiaStudents();
+                await this.loadAcademiaPrograms();
+            },
+
+            switchAcademiaTab(tab) {
+                document.getElementById('academia-tab-alunos').classList.toggle('hidden', tab !== 'alunos');
+                document.getElementById('academia-tab-programas').classList.toggle('hidden', tab !== 'programas');
+                document.getElementById('tab-alunos').classList.toggle('border-brand-neon', tab === 'alunos');
+                document.getElementById('tab-alunos').classList.toggle('text-brand-neon', tab === 'alunos');
+                document.getElementById('tab-alunos').classList.toggle('border-transparent', tab !== 'alunos');
+                document.getElementById('tab-alunos').classList.toggle('text-ios-gray', tab !== 'alunos');
+                document.getElementById('tab-programas').classList.toggle('border-brand-neon', tab === 'programas');
+                document.getElementById('tab-programas').classList.toggle('text-brand-neon', tab === 'programas');
+                document.getElementById('tab-programas').classList.toggle('border-transparent', tab !== 'programas');
+                document.getElementById('tab-programas').classList.toggle('text-ios-gray', tab !== 'programas');
+            },
+
+            async loadAcademiaStudents() {
+                try {
+                    const res = await fetch('/api/academia/students', { headers: AUTH.headers() });
+                    const students = await res.json();
+                    this.renderAcademiaStudents(students);
+                } catch { this.showToast('Erro ao carregar alunos'); }
+            },
+
+            renderAcademiaStudents(students) {
+                const listEl = document.getElementById('academia-students-list');
+                if (!listEl) return;
+                if (!students || students.length === 0) {
+                    listEl.innerHTML = `<div class="text-center py-12 text-ios-gray">
+                        <i data-lucide="users" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                        <p class="text-sm">Nenhum aluno ainda</p>
+                        <p class="text-xs mt-1">Adicione alunos pelo email</p>
+                    </div>`;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+                listEl.innerHTML = students.map(link => {
+                    const s = link.student || {};
+                    const prog = link.program || {};
+                    return `
+                        <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800 flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-brand-neon/10 flex items-center justify-center font-black text-brand-neon text-lg flex-shrink-0">
+                                ${(s.name || 'A').charAt(0).toUpperCase()}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-bold text-sm">${s.name || 'Sem nome'}</p>
+                                <p class="text-xs text-ios-gray truncate">${s.email || ''}</p>
+                                ${prog.name ? `<p class="text-xs text-brand-neon mt-0.5">📋 ${prog.name}</p>` : '<p class="text-xs text-ios-gray mt-0.5">Sem programa</p>'}
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-1 rounded-full ${link.status === 'active' ? 'bg-brand-neon/10 text-brand-neon' : 'bg-gray-100 text-ios-gray'}">
+                                ${link.status === 'active' ? 'Ativo' : 'Inativo'}
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            async loadAcademiaPrograms() {
+                try {
+                    const res = await fetch('/api/academia/programs', { headers: AUTH.headers() });
+                    const programs = await res.json();
+                    this.state.academiaPrograms = programs;
+                    this.renderAcademiaPrograms(programs);
+                    this.populateProgramSelect(programs);
+                } catch { }
+            },
+
+            renderAcademiaPrograms(programs) {
+                const listEl = document.getElementById('academia-programs-list');
+                if (!listEl) return;
+                if (!programs || programs.length === 0) {
+                    listEl.innerHTML = `<div class="text-center py-12 text-ios-gray">
+                        <i data-lucide="dumbbell" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                        <p class="text-sm">Nenhum programa criado</p>
+                        <p class="text-xs mt-1">Crie programas de treino para seus alunos</p>
+                    </div>`;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+                listEl.innerHTML = programs.map(p => `
+                    <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800 flex items-center gap-3">
+                        <div class="w-12 h-12 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">🏋️</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-sm">${p.name}</p>
+                            <p class="text-xs text-ios-gray">${Array.isArray(p.exercises) ? p.exercises.length : 0} exercícios</p>
+                        </div>
+                        <button onclick="app.editProgram('${p.id}')" class="text-brand-neon text-xs font-bold border border-brand-neon/30 px-3 py-1.5 rounded-full">Editar</button>
+                    </div>
+                `).join('');
+            },
+
+            populateProgramSelect(programs) {
+                const sel = document.getElementById('add-student-program');
+                if (!sel) return;
+                sel.innerHTML = '<option value="">Sem programa</option>' +
+                    (programs || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            },
+
+            openAddStudentModal() {
+                document.getElementById('modal-add-student').classList.remove('hidden');
+                document.getElementById('modal-add-student').classList.add('flex');
+            },
+
+            closeAddStudentModal() {
+                document.getElementById('modal-add-student').classList.add('hidden');
+                document.getElementById('modal-add-student').classList.remove('flex');
+                document.getElementById('add-student-email').value = '';
+            },
+
+            async addStudent() {
+                const email = document.getElementById('add-student-email').value.trim();
+                const programId = document.getElementById('add-student-program').value;
+                if (!email) { this.showToast('Digite o email do aluno'); return; }
+                try {
+                    const res = await fetch('/api/academia/students', {
+                        method: 'POST', headers: AUTH.headers(),
+                        body: JSON.stringify({ student_email: email, assigned_program_id: programId || null })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) { this.showToast(data.error || 'Erro ao adicionar aluno'); return; }
+                    this.showToast('Aluno adicionado!');
+                    this.closeAddStudentModal();
+                    await this.loadAcademiaStudents();
+                } catch { this.showToast('Erro de conexão'); }
+            },
+
+            openCreateProgramModal() {
+                document.getElementById('modal-create-program').classList.remove('hidden');
+                document.getElementById('modal-create-program').classList.add('flex');
+                document.getElementById('prog-exercises-list').innerHTML = '';
+                this.addExerciseRow();
+            },
+
+            closeCreateProgramModal() {
+                document.getElementById('modal-create-program').classList.add('hidden');
+                document.getElementById('modal-create-program').classList.remove('flex');
+            },
+
+            addExerciseRow() {
+                const container = document.getElementById('prog-exercises-list');
+                const idx = container.children.length;
+                const row = document.createElement('div');
+                row.className = 'flex gap-2 items-start';
+                row.innerHTML = `
+                    <div class="flex-1 space-y-2">
+                        <input type="text" placeholder="Nome do exercício" class="prog-ex-name w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-neon">
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="number" placeholder="Séries" class="prog-ex-sets w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none" value="3">
+                            <input type="text" placeholder="Reps" class="prog-ex-reps w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none" value="12">
+                            <input type="number" placeholder="Peso(kg)" class="prog-ex-weight w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none">
+                        </div>
+                        <input type="url" placeholder="URL do vídeo YouTube (opcional)" class="prog-ex-video w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-neon">
+                    </div>
+                    <button onclick="this.parentElement.remove()" class="w-8 h-8 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center justify-center text-red-400 flex-shrink-0 mt-2">✕</button>
+                `;
+                container.appendChild(row);
+            },
+
+            async saveProgram() {
+                const name = document.getElementById('prog-name').value.trim();
+                const category = document.getElementById('prog-category').value;
+                if (!name) { this.showToast('Digite o nome do programa'); return; }
+
+                const rows = document.getElementById('prog-exercises-list').querySelectorAll('div.flex.gap-2');
+                const exercises = Array.from(rows).map(row => ({
+                    name: row.querySelector('.prog-ex-name').value.trim(),
+                    sets: parseInt(row.querySelector('.prog-ex-sets').value) || 3,
+                    reps: row.querySelector('.prog-ex-reps').value || '12',
+                    target_weight: parseFloat(row.querySelector('.prog-ex-weight').value) || 0,
+                    video_url: row.querySelector('.prog-ex-video').value.trim()
+                })).filter(ex => ex.name);
+
+                if (exercises.length === 0) { this.showToast('Adicione ao menos um exercício'); return; }
+
+                try {
+                    const res = await fetch('/api/academia/programs', {
+                        method: 'POST', headers: AUTH.headers(),
+                        body: JSON.stringify({ name, category, exercises })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) { this.showToast(data.error || 'Erro ao salvar'); return; }
+                    this.showToast('Programa criado!');
+                    this.closeCreateProgramModal();
+                    document.getElementById('prog-name').value = '';
+                    await this.loadAcademiaPrograms();
+                } catch { this.showToast('Erro de conexão'); }
+            },
+
+            editProgram(id) { this.showToast('Edição de programas em breve!'); },
 
             loadTodayMeals() {
                 // Background Sync
@@ -5371,7 +5935,7 @@
             },
 
             async handleAuth(type) {
-                let email, pass, name, username;
+                let email, pass, name, username, user_type = 'aluno';
                 try {
                     if (type === 'login') {
                         email = document.getElementById('login-email').value.trim();
@@ -5381,16 +5945,17 @@
                         username = document.getElementById('reg-username').value.trim();
                         email = document.getElementById('reg-email').value.trim();
                         pass = document.getElementById('reg-password').value;
+                        const typeRadio = document.querySelector('input[name="reg-user-type"]:checked');
+                        user_type = typeRadio ? typeRadio.value : 'aluno';
                     }
                 } catch (e) { return; }
 
-                if (!email || !pass) return;
+                if (!email || !pass) { this.showToast('Preencha email e senha'); return; }
 
-                // Auto-fill username/name if empty for register
                 if (type === 'register') {
                     if (!username) username = '@' + (email.split('@')[0] || 'user').toLowerCase().replace(/[^a-z0-9_]/g, '');
                     if (!username.startsWith('@')) username = '@' + username;
-                    if (!name) { name = (email.split('@')[0] || 'Usuário'); name = name.charAt(0).toUpperCase() + name.slice(1); }
+                    if (!name) { name = email.split('@')[0] || 'Usuário'; name = name.charAt(0).toUpperCase() + name.slice(1); }
                 }
 
                 const endpoint = type === 'login' ? '/api/auth/login' : '/api/auth/register';
@@ -5398,14 +5963,21 @@
                     const res = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(type === 'login' ? { email, password: pass } : { email, password: pass, name, username })
+                        body: JSON.stringify(type === 'login'
+                            ? { email, password: pass }
+                            : { email, password: pass, name, username, user_type })
                     });
                     const data = await res.json();
-                    if (!res.ok) return; // silent fail
+                    if (!res.ok) {
+                        this.showToast(data.error || 'Erro ao entrar');
+                        return;
+                    }
 
                     AUTH.setToken(data.token);
                     localStorage.setItem('macro_ai_auth', 'true');
+                    localStorage.setItem('macro_ai_user_type', data.userType || 'aluno');
                     this.state.isLoggedIn = true;
+                    this.state.userType = data.userType || 'aluno';
                     this.state.userProfile.email = email;
                     this.state.userProfile.name = data.name || name || email.split('@')[0];
                     this.state.userName = this.state.userProfile.name;
@@ -5416,14 +5988,19 @@
                         authScreen.classList.add('opacity-0', 'pointer-events-none');
                         setTimeout(() => {
                             authScreen.classList.add('hidden');
-                            if (type === 'register') {
+                            authScreen.classList.remove('opacity-0', 'pointer-events-none');
+                            if (this.state.userType === 'academia') {
+                                this.showAcademiaPanel();
+                            } else if (type === 'register') {
                                 this.startOnboardingFlow();
                             } else {
                                 this.navigate('dashboard');
                             }
                         }, 500);
                     }
-                } catch (e) { /* silent */ }
+                } catch (e) {
+                    this.showToast('Erro de conexão. Tente novamente.');
+                }
             },
 
             initAuthProviders() {
@@ -8618,7 +9195,7 @@ Rules:
                 // Header Visibility for special screens
                 const header = document.querySelector('header');
                 const nav = document.querySelector('nav');
-                if (['streak', 'health', 'coach'].includes(screen)) {
+                if (['streak', 'health', 'coach', 'treino'].includes(screen)) {
                     if (header) header.classList.add('hidden');
                     if (nav) nav.classList.add('hidden');
                     document.getElementById('app').classList.remove('pb-24');
@@ -8637,6 +9214,9 @@ Rules:
                     this.renderTodayMeals();
                     this.renderRecents();
                     this.updateDashboardTotals();
+                }
+                if (screen === 'treino') {
+                    this.loadTreinoScreen();
                 }
                 if (screen === 'coach') {
                     this.loadCoachState();
@@ -9970,6 +10550,7 @@ Rules:
                 this.calculateActivity();
                 this.calculateWeeklyConsistency();
                 this.updateHealthScore();
+                this.updateDailyMission();
                 this.renderTodayMeals();
                 this.renderUserStats();
 
