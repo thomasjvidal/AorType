@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import fetch from 'node-fetch';
 import bodyParser from 'body-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -14,11 +13,24 @@ const __dirname = path.dirname(__filename);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'macroai_secret_change_in_production';
 
-// Supabase client (service role — bypasses RLS, só no servidor)
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+// Supabase client — criado de forma lazy para não crashar se env vars ausentes
+const getSupabase = (() => {
+  let client = null;
+  return () => {
+    if (!client) {
+      const url = process.env.SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_KEY;
+      if (!url || !key) throw new Error('SUPABASE_URL e SUPABASE_SERVICE_KEY são obrigatórios. Configure as variáveis de ambiente no Vercel.');
+      client = createClient(url, key);
+    }
+    return client;
+  };
+})();
+
+// Atalho — usar supabase.from(...) normalmente nas rotas
+const supabase = new Proxy({}, {
+  get: (_, prop) => (...args) => getSupabase()[prop](...args)
+});
 
 const app = express();
 app.use(cors());
