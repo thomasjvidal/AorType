@@ -2131,10 +2131,10 @@
                         <div>
                             <span class="text-xs font-bold uppercase tracking-widest opacity-80"
                                 data-translate="health_score">Score de Saúde</span>
-                            <div class="text-7xl font-black mt-2">85</div>
+                            <div id="health-screen-score" class="text-7xl font-black mt-2">--</div>
                             <div class="flex items-center gap-2 mt-4 bg-white/20 px-3 py-1 rounded-full w-fit">
                                 <i data-lucide="trending-up" class="w-4 h-4"></i>
-                                <span class="text-xs font-bold" data-translate="pts_vs_yesterday">+5 pts vs ontem</span>
+                                <span id="health-screen-trend" class="text-xs font-bold">Calculando...</span>
                             </div>
                         </div>
                         <i data-lucide="heart" class="w-20 h-20 text-white/20 fill-white/10"></i>
@@ -2149,9 +2149,8 @@
                             <i data-lucide="droplet" class="w-5 h-5"></i>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold text-ios-gray uppercase" data-translate="hydration">
-                                Hidratação</div>
-                            <div class="text-xl font-bold" data-translate="excellent">Excelente</div>
+                            <div class="text-[10px] font-bold text-ios-gray uppercase">Hidratação</div>
+                            <div id="health-hydration-label" class="text-xl font-bold">--</div>
                         </div>
                     </div>
                     <div
@@ -2161,9 +2160,8 @@
                             <i data-lucide="apple" class="w-5 h-5"></i>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold text-ios-gray uppercase" data-translate="nutrition_label">
-                                Nutrição</div>
-                            <div class="text-xl font-bold" data-translate="on_target">No Alvo</div>
+                            <div class="text-[10px] font-bold text-ios-gray uppercase">Nutrição</div>
+                            <div id="health-nutrition-label" class="text-xl font-bold">--</div>
                         </div>
                     </div>
                     <div
@@ -2173,9 +2171,8 @@
                             <i data-lucide="activity" class="w-5 h-5"></i>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold text-ios-gray uppercase" data-translate="activity_label">
-                                Atividade</div>
-                            <div class="text-xl font-bold" data-translate="moderate">Moderada</div>
+                            <div class="text-[10px] font-bold text-ios-gray uppercase">Atividade</div>
+                            <div id="health-activity-label" class="text-xl font-bold">--</div>
                         </div>
                     </div>
                     <div
@@ -2185,9 +2182,8 @@
                             <i data-lucide="moon" class="w-5 h-5"></i>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold text-ios-gray uppercase" data-translate="sleep_label">Sono
-                            </div>
-                            <div class="text-xl font-bold" data-translate="regular">Regular</div>
+                            <div class="text-[10px] font-bold text-ios-gray uppercase">Streak</div>
+                            <div id="health-streak-label" class="text-xl font-bold">--</div>
                         </div>
                     </div>
                 </div>
@@ -5175,13 +5171,21 @@
                     if (!container) return;
                     container.innerHTML = '';
 
+                    const actLog = JSON.parse(localStorage.getItem('wb_activity_log') || '{}');
                     for (let i = 3; i >= 0; i--) { // Show last 4 months
                         const d = new Date();
                         d.setMonth(d.getMonth() - i);
                         const mName = d.toLocaleDateString(this.state.locale || 'pt-BR', { month: 'short' });
 
-                        // Mock height for visual consistency as we don't have months of data yet
-                        let h = i === 0 ? 60 : Math.floor(Math.random() * 40);
+                        // Count days with activity in this month from real activity log
+                        const year = d.getFullYear(), month = d.getMonth();
+                        let daysWithActivity = 0, daysInMonth = new Date(year, month + 1, 0).getDate();
+                        for (let day = 1; day <= daysInMonth; day++) {
+                            const key = new Date(year, month, day).toLocaleDateString('pt-BR');
+                            if (actLog[key] > 0) daysWithActivity++;
+                        }
+                        let h = i === 0 ? Math.max(10, Math.round((daysWithActivity / Math.max(daysInMonth, 1)) * 100))
+                                       : Math.max(5, Math.round((daysWithActivity / Math.max(daysInMonth, 1)) * 100));
 
                         const div = document.createElement('div');
                         div.className = 'flex flex-col items-center gap-2 flex-1';
@@ -5221,17 +5225,83 @@
                 } catch (e) { console.error('Body stats error', e); }
             },
 
-            updateHealthScore() {
-                const scoreEl = document.getElementById('dash-health-score');
-                if (!scoreEl) return;
+            calculateHealthScoreValue() {
                 const goalCals = this.state.goals.calories || 2000;
                 const currentCals = this.state.totals.calories || 0;
-                const ratio = Math.min(100, (currentCals / goalCals) * 100);
-                let score = 70;
-                if (currentCals > 0) score += 10;
-                if (ratio > 50 && ratio < 115) score += 15;
-                if ((this.state.userProfile.streak || 0) >= 3) score += 5;
-                scoreEl.textContent = Math.min(100, score);
+                const goalProt = this.state.goals.protein || 120;
+                const currentProt = this.state.totals.protein || 0;
+                const streak = parseInt(this.state.userProfile.streak || localStorage.getItem('wb_streak') || 0);
+                const today = new Date().toISOString().split('T')[0];
+                const checkins = this.state.dailyCheckins || {};
+                const todayCheckin = checkins[today] || {};
+                const waterMl = todayCheckin.water_ml || 0;
+                const hadWorkout = !!todayCheckin.workout_type;
+
+                let score = 50;
+                // Calories logged today (up to 20 pts)
+                const calRatio = goalCals > 0 ? currentCals / goalCals : 0;
+                if (calRatio > 0.1) score += 10;
+                if (calRatio > 0.5 && calRatio < 1.2) score += 10;
+                // Protein (up to 15 pts)
+                const protRatio = goalProt > 0 ? currentProt / goalProt : 0;
+                if (protRatio > 0.5) score += 8;
+                if (protRatio >= 0.9) score += 7;
+                // Water (up to 10 pts)
+                if (waterMl >= 1000) score += 5;
+                if (waterMl >= 2000) score += 5;
+                // Workout (5 pts)
+                if (hadWorkout) score += 5;
+                // Streak (up to 10 pts)
+                if (streak >= 1) score += 3;
+                if (streak >= 3) score += 4;
+                if (streak >= 7) score += 3;
+
+                return Math.min(100, score);
+            },
+
+            updateHealthScore() {
+                const score = this.calculateHealthScoreValue();
+                const goalCals = this.state.goals.calories || 2000;
+                const currentCals = this.state.totals.calories || 0;
+                const goalProt = this.state.goals.protein || 120;
+                const currentProt = this.state.totals.protein || 0;
+                const streak = parseInt(this.state.userProfile.streak || localStorage.getItem('wb_streak') || 0);
+                const today = new Date().toISOString().split('T')[0];
+                const checkins = this.state.dailyCheckins || {};
+                const todayCheckin = checkins[today] || {};
+                const waterMl = todayCheckin.water_ml || 0;
+                const hadWorkout = !!todayCheckin.workout_type;
+
+                // Dashboard score
+                const dashEl = document.getElementById('dash-health-score');
+                if (dashEl) dashEl.textContent = score;
+
+                // Health screen score
+                const screenScore = document.getElementById('health-screen-score');
+                if (screenScore) screenScore.textContent = score;
+                const trendEl = document.getElementById('health-screen-trend');
+                if (trendEl) trendEl.textContent = score >= 80 ? 'Ótimo hoje!' : score >= 60 ? 'Em progresso' : 'Vamos melhorar!';
+
+                // Hydration label
+                const hydEl = document.getElementById('health-hydration-label');
+                if (hydEl) hydEl.textContent = waterMl >= 2500 ? 'Excelente' : waterMl >= 1500 ? 'Bom' : waterMl >= 500 ? 'Regular' : 'Baixa';
+
+                // Nutrition label
+                const calRatio = goalCals > 0 ? currentCals / goalCals : 0;
+                const protRatio = goalProt > 0 ? currentProt / goalProt : 0;
+                const nutEl = document.getElementById('health-nutrition-label');
+                if (nutEl) {
+                    const avg = (calRatio + protRatio) / 2;
+                    nutEl.textContent = avg >= 0.85 ? 'No Alvo' : avg >= 0.5 ? 'Em progresso' : currentCals === 0 ? 'Sem registro' : 'Abaixo';
+                }
+
+                // Activity label
+                const actEl = document.getElementById('health-activity-label');
+                if (actEl) actEl.textContent = hadWorkout ? 'Ativo hoje' : streak >= 3 ? 'Consistente' : 'Descansando';
+
+                // Streak label
+                const strEl = document.getElementById('health-streak-label');
+                if (strEl) strEl.textContent = streak === 0 ? 'Comece hoje' : `${streak} ${streak === 1 ? 'dia' : 'dias'}`;
             },
 
             updateDailyMission() {
@@ -5293,6 +5363,7 @@
                     const res = await fetch('/api/workouts', { headers: AUTH.headers() });
                     const programs = await res.json();
                     this.state.workoutPrograms = programs;
+                    this.state.treinoPrograms = programs; // save for history lookup
                     this.renderTreinoProgramList(programs);
                 } catch {
                     listEl.innerHTML = '<div class="text-center py-12 text-red-400"><p class="text-sm">Erro ao carregar treinos</p></div>';
@@ -5471,8 +5542,60 @@
                 if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
             },
 
-            openTreinoHistory() {
-                this.showToast('Histórico em breve!');
+            async openTreinoHistory() {
+                try {
+                    const res = await fetch('/api/workouts/progress', { headers: AUTH.headers() });
+                    const data = await res.json();
+                    const dates = Object.keys(data).sort((a, b) => b.localeCompare(a)).slice(0, 10);
+
+                    if (dates.length === 0) {
+                        this.showToast('Nenhum treino registrado ainda. Complete um treino primeiro!', 3000);
+                        return;
+                    }
+
+                    // Build modal HTML
+                    const programs = this.state.treinoPrograms || [];
+                    const rows = dates.map(date => {
+                        const sessions = data[date];
+                        const progIds = Object.keys(sessions);
+                        const progNames = progIds.map(id => {
+                            const p = programs.find(p => p.id === id);
+                            return p ? p.name : 'Treino';
+                        }).join(', ');
+                        const totalSets = progIds.reduce((acc, id) => {
+                            const sets = sessions[id] || {};
+                            return acc + Object.values(sets).filter(Boolean).length;
+                        }, 0);
+                        const d = new Date(date + 'T12:00:00');
+                        const dateStr = d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+                        return `<div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+                            <div>
+                                <div class="font-bold text-sm text-black dark:text-white">${progNames}</div>
+                                <div class="text-xs text-ios-gray capitalize">${dateStr}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-black text-brand-neon">${totalSets}</div>
+                                <div class="text-[10px] text-ios-gray uppercase">séries</div>
+                            </div>
+                        </div>`;
+                    }).join('');
+
+                    // Show in a simple overlay
+                    const existing = document.getElementById('treino-history-modal');
+                    if (existing) existing.remove();
+                    const modal = document.createElement('div');
+                    modal.id = 'treino-history-modal';
+                    modal.className = 'fixed inset-0 z-[200] bg-black/60 flex items-end';
+                    modal.innerHTML = `
+                        <div class="w-full bg-white dark:bg-dark-card rounded-t-[2rem] max-h-[80vh] overflow-y-auto">
+                            <div class="sticky top-0 bg-white dark:bg-dark-card px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                                <h2 class="font-black text-lg">Histórico de Treinos</h2>
+                                <button onclick="document.getElementById('treino-history-modal').remove()" class="w-8 h-8 bg-gray-100 dark:bg-dark-elevated rounded-full flex items-center justify-center font-bold text-ios-gray">✕</button>
+                            </div>
+                            ${rows}
+                        </div>`;
+                    document.body.appendChild(modal);
+                } catch { this.showToast('Erro ao carregar histórico'); }
             },
 
             // ══════════════════════════════════════════════════════
@@ -5676,7 +5799,71 @@
                 } catch { this.showToast('Erro de conexão'); }
             },
 
-            editProgram(id) { this.showToast('Edição de programas em breve!'); },
+            async editProgram(id) {
+                const programs = this.state.academiaPrograms || [];
+                const prog = programs.find(p => p.id === id);
+                if (!prog) { this.showToast('Programa não encontrado'); return; }
+
+                // Re-use the create modal, adapting it for edit
+                this.openCreateProgramModal();
+                document.getElementById('prog-name').value = prog.name || '';
+                const catEl = document.getElementById('prog-category');
+                if (catEl) catEl.value = prog.category || 'strength';
+
+                // Fill exercises
+                const container = document.getElementById('prog-exercises-list');
+                container.innerHTML = '';
+                (prog.exercises || []).forEach(ex => {
+                    this.addExerciseRow();
+                    const row = container.lastElementChild;
+                    row.querySelector('.prog-ex-name').value = ex.name || '';
+                    row.querySelector('.prog-ex-sets').value = ex.sets || 3;
+                    row.querySelector('.prog-ex-reps').value = ex.reps || '12';
+                    row.querySelector('.prog-ex-weight').value = ex.target_weight || '';
+                    row.querySelector('.prog-ex-video').value = ex.video_url || '';
+                });
+
+                // Change save button to update mode
+                const saveBtn = document.querySelector('#modal-create-program button[onclick="app.saveProgram()"]');
+                if (saveBtn) {
+                    saveBtn.setAttribute('onclick', `app.updateProgram('${id}')`);
+                    saveBtn.textContent = 'Salvar Alterações';
+                }
+            },
+
+            async updateProgram(id) {
+                const name = document.getElementById('prog-name').value.trim();
+                const category = document.getElementById('prog-category').value;
+                if (!name) { this.showToast('Digite o nome do programa'); return; }
+
+                const rows = document.getElementById('prog-exercises-list').querySelectorAll('div.flex.gap-2');
+                const exercises = Array.from(rows).map(row => ({
+                    name: row.querySelector('.prog-ex-name').value.trim(),
+                    sets: parseInt(row.querySelector('.prog-ex-sets').value) || 3,
+                    reps: row.querySelector('.prog-ex-reps').value || '12',
+                    target_weight: parseFloat(row.querySelector('.prog-ex-weight').value) || 0,
+                    video_url: row.querySelector('.prog-ex-video').value.trim()
+                })).filter(ex => ex.name);
+
+                if (exercises.length === 0) { this.showToast('Adicione ao menos um exercício'); return; }
+
+                try {
+                    const res = await fetch(`/api/academia/programs/${id}`, {
+                        method: 'PUT', headers: AUTH.headers(),
+                        body: JSON.stringify({ name, category, exercises })
+                    });
+                    if (!res.ok) { this.showToast('Erro ao atualizar'); return; }
+                    this.showToast('Programa atualizado!');
+                    this.closeCreateProgramModal();
+                    await this.loadAcademiaPrograms();
+                    // Reset save button back
+                    const saveBtn = document.querySelector('#modal-create-program button');
+                    if (saveBtn) {
+                        saveBtn.setAttribute('onclick', 'app.saveProgram()');
+                        saveBtn.textContent = 'Criar Programa';
+                    }
+                } catch { this.showToast('Erro de conexão'); }
+            },
 
             loadTodayMeals() {
                 // Background Sync
@@ -8898,7 +9085,7 @@ Instruções:
                         streak: streak,
                         consistency7d: consistencyPct,
                         currentWindow: windowName,
-                        healthScore: 85 // Mocked for now
+                        healthScore: this.calculateHealthScoreValue()
                     },
                     favorites: defaultFavorites,
                     history: days
@@ -8931,61 +9118,32 @@ Instruções:
                 const ctx = this.getCoachContext();
                 let response = '';
 
-                // 3. INTENT HANDLING (Hybrid: Code-First Logic -> LLM Fallback)
-                // We define the logic here to ensure specific data usage, 
-                // but we can also pass this data to LLM if connected.
+                // 3. Build enriched message with action hint if from quick-action buttons
+                const actionHints = {
+                    analyze_7days: 'O usuário quer uma análise detalhada dos últimos 7 dias de nutrição e consistência.',
+                    favorites: 'O usuário quer saber quais são seus alimentos mais registrados e receber sugestões com eles.',
+                    end_day: 'O usuário quer encerrar o dia e receber um resumo completo com avaliação do que foi atingido.',
+                    status_current: 'O usuário quer saber o status atual do dia: calorias, proteína, água e health score.',
+                    suggest_diet: 'O usuário quer sugestões de refeições que caibam nos macros restantes do dia.'
+                };
+                const enrichedMessage = actionType && actionHints[actionType]
+                    ? `${actionHints[actionType]}\n\nMensagem do usuário: ${userText}`
+                    : userText;
 
-                const lower = userText.toLowerCase();
-
-                // --- INTENT: SUGGEST_DIET ---
-                /* 
-                   REMOVED: Hardcoded logic replaced by LLM call for better variety
-                   Old logic: if (actionType === 'suggest_diet' ...)
-                */
-                
-                // --- INTENT: ANALYZE_7_DAYS ---
-                if (actionType === 'analyze_7days' || lower.includes('analise') || lower.includes('semana')) {
-                    response = `📊 **Análise Semanal**\n\nSua consistência nos últimos 7 dias foi de **${ctx.status.consistency7d}%**.\n\n• Maior sequência: ${ctx.status.streak} dias\n• Proteína média: Estável\n• Ponto de atenção: Fim de semana\n\nSeu maior gargalo parece ser a hidratação nos dias de descanso. Vamos focar nisso?`;
-                }
-                // --- INTENT: FAVORITES ---
-                else if (actionType === 'favorites' || lower.includes('favoritos')) {
-                    response = `Seus campeões de registro 🏆:\n\n1. ${ctx.favorites[0]}\n2. ${ctx.favorites[1]}\n3. ${ctx.favorites[2]}\n\nQuer que eu monte uma receita rápida com ${ctx.favorites[0]} e ${ctx.favorites[1]}?`;
-                }
-                // --- INTENT: END_DAY ---
-                else if (actionType === 'end_day' || lower.includes('encerrar') || lower.includes('fechar dia')) {
-                    const beatCal = ctx.metrics.calories.current <= ctx.metrics.calories.target + 100;
-                    const beatProt = ctx.metrics.protein.current >= ctx.metrics.protein.target - 10;
-                    const beatWater = ctx.metrics.water.current >= ctx.metrics.water.target - 200;
-
-                    response = `🌙 **Resumo do Dia**\n\n🔥 Calorias: ${ctx.metrics.calories.current} / ${ctx.metrics.calories.target} ${beatCal ? '✅' : '⚠️'}\n🥩 Proteína: ${ctx.metrics.protein.current}g / ${ctx.metrics.protein.target}g ${beatProt ? '✅' : '⚠️'}\n💧 Água: ${(ctx.metrics.water.current / 1000).toFixed(1)}L / ${(ctx.metrics.water.target / 1000).toFixed(1)}L ${beatWater ? '✅' : '⚠️'}\n\nStreak: ${ctx.status.streak} dias 🔥\n\n${beatCal && beatProt ? 'Dia perfeito! Descanse bem.' : 'Faltou pouco! Amanhã focamos no que ficou pendente.'}`;
-                }
-                // --- INTENT: STATUS_ATUAL ---
-                else if (actionType === 'status_current' || lower.includes('status') || lower.includes('como estou')) {
-                    const health = ctx.status.healthScore || 85;
-                    response = `📈 **Status Atual**\n\n🎯 Meta: ${ctx.metrics.calories.target} kcal\n🔥 Consumido: ${ctx.metrics.calories.current} kcal (${Math.round(ctx.metrics.calories.current / ctx.metrics.calories.target * 100)}%)\n💧 Água: ${(ctx.metrics.water.current / 1000).toFixed(1)}L\n\nHealth Score: ${health}/100 🌟\n\nContinue assim!`;
-                }
-                // --- INTENT: GREETING ---
-                else if (['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite'].some(g => lower.startsWith(g))) {
-                    response = `Olá, ${ctx.user}. 👋\n\nVocê está na janela do **${ctx.status.currentWindow}**.\nDisponível: **${ctx.metrics.calories.remaining} kcal**.\n\nQuer registrar uma refeição ou ajustar o planejamento?`;
-                }
-
-                // 4. LLM INTEGRATION (If connected, overwrite response with smarter one)
-                const hasLocalKey = app.config && app.config.geminiApiKey;
+                // 4. SEMPRE chama o Groq via backend
                 const hasBackendKey = this.state.aiStatus && this.state.aiStatus.providers && (this.state.aiStatus.providers.groq || this.state.aiStatus.providers.gemini);
+                const hasLocalKey = app.config && app.config.geminiApiKey;
 
-                if ((hasLocalKey || hasBackendKey) && !response) {
+                if (hasBackendKey || hasLocalKey) {
                     try {
-                        // PRIORITIZE BACKEND PROXY (More Secure)
                         if (hasBackendKey) {
-                            // Server-side Proxy Call
-                            console.log('Using Backend Proxy for Chat...');
                             const res = await fetch('/api/chat', {
                                 method: 'POST',
                                 headers: AUTH.headers(),
                                 body: JSON.stringify({
-                                    message: userText,
+                                    message: enrichedMessage,
                                     context: ctx,
-                                    history: this.state.coach.messages.slice(-5)
+                                    history: this.state.coach.messages.slice(-8)
                                 })
                             });
                             const data = await res.json();
@@ -9217,6 +9375,9 @@ Rules:
                 }
                 if (screen === 'treino') {
                     this.loadTreinoScreen();
+                }
+                if (screen === 'health') {
+                    this.updateHealthScore();
                 }
                 if (screen === 'coach') {
                     this.loadCoachState();
