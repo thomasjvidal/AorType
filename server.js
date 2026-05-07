@@ -35,9 +35,16 @@ const supabase = new Proxy({}, {
 const app = express();
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
-app.use(express.static(__dirname));
 
 const PORT = process.env.PORT || 3000;
+
+// ── ARQUIVOS ESTÁTICOS (antes do authMiddleware) ───────────────
+// Serve index.html e assets sem exigir autenticação
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/favicon.png', (req, res) => res.sendFile(path.join(__dirname, 'favicon.png')));
+app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, 'favicon.png')));
+app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, 'logo.png')));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // ── AUTH MIDDLEWARE ────────────────────────────────────────────
 const authMiddleware = (req, res, next) => {
