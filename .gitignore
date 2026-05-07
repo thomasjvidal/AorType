@@ -1,0 +1,21 @@
+node_modules/
+.DS_Store
+*.log
+dist/
+build/
+.vscode/
+.idea/
+diff.txt
+diff_utf8.txt
+fix.js
+fix2.js
+modified_index.html
+original_index.html
+
+# Sensitive — never commit
+.env
+.env.local
+.env.production
+
+# Claude Code local config
+.claude/
