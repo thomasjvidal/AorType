@@ -222,11 +222,13 @@ app.get('/api/profile', async (req, res) => {
 
 app.post('/api/profile', async (req, res) => {
   try {
-    const { name, username, phone, avatar_url, weight, height, age, gender, goal, activity_level, biotype, diet } = req.body;
+    const { name, username, phone, avatar_url, weight, height, age, gender, goal, activity_level, biotype, diet, streak, last_open_date } = req.body;
 
     await supabase.from('users').update({ name, username, phone, avatar_url }).eq('id', req.userId);
 
     const profileData = { weight, height, age, gender, goal, activity_level, biotype, diet, updated_at: new Date().toISOString() };
+    if (streak !== undefined) profileData.streak = streak;
+    if (last_open_date !== undefined) profileData.last_open_date = last_open_date;
 
     // Calcula metas calóricas se tiver dados suficientes
     if (weight && height && age && gender) {

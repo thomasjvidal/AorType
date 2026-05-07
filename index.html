@@ -8848,14 +8848,16 @@ Instruções:
             getCoachContext() {
                 const p = this.state.userProfile || {};
                 const t = this.state.totals || { calories: 0, protein: 0, water: 0, carbs: 0, fat: 0 };
-                const goalCal = p.goal === 'gain' ? 2500 : (p.goal === 'lose' ? 1800 : 2000);
-                const goalProt = p.goal === 'gain' ? 160 : (p.goal === 'lose' ? 140 : 120);
-                const goalWater = 3000;
 
-                // Streak
-                const streak = parseInt(localStorage.getItem('wb_streak') || '0');
+                // Use real profile macros from Supabase, fallback to goal-based estimates
+                const goalCal = p.daily_calories || (p.goal === 'gain' ? 2500 : (p.goal === 'lose' ? 1800 : 2000));
+                const goalProt = p.daily_protein || (p.goal === 'gain' ? 160 : (p.goal === 'lose' ? 140 : 120));
+                const goalWater = p.weight ? Math.round(p.weight * 35) : 2500;
 
-                // 7 Days Consistency
+                // Streak from profile (synced to Supabase) or localStorage fallback
+                const streak = parseInt(p.streak || p.lastOpenDate && localStorage.getItem('wb_streak') || localStorage.getItem('wb_streak') || '0');
+
+                // 7 Days Consistency from activity log
                 const log = JSON.parse(localStorage.getItem('wb_activity_log') || '{}');
                 let consistencyScore = 0;
                 const days = [];
@@ -8867,16 +8869,31 @@ Instruções:
                 }
                 const consistencyPct = Math.round((consistencyScore / 7) * 100);
 
-                // Meal Window (Simple time based)
+                // Meal Window based on time of day
                 const hour = new Date().getHours();
                 let windowName = 'Café da Manhã';
                 if (hour >= 11 && hour < 15) windowName = 'Almoço';
                 else if (hour >= 15 && hour < 18) windowName = 'Lanche da Tarde';
                 else if (hour >= 18) windowName = 'Jantar';
 
-                // Favorites (Inferred from Recents or defaults)
-                const defaultFavorites = ['Frango Grelhado', 'Ovos Mexidos', 'Whey Protein', 'Banana', 'Arroz Integral', 'Tapioca'];
-                // In a real app, we would count frequency from history
+                // Compute real favorites from meal history frequency
+                const mealFrequency = {};
+                const allHistoryMeals = Object.values(this.state.mealHistory || {}).flat();
+                const allMeals = [...(this.state.mealsToday || []), ...allHistoryMeals];
+                allMeals.forEach(m => {
+                    const rawName = m.name || (m.ingredients && m.ingredients[0] && m.ingredients[0].name);
+                    if (rawName && typeof rawName === 'string') {
+                        const key = rawName.toLowerCase().trim();
+                        mealFrequency[key] = (mealFrequency[key] || 0) + 1;
+                    }
+                });
+                const computedFavorites = Object.entries(mealFrequency)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 6)
+                    .map(([name]) => name.charAt(0).toUpperCase() + name.slice(1));
+                const favorites = computedFavorites.length >= 2
+                    ? computedFavorites
+                    : ['Frango Grelhado', 'Ovos Mexidos', 'Whey Protein', 'Banana', 'Arroz Integral', 'Tapioca'];
 
                 return {
                     user: (this.state.userName || 'Atleta').split(' ')[0],
@@ -8885,7 +8902,7 @@ Instruções:
                         weight: p.weight,
                         height: p.height,
                         age: p.age,
-                        activity: p.activityLevel || 'moderate'
+                        activity: p.activity_level || p.activityLevel || 'moderate'
                     },
                     metrics: {
                         calories: { current: Math.round(t.calories), target: goalCal, remaining: Math.max(0, goalCal - t.calories) },
@@ -8900,7 +8917,7 @@ Instruções:
                         currentWindow: windowName,
                         healthScore: 85 // Mocked for now
                     },
-                    favorites: defaultFavorites,
+                    favorites,
                     history: days
                 };
             },
@@ -10331,37 +10348,13 @@ Rules:
                     if (tempId) {
                         const mealIndex = this.state.recentMeals.findIndex(m => m.id === tempId);
                         if (mealIndex >= 0) {
-                            // Fallback / Simulation logic
-                            const meal = this.state.recentMeals[mealIndex];
-                            meal.isAnalyzing = false;
-
-                            // Create a simulated result
-                            const mockResult = {
-                                items: [
-                                    { name: "Frango Grelhado", grams: 150, calories: 240, protein: 45, carbs: 0, fat: 5 },
-                                    { name: "Arroz Branco", grams: 100, calories: 130, protein: 2, carbs: 28, fat: 0 },
-                                    { name: "Brócolis", grams: 80, calories: 30, protein: 3, carbs: 4, fat: 0 }
-                                ],
-                                totals: { cal: 400, p: 50, c: 32, f: 5 },
-                                confidence: 0.85
-                            };
-
-                            meal.pendingResult = mockResult;
-                            meal.name = "Refeição Detectada (Sim)";
-                            meal.macros = { cal: 400, p: 50, c: 32, f: 5 };
-
-                            this.applyVisionResult(mockResult, meal.image, tempId);
-
+                            // Remove the pending placeholder on failure
+                            this.state.recentMeals.splice(mealIndex, 1);
                             this.renderRecents();
-                            try {
-                                localStorage.setItem('wb_meals_recent', JSON.stringify(this.state.recentMeals));
-                            } catch (err) { }
-
-                            this.showToast('Erro na IA. Usando análise simulada para você confirmar.');
-                            return;
+                            try { localStorage.setItem('wb_meals_recent', JSON.stringify(this.state.recentMeals)); } catch (err) { }
                         }
                     }
-                    this.showToast('Erro: ' + (e.message || 'Falha desconhecida'));
+                    this.showToast('Falha na análise. Tente novamente ou adicione manualmente.', 3000);
                 }
             },
 
