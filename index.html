@@ -2490,7 +2490,7 @@
                     <div class="space-y-2">
                         <div class="flex items-center justify-between">
                             <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Exercícios</label>
-                            <button onclick="app.addExerciseRow()" class="text-brand-neon text-xs font-black">+ Adicionar</button>
+                            <button onclick="app.openExercisePicker()" class="text-brand-neon text-xs font-black">+ Adicionar</button>
                         </div>
                         <div id="prog-exercises-list" class="space-y-2">
                             <!-- Linhas de exercício adicionadas por JS -->
@@ -2499,6 +2499,41 @@
                     <div class="flex gap-3 pt-2">
                         <button onclick="app.closeCreateProgramModal()" class="flex-1 border border-gray-200 dark:border-gray-700 py-3 rounded-2xl font-bold text-sm">Cancelar</button>
                         <button onclick="app.saveProgram()" class="flex-1 bg-brand-neon text-black py-3 rounded-2xl font-black text-sm">Salvar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: Seletor de Exercícios -->
+            <div id="modal-exercise-picker" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-end">
+                <div class="w-full bg-white dark:bg-dark-card rounded-t-3xl p-6 space-y-4 animate-slide-up max-h-[85vh] flex flex-col">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-black">Escolher Exercício</h3>
+                        <button onclick="app.closeExercisePicker()" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center text-ios-gray font-bold">✕</button>
+                    </div>
+                    <input type="text" id="exercise-picker-search" placeholder="Buscar exercício..." oninput="app.filterExercisePicker(this.value)"
+                        class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brand-neon">
+                    <div id="exercise-picker-list" class="overflow-y-auto flex-1 space-y-1 pb-2">
+                        <!-- Populado por JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: Atribuir Treino ao Aluno -->
+            <div id="modal-assign-program" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-end">
+                <div class="w-full bg-white dark:bg-dark-card rounded-t-3xl p-6 space-y-4 animate-slide-up">
+                    <h3 class="text-lg font-black">Atribuir Treino</h3>
+                    <p id="assign-student-name" class="text-sm text-ios-gray -mt-2"></p>
+                    <input type="hidden" id="assign-student-id">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Programa de Treino</label>
+                        <select id="assign-program-select"
+                            class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:border-brand-neon">
+                            <option value="">Sem programa</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="app.closeAssignProgramModal()" class="flex-1 border border-gray-200 dark:border-gray-700 py-3 rounded-2xl font-bold text-sm">Cancelar</button>
+                        <button onclick="app.saveAssignProgram()" class="flex-1 bg-brand-neon text-black py-3 rounded-2xl font-black text-sm">Salvar</button>
                     </div>
                 </div>
             </div>
@@ -5291,40 +5326,86 @@
                 listEl.innerHTML = '<div class="text-center py-12 text-ios-gray"><p class="text-sm">Carregando treinos...</p></div>';
                 try {
                     const res = await fetch('/api/workouts', { headers: AUTH.headers() });
-                    const programs = await res.json();
+                    const data = await res.json();
+                    // Suporta resposta antiga (array) e nova ({ programs, assignedProgramId })
+                    const programs = Array.isArray(data) ? data : (data.programs || []);
+                    const assignedProgramId = Array.isArray(data) ? null : (data.assignedProgramId || null);
                     this.state.workoutPrograms = programs;
-                    this.renderTreinoProgramList(programs);
+                    this.state.assignedProgramId = assignedProgramId;
+                    this.renderTreinoProgramList(programs, assignedProgramId);
                 } catch {
                     listEl.innerHTML = '<div class="text-center py-12 text-red-400"><p class="text-sm">Erro ao carregar treinos</p></div>';
                 }
             },
 
-            renderTreinoProgramList(programs) {
+            renderTreinoProgramList(programs, assignedProgramId) {
                 const listEl = document.getElementById('treino-program-list');
                 if (!listEl) return;
-                const categoryIcons = {
+                const catIcons = {
                     'chest-triceps': '💪', 'back-biceps': '🦾', 'legs': '🦵',
-                    'shoulders': '🏋️', 'abs': '🔥', 'cardio': '🏃', 'full-body': '⚡', 'default': '🏅'
+                    'shoulders': '🏋️', 'abs': '🔥', 'cardio': '🏃', 'full-body': '⚡'
                 };
-                listEl.innerHTML = `
-                    <p class="text-xs text-ios-gray font-bold uppercase tracking-widest px-1 mb-3">Programas Disponíveis</p>
-                    <div class="space-y-3">
-                        ${programs.map(p => `
-                            <button onclick="app.selectTreinoProgram('${p.id}')"
-                                class="w-full bg-white dark:bg-dark-card rounded-3xl p-5 border border-ios-separator/30 dark:border-gray-800 shadow-sm text-left flex items-center gap-4 hover:border-brand-neon/50 transition-all">
-                                <div class="w-14 h-14 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
-                                    ${categoryIcons[p.category] || categoryIcons.default}
+                const icon = (cat) => catIcons[cat] || '🏅';
+
+                const assigned = assignedProgramId ? programs.find(p => p.id === assignedProgramId) : null;
+                const others = programs.filter(p => p.id !== assignedProgramId);
+
+                let html = '';
+
+                // ── Treino personalizado da academia ───────────────────
+                if (assigned) {
+                    const exCount = Array.isArray(assigned.exercises) ? assigned.exercises.length : 0;
+                    html += `
+                        <div class="mb-5">
+                            <p class="text-xs text-brand-neon font-black uppercase tracking-widest px-1 mb-3">⚡ Seu Treino Personalizado</p>
+                            <button onclick="app.selectTreinoProgram('${assigned.id}')"
+                                class="w-full bg-gradient-to-r from-brand-neon/20 to-brand-neon/5 border-2 border-brand-neon rounded-3xl p-5 text-left flex items-center gap-4 shadow-neon/20 shadow-lg">
+                                <div class="w-16 h-16 bg-brand-neon rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 shadow-neon">
+                                    ${icon(assigned.category)}
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <h3 class="font-black text-base">${p.name}</h3>
-                                    <p class="text-xs text-ios-gray mt-0.5">${Array.isArray(p.exercises) ? p.exercises.length : 0} exercícios</p>
-                                    ${p.description ? `<p class="text-xs text-ios-gray truncate">${p.description}</p>` : ''}
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-[10px] bg-brand-neon text-black font-black px-2 py-0.5 rounded-full">DA SUA ACADEMIA</span>
+                                    </div>
+                                    <h3 class="font-black text-base">${assigned.name}</h3>
+                                    <p class="text-xs text-ios-gray mt-0.5">${exCount} exercício${exCount !== 1 ? 's' : ''}</p>
                                 </div>
-                                <i data-lucide="chevron-right" class="w-5 h-5 text-ios-gray flex-shrink-0"></i>
+                                <i data-lucide="chevron-right" class="w-5 h-5 text-brand-neon flex-shrink-0"></i>
                             </button>
-                        `).join('')}
-                    </div>
-                `;
+                        </div>
+                    `;
+                }
+
+                // ── Outros programas disponíveis (carrossel) ───────────
+                if (others.length > 0) {
+                    html += `<p class="text-xs text-ios-gray font-black uppercase tracking-widest px-1 mb-3">${assigned ? 'Outros Programas' : 'Programas Disponíveis'}</p>`;
+                    html += `<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2">`;
+                    html += others.map(p => {
+                        const exCount = Array.isArray(p.exercises) ? p.exercises.length : 0;
+                        return `
+                            <button onclick="app.selectTreinoProgram('${p.id}')"
+                                class="flex-shrink-0 w-44 bg-white dark:bg-dark-card rounded-3xl p-4 border border-ios-separator/30 dark:border-gray-800 shadow-sm text-left">
+                                <div class="w-12 h-12 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-2xl mb-3">
+                                    ${icon(p.category)}
+                                </div>
+                                <h3 class="font-black text-sm leading-tight">${p.name}</h3>
+                                <p class="text-[11px] text-ios-gray mt-1">${exCount} exercício${exCount !== 1 ? 's' : ''}</p>
+                                ${p.description ? `<p class="text-[11px] text-ios-gray mt-0.5 line-clamp-2">${p.description}</p>` : ''}
+                            </button>
+                        `;
+                    }).join('');
+                    html += `</div>`;
+                }
+
+                if (!assigned && others.length === 0) {
+                    html = `<div class="text-center py-12 text-ios-gray">
+                        <div class="text-4xl mb-3">🏋️</div>
+                        <p class="text-sm font-bold">Nenhum treino disponível</p>
+                        <p class="text-xs mt-1">Aguarde seu personal atribuir um treino</p>
+                    </div>`;
+                }
+
+                listEl.innerHTML = html;
                 if (window.lucide) lucide.createIcons();
             },
 
@@ -5528,21 +5609,34 @@
                     const s = link.student || {};
                     const prog = link.program || {};
                     return `
-                        <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800 flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-2xl bg-brand-neon/10 flex items-center justify-center font-black text-brand-neon text-lg flex-shrink-0">
-                                ${(s.name || 'A').charAt(0).toUpperCase()}
+                        <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800 space-y-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-11 h-11 rounded-2xl bg-brand-neon/10 flex items-center justify-center font-black text-brand-neon text-lg flex-shrink-0">
+                                    ${(s.name || 'A').charAt(0).toUpperCase()}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-bold text-sm">${s.name || 'Sem nome'}</p>
+                                    <p class="text-xs text-ios-gray truncate">${s.email || ''}</p>
+                                    ${prog.name ? `<p class="text-xs text-brand-neon mt-0.5">📋 ${prog.name}</p>` : '<p class="text-xs text-ios-gray mt-0.5">Sem treino atribuído</p>'}
+                                </div>
+                                <span class="text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 ${link.status === 'active' ? 'bg-brand-neon/10 text-brand-neon' : 'bg-gray-100 text-ios-gray'}">
+                                    ${link.status === 'active' ? 'Ativo' : 'Inativo'}
+                                </span>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="font-bold text-sm">${s.name || 'Sem nome'}</p>
-                                <p class="text-xs text-ios-gray truncate">${s.email || ''}</p>
-                                ${prog.name ? `<p class="text-xs text-brand-neon mt-0.5">📋 ${prog.name}</p>` : '<p class="text-xs text-ios-gray mt-0.5">Sem programa</p>'}
+                            <div class="flex gap-2 pt-1 border-t border-gray-100 dark:border-gray-800">
+                                <button onclick="app.openAssignProgramModal('${s.id}', '${s.name || s.email}')"
+                                    class="flex-1 bg-brand-neon/10 text-brand-neon text-xs font-black py-2 rounded-xl flex items-center justify-center gap-1">
+                                    <i data-lucide="clipboard-list" class="w-3 h-3"></i> Atribuir Treino
+                                </button>
+                                <button onclick="app.removeStudent('${s.id}')"
+                                    class="w-10 bg-red-50 dark:bg-red-900/20 text-red-400 text-xs font-black py-2 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
                             </div>
-                            <span class="text-[10px] font-bold px-2 py-1 rounded-full ${link.status === 'active' ? 'bg-brand-neon/10 text-brand-neon' : 'bg-gray-100 text-ios-gray'}">
-                                ${link.status === 'active' ? 'Ativo' : 'Inativo'}
-                            </span>
                         </div>
                     `;
                 }).join('');
+                if (window.lucide) lucide.createIcons();
             },
 
             async loadAcademiaPrograms() {
@@ -5567,16 +5661,29 @@
                     if (window.lucide) lucide.createIcons();
                     return;
                 }
-                listEl.innerHTML = programs.map(p => `
-                    <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800 flex items-center gap-3">
-                        <div class="w-12 h-12 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">🏋️</div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-bold text-sm">${p.name}</p>
-                            <p class="text-xs text-ios-gray">${Array.isArray(p.exercises) ? p.exercises.length : 0} exercícios</p>
+                const catIcons = { 'chest-triceps': '💪', 'back-biceps': '🦾', 'legs': '🦵', 'shoulders': '🏋️', 'abs': '🔥', 'cardio': '🏃', 'full-body': '⚡' };
+                listEl.innerHTML = programs.map(p => {
+                    const exCount = Array.isArray(p.exercises) ? p.exercises.length : 0;
+                    const icon = catIcons[p.category] || '🏅';
+                    return `
+                    <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800 space-y-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0">${icon}</div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-bold text-sm">${p.name}</p>
+                                <p class="text-xs text-ios-gray">${exCount} exercício${exCount !== 1 ? 's' : ''}</p>
+                            </div>
                         </div>
-                        <button onclick="app.editProgram('${p.id}')" class="text-brand-neon text-xs font-bold border border-brand-neon/30 px-3 py-1.5 rounded-full">Editar</button>
-                    </div>
-                `).join('');
+                        <div class="flex gap-2 pt-1 border-t border-gray-100 dark:border-gray-800">
+                            <button onclick="app.editProgram('${p.id}')"
+                                class="flex-1 bg-brand-neon/10 text-brand-neon text-xs font-black py-2 rounded-xl">Editar</button>
+                            <button onclick="app.deleteProgram('${p.id}')"
+                                class="w-10 bg-red-50 dark:bg-red-900/20 text-red-400 py-2 rounded-xl flex items-center justify-center">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('');
             },
 
             populateProgramSelect(programs) {
@@ -5614,54 +5721,110 @@
                 } catch { this.showToast('Erro de conexão'); }
             },
 
+            // Banco de exercícios por categoria
+            EXERCISE_BANK: {
+                'Peito': ['Supino Reto','Supino Inclinado','Supino Declinado','Crucifixo','Crossover','Flexão de Braço','Peck Deck','Supino Máquina'],
+                'Costas': ['Puxada Frente','Puxada Atrás','Remada Curvada','Remada Unilateral','Pulldown','Serrote','Levantamento Terra','Remada Máquina'],
+                'Pernas': ['Agachamento Livre','Leg Press 45','Cadeira Extensora','Mesa Flexora','Stiff','Hack Squat','Afundo','Panturrilha Sentado','Panturrilha em Pé'],
+                'Ombros': ['Desenvolvimento c/ Halteres','Desenvolvimento c/ Barra','Elevação Lateral','Elevação Frontal','Encolhimento','Crucifixo Inverso','Face Pull'],
+                'Bíceps': ['Rosca Direta','Rosca Alternada','Rosca Martelo','Rosca Scott','Rosca Concentrada','Rosca 21'],
+                'Tríceps': ['Tríceps Corda','Tríceps Francês','Tríceps Testa','Tríceps Máquina','Mergulho','Tríceps Coice'],
+                'Abdômen': ['Crunch','Crunch Máquina','Elevação de Pernas','Prancha','Russian Twist','Abdominal Oblíquo','Roda Abdominal'],
+                'Cardio': ['Esteira','Bike','Elíptico','Pular Corda','Burpee','Polichinelo']
+            },
+
             openCreateProgramModal() {
                 document.getElementById('modal-create-program').classList.remove('hidden');
                 document.getElementById('modal-create-program').classList.add('flex');
                 document.getElementById('prog-exercises-list').innerHTML = '';
-                this.addExerciseRow();
+                document.getElementById('prog-name').value = '';
+                document.getElementById('prog-category').value = 'chest-triceps';
+                // Reset save button to create mode
+                const saveBtn = document.querySelector('#modal-create-program button[onclick="app.saveProgram()"]');
+                if (saveBtn) { saveBtn.onclick = () => app.saveProgram(); saveBtn.textContent = 'Salvar'; }
+                delete this._editingProgramId;
             },
 
             closeCreateProgramModal() {
                 document.getElementById('modal-create-program').classList.add('hidden');
                 document.getElementById('modal-create-program').classList.remove('flex');
+                delete this._editingProgramId;
             },
 
-            addExerciseRow() {
+            openExercisePicker() {
+                const modal = document.getElementById('modal-exercise-picker');
+                modal.classList.remove('hidden');
+                document.getElementById('exercise-picker-search').value = '';
+                this.renderExercisePickerList('');
+            },
+
+            closeExercisePicker() {
+                document.getElementById('modal-exercise-picker').classList.add('hidden');
+            },
+
+            renderExercisePickerList(filter) {
+                const list = document.getElementById('exercise-picker-list');
+                const f = filter.toLowerCase().trim();
+                let html = '';
+                for (const [cat, exs] of Object.entries(this.EXERCISE_BANK)) {
+                    const filtered = f ? exs.filter(e => e.toLowerCase().includes(f)) : exs;
+                    if (!filtered.length) continue;
+                    html += `<p class="text-[10px] font-black text-ios-gray uppercase tracking-widest px-1 pt-2 pb-1">${cat}</p>`;
+                    html += filtered.map(ex => `
+                        <button onclick="app.addExerciseFromPicker('${ex.replace(/'/g, '&#39;')}')"
+                            class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-brand-neon/10 text-sm font-semibold transition-colors flex items-center justify-between">
+                            ${ex}
+                            <span class="text-brand-neon text-xs font-black">+ Adicionar</span>
+                        </button>
+                    `).join('');
+                }
+                list.innerHTML = html || '<p class="text-sm text-ios-gray text-center py-4">Nenhum exercício encontrado</p>';
+            },
+
+            filterExercisePicker(val) { this.renderExercisePickerList(val); },
+
+            addExerciseFromPicker(name) {
+                this.closeExercisePicker();
+                this._addExerciseRow(name);
+            },
+
+            _addExerciseRow(name = '') {
                 const container = document.getElementById('prog-exercises-list');
-                const idx = container.children.length;
                 const row = document.createElement('div');
                 row.className = 'flex gap-2 items-start';
                 row.innerHTML = `
                     <div class="flex-1 space-y-2">
-                        <input type="text" placeholder="Nome do exercício" class="prog-ex-name w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-neon">
-                        <div class="grid grid-cols-3 gap-2">
-                            <input type="number" placeholder="Séries" class="prog-ex-sets w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none" value="3">
-                            <input type="text" placeholder="Reps" class="prog-ex-reps w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none" value="12">
-                            <input type="number" placeholder="Peso(kg)" class="prog-ex-weight w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none">
+                        <div class="flex items-center gap-2">
+                            <input type="text" placeholder="Nome do exercício" value="${name}" class="prog-ex-name flex-1 bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-neon font-semibold">
                         </div>
-                        <input type="url" placeholder="URL do vídeo YouTube (opcional)" class="prog-ex-video w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-neon">
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="number" placeholder="Séries" class="prog-ex-sets w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none text-center" value="3">
+                            <input type="text" placeholder="Reps" class="prog-ex-reps w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none text-center" value="12">
+                            <input type="number" placeholder="Peso kg" class="prog-ex-weight w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none text-center">
+                        </div>
                     </div>
-                    <button onclick="this.parentElement.remove()" class="w-8 h-8 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center justify-center text-red-400 flex-shrink-0 mt-2">✕</button>
+                    <button onclick="this.parentElement.remove()" class="w-8 h-8 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center justify-center text-red-400 flex-shrink-0 mt-2 text-sm font-bold">✕</button>
                 `;
                 container.appendChild(row);
+            },
+
+            _collectExercises() {
+                const rows = document.getElementById('prog-exercises-list').querySelectorAll('div.flex.gap-2.items-start');
+                return Array.from(rows).map(row => ({
+                    name: row.querySelector('.prog-ex-name')?.value.trim() || '',
+                    sets: parseInt(row.querySelector('.prog-ex-sets')?.value) || 3,
+                    reps: row.querySelector('.prog-ex-reps')?.value || '12',
+                    target_weight: parseFloat(row.querySelector('.prog-ex-weight')?.value) || 0,
+                    video_url: ''
+                })).filter(ex => ex.name);
             },
 
             async saveProgram() {
                 const name = document.getElementById('prog-name').value.trim();
                 const category = document.getElementById('prog-category').value;
                 if (!name) { this.showToast('Digite o nome do programa'); return; }
-
-                const rows = document.getElementById('prog-exercises-list').querySelectorAll('div.flex.gap-2');
-                const exercises = Array.from(rows).map(row => ({
-                    name: row.querySelector('.prog-ex-name').value.trim(),
-                    sets: parseInt(row.querySelector('.prog-ex-sets').value) || 3,
-                    reps: row.querySelector('.prog-ex-reps').value || '12',
-                    target_weight: parseFloat(row.querySelector('.prog-ex-weight').value) || 0,
-                    video_url: row.querySelector('.prog-ex-video').value.trim()
-                })).filter(ex => ex.name);
-
+                const exercises = this._collectExercises();
                 if (exercises.length === 0) { this.showToast('Adicione ao menos um exercício'); return; }
-
                 try {
                     const res = await fetch('/api/academia/programs', {
                         method: 'POST', headers: AUTH.headers(),
@@ -5671,12 +5834,109 @@
                     if (!res.ok) { this.showToast(data.error || 'Erro ao salvar'); return; }
                     this.showToast('Programa criado!');
                     this.closeCreateProgramModal();
-                    document.getElementById('prog-name').value = '';
                     await this.loadAcademiaPrograms();
                 } catch { this.showToast('Erro de conexão'); }
             },
 
-            editProgram(id) { this.showToast('Edição de programas em breve!'); },
+            editProgram(id) {
+                const prog = (this.state.academiaPrograms || []).find(p => p.id === id);
+                if (!prog) { this.showToast('Programa não encontrado'); return; }
+                this._editingProgramId = id;
+
+                // Open modal
+                document.getElementById('modal-create-program').classList.remove('hidden');
+                document.getElementById('modal-create-program').classList.add('flex');
+
+                // Pre-fill fields
+                document.getElementById('prog-name').value = prog.name || '';
+                const catSel = document.getElementById('prog-category');
+                if (catSel) catSel.value = prog.category || 'chest-triceps';
+
+                // Pre-fill exercises
+                const container = document.getElementById('prog-exercises-list');
+                container.innerHTML = '';
+                (Array.isArray(prog.exercises) ? prog.exercises : []).forEach(ex => {
+                    this._addExerciseRow(ex.name || '');
+                    const rows = container.querySelectorAll('div.flex.gap-2.items-start');
+                    const last = rows[rows.length - 1];
+                    if (last) {
+                        last.querySelector('.prog-ex-sets').value = ex.sets || 3;
+                        last.querySelector('.prog-ex-reps').value = ex.reps || '12';
+                        last.querySelector('.prog-ex-weight').value = ex.target_weight || '';
+                    }
+                });
+                if (container.children.length === 0) this._addExerciseRow();
+
+                // Switch save button to update mode
+                const saveBtn = document.querySelector('#modal-create-program button[onclick="app.saveProgram()"]');
+                if (saveBtn) { saveBtn.onclick = () => app.updateProgram(id); saveBtn.textContent = 'Atualizar'; }
+            },
+
+            async updateProgram(id) {
+                const name = document.getElementById('prog-name').value.trim();
+                const category = document.getElementById('prog-category').value;
+                if (!name) { this.showToast('Digite o nome do programa'); return; }
+                const exercises = this._collectExercises();
+                if (exercises.length === 0) { this.showToast('Adicione ao menos um exercício'); return; }
+                try {
+                    const res = await fetch(`/api/academia/programs/${id}`, {
+                        method: 'PUT', headers: AUTH.headers(),
+                        body: JSON.stringify({ name, category, exercises })
+                    });
+                    if (!res.ok) { this.showToast('Erro ao atualizar'); return; }
+                    this.showToast('Programa atualizado!');
+                    this.closeCreateProgramModal();
+                    await this.loadAcademiaPrograms();
+                } catch { this.showToast('Erro de conexão'); }
+            },
+
+            async deleteProgram(id) {
+                if (!confirm('Remover este programa?')) return;
+                try {
+                    await fetch(`/api/academia/programs/${id}`, { method: 'DELETE', headers: AUTH.headers() });
+                    this.showToast('Programa removido');
+                    await this.loadAcademiaPrograms();
+                } catch { this.showToast('Erro ao remover'); }
+            },
+
+            openAssignProgramModal(studentId, studentName) {
+                document.getElementById('assign-student-id').value = studentId;
+                document.getElementById('assign-student-name').textContent = `Aluno: ${studentName}`;
+                const sel = document.getElementById('assign-program-select');
+                sel.innerHTML = '<option value="">Sem programa</option>' +
+                    (this.state.academiaPrograms || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+                document.getElementById('modal-assign-program').classList.remove('hidden');
+                document.getElementById('modal-assign-program').classList.add('flex');
+            },
+
+            closeAssignProgramModal() {
+                document.getElementById('modal-assign-program').classList.add('hidden');
+                document.getElementById('modal-assign-program').classList.remove('flex');
+            },
+
+            async saveAssignProgram() {
+                const studentId = document.getElementById('assign-student-id').value;
+                const programId = document.getElementById('assign-program-select').value;
+                try {
+                    const res = await fetch(`/api/academia/students/${studentId}`, {
+                        method: 'PATCH', headers: AUTH.headers(),
+                        body: JSON.stringify({ assigned_program_id: programId || null, status: 'active' })
+                    });
+                    if (!res.ok) { this.showToast('Erro ao atribuir treino'); return; }
+                    this.showToast(programId ? 'Treino atribuído!' : 'Treino removido');
+                    this.closeAssignProgramModal();
+                    await this.loadAcademiaStudents();
+                } catch { this.showToast('Erro de conexão'); }
+            },
+
+            async removeStudent(studentId) {
+                if (!confirm('Remover aluno da academia?')) return;
+                try {
+                    await fetch(`/api/academia/students/${studentId}`, { method: 'DELETE', headers: AUTH.headers() });
+                    this.showToast('Aluno removido');
+                    await this.loadAcademiaStudents();
+                } catch { this.showToast('Erro ao remover aluno'); }
+            },
 
             loadTodayMeals() {
                 // Background Sync

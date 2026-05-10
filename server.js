@@ -481,7 +481,6 @@ app.get('/api/workouts', async (req, res) => {
       .select('*')
       .eq('is_public', true);
 
-    // Se o aluno tem uma academia vinculada, busca os programas dela também
     const { data: link } = await supabase
       .from('academia_students')
       .select('assigned_program_id, academia_id')
@@ -502,9 +501,25 @@ app.get('/api/workouts', async (req, res) => {
       !(publicPrograms || []).find(pp => pp.id === ap.id)
     )];
 
-    res.json(all);
+    // Retorna { programs, assignedProgramId } para o front saber qual é o treino do aluno
+    res.json({ programs: all, assignedProgramId: link?.assigned_program_id || null });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao buscar treinos' });
+  }
+});
+
+// Remove aluno da academia
+app.delete('/api/academia/students/:studentId', async (req, res) => {
+  try {
+    if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
+    await supabase
+      .from('academia_students')
+      .delete()
+      .eq('academia_id', req.userId)
+      .eq('student_id', req.params.studentId);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao remover aluno' });
   }
 });
 
@@ -645,6 +660,21 @@ app.post('/api/academia/programs', async (req, res) => {
     res.json({ success: true, program: data });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao criar programa' });
+  }
+});
+
+// Deleta programa de treino
+app.delete('/api/academia/programs/:id', async (req, res) => {
+  try {
+    if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
+    await supabase
+      .from('workout_programs')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('created_by', req.userId);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao deletar programa' });
   }
 });
 
