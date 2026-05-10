@@ -11,3 +11,11 @@ fix.js
 fix2.js
 modified_index.html
 original_index.html
+
+# Sensitive — never commit
+.env
+.env.local
+.env.production
+
+# Claude Code local config
+.claude/

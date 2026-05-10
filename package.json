@@ -1,13 +1,16 @@
 {
-  "name": "macro-ai",
+  "name": "aortype",
   "version": "1.0.0",
-  "description": "MacroAI - Personal nutrition and fitness AI assistant",
+  "description": "AorType - Personal nutrition and fitness AI assistant",
   "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
     "test": "echo \"No tests specified\" && exit 0"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "keywords": [],
   "author": "",
@@ -20,7 +23,6 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.3",
-    "node-fetch": "^3.3.2"
+    "jsonwebtoken": "^9.0.3"
   }
 }

@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import fetch from 'node-fetch';
 import bodyParser from 'body-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
