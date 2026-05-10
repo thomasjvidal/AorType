@@ -13,38 +13,18 @@ const __dirname = path.dirname(__filename);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'macroai_secret_change_in_production';
 
-// Supabase client — criado de forma lazy para não crashar se env vars ausentes
-const getSupabase = (() => {
-  let client = null;
-  return () => {
-    if (!client) {
-      const url = process.env.SUPABASE_URL;
-      const key = process.env.SUPABASE_SERVICE_KEY;
-      if (!url || !key) throw new Error('SUPABASE_URL e SUPABASE_SERVICE_KEY são obrigatórios. Configure as variáveis de ambiente no Vercel.');
-      client = createClient(url, key);
-    }
-    return client;
-  };
-})();
-
-// Atalho — usar supabase.from(...) normalmente nas rotas
-const supabase = new Proxy({}, {
-  get: (_, prop) => (...args) => getSupabase()[prop](...args)
-});
+// Supabase client (service role — bypasses RLS, só no servidor)
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
+app.use(express.static(__dirname));
 
 const PORT = process.env.PORT || 3000;
-
-// ── ARQUIVOS ESTÁTICOS (antes do authMiddleware) ───────────────
-// Serve index.html e assets sem exigir autenticação
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/favicon.png', (req, res) => res.sendFile(path.join(__dirname, 'favicon.png')));
-app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, 'favicon.png')));
-app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, 'logo.png')));
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // ── AUTH MIDDLEWARE ────────────────────────────────────────────
 const authMiddleware = (req, res, next) => {
@@ -201,101 +181,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Verifica disponibilidade de email (sem criar conta)
-app.post('/api/auth/check-email', async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email obrigatório' });
-    const { data: existing } = await supabase.from('users').select('id').eq('email', email).single();
-    if (existing) return res.status(409).json({ error: 'Email já cadastrado' });
-    res.json({ available: true });
-  } catch (e) {
-    res.json({ available: true }); // Supabase retorna erro quando não encontra — é available
-  }
-});
-
-// Esqueci minha senha
-app.post('/api/auth/forgot-password', async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email obrigatório' });
-    const { data: user } = await supabase.from('users').select('id, name').eq('email', email).single();
-    if (!user) {
-      // Don't reveal if email exists
-      return res.json({ success: true, message: 'Se o email existir, você receberá as instruções.' });
-    }
-    // Generate a reset token (simple JWT valid 1h)
-    const resetToken = jwt.sign({ userId: user.id, purpose: 'reset' }, JWT_SECRET, { expiresIn: '1h' });
-    // Store token in profile (as a simple reset mechanism)
-    await supabase.from('profiles').update({ reset_token: resetToken, reset_token_at: new Date().toISOString() }).eq('user_id', user.id);
-    // In production, send an email. For now, log the token and return a success message.
-    console.log(`[RESET] Token for ${email}: ${resetToken}`);
-    res.json({ success: true, message: 'Email de recuperação enviado (verifique os logs em dev).' });
-  } catch (e) {
-    console.error('Forgot password error:', e);
-    res.status(500).json({ error: 'Erro ao processar solicitação' });
-  }
-});
-
-// Cadastro completo: cria conta + salva onboarding em uma transação
-app.post('/api/auth/register-complete', async (req, res) => {
-  try {
-    const { email, password, name, username, user_type = 'aluno', onboardingData, profile, goals } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email e senha obrigatórios' });
-
-    const { data: existing } = await supabase.from('users').select('id').eq('email', email).single();
-    if (existing) return res.status(409).json({ error: 'Email já cadastrado' });
-
-    const password_hash = await bcrypt.hash(password, 10);
-    const { data: user, error: userErr } = await supabase
-      .from('users')
-      .insert({ email, password_hash, name, username, user_type })
-      .select()
-      .single();
-    if (userErr) throw userErr;
-
-    // Salva perfil + onboarding juntos
-    const d = onboardingData || {};
-    const weight = parseFloat(d.weight) || null;
-    const height = parseFloat(d.height) || null;
-    const age = parseInt(d.age) || null;
-    const gender = d.gender || null;
-    const goal = d.goal || null;
-    const activity_level = d.workoutFreq === '6+' ? 1.725 : d.workoutFreq === '3-5' ? 1.55 : 1.375;
-
-    let daily_calories = null, daily_protein = null, daily_carbs = null, daily_fat = null;
-    if (weight && height && age && gender) {
-      // Mifflin-St Jeor (same formula as frontend)
-      const bmr = gender === 'male'
-        ? 10 * weight + 6.25 * height - 5 * age + 5
-        : 10 * weight + 6.25 * height - 5 * age - 161;
-      const tdee = Math.round(bmr * activity_level);
-      daily_calories = goal === 'lose' ? tdee - 500 : goal === 'gain' ? tdee + 400 : tdee;
-      // Protein: 2g/kg for lose/gain, 1.6g/kg for maintain/health
-      const proteinPerKg = (goal === 'maintain' || goal === 'health') ? 1.6 : 2.0;
-      daily_protein = Math.round(weight * proteinPerKg);
-      daily_fat = Math.round(weight * 0.9);
-      daily_carbs = Math.max(0, Math.round((daily_calories - (daily_protein * 4) - (daily_fat * 9)) / 4));
-    }
-
-    await supabase.from('profiles').insert({
-      user_id: user.id,
-      weight, height, age, gender, goal, activity_level,
-      biotype: d.biotype, diet: d.diet,
-      daily_calories, daily_protein, daily_carbs, daily_fat,
-      onboarding_done: true,
-      onboarding_data: d,
-      updated_at: new Date().toISOString()
-    });
-
-    const token = jwt.sign({ userId: user.id, email, userType: user_type }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, userId: user.id, email, name: user.name, userType: user_type, daily_calories, daily_protein, daily_carbs, daily_fat });
-  } catch (e) {
-    console.error('Register-complete error:', e);
-    res.status(500).json({ error: 'Erro ao cadastrar. Tente novamente.' });
-  }
-});
-
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
@@ -336,32 +221,26 @@ app.get('/api/profile', async (req, res) => {
 
 app.post('/api/profile', async (req, res) => {
   try {
-    const { name, username, phone, weight, height, age, gender, goal, activity_level, biotype, diet, streak, lastOpenDate } = req.body;
-    // Accept both 'avatar_url' and 'avatar' from frontend
-    const avatar_url = req.body.avatar_url || req.body.avatar || undefined;
+    const { name, username, phone, avatar_url, weight, height, age, gender, goal, activity_level, biotype, diet, streak, last_open_date } = req.body;
 
-    const userUpdate = { name, username, phone };
-    if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url;
-    await supabase.from('users').update(userUpdate).eq('id', req.userId);
+    await supabase.from('users').update({ name, username, phone, avatar_url }).eq('id', req.userId);
 
     const profileData = { weight, height, age, gender, goal, activity_level, biotype, diet, updated_at: new Date().toISOString() };
-    // Persist streak + last open date if provided (requires streak, last_open_date columns in profiles table)
     if (streak !== undefined) profileData.streak = streak;
-    if (lastOpenDate !== undefined) profileData.last_open_date = lastOpenDate;
+    if (last_open_date !== undefined) profileData.last_open_date = last_open_date;
 
-    // Calcula metas calóricas se tiver dados suficientes (Mifflin-St Jeor)
+    // Calcula metas calóricas se tiver dados suficientes
     if (weight && height && age && gender) {
-      const bmr = gender === 'male'
-        ? 10 * weight + 6.25 * height - 5 * age + 5
-        : 10 * weight + 6.25 * height - 5 * age - 161;
+      const bmr = gender === 'female'
+        ? 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age)
+        : 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
       const actLvl = parseFloat(activity_level) || 1.375;
       const tdee = Math.round(bmr * actLvl);
-      const target = goal === 'lose' ? tdee - 500 : goal === 'gain' ? tdee + 400 : tdee;
+      const target = goal === 'lose' ? tdee - 500 : goal === 'gain' ? tdee + 300 : tdee;
       profileData.daily_calories = target;
-      const proteinPerKg = (goal === 'maintain' || goal === 'health') ? 1.6 : 2.0;
-      profileData.daily_protein = Math.round(weight * proteinPerKg);
-      profileData.daily_fat = Math.round(weight * 0.9);
-      profileData.daily_carbs = Math.max(0, Math.round((target - (profileData.daily_protein * 4) - (profileData.daily_fat * 9)) / 4));
+      profileData.daily_protein = Math.round(weight * 2.2);
+      profileData.daily_fat = Math.round((target * 0.25) / 9);
+      profileData.daily_carbs = Math.round((target - (profileData.daily_protein * 4) - (profileData.daily_fat * 9)) / 4);
     }
 
     const { data: existing } = await supabase.from('profiles').select('id').eq('user_id', req.userId).single();
@@ -394,16 +273,14 @@ app.post('/api/onboarding', async (req, res) => {
     let daily_calories = null, daily_protein = null, daily_carbs = null, daily_fat = null;
 
     if (weight && height && age && gender) {
-      // Mifflin-St Jeor (same formula as frontend)
-      const bmr = gender === 'male'
-        ? 10 * weight + 6.25 * height - 5 * age + 5
-        : 10 * weight + 6.25 * height - 5 * age - 161;
+      const bmr = gender === 'female'
+        ? 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age)
+        : 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
       const tdee = Math.round(bmr * activity_level);
-      daily_calories = goal === 'lose' ? tdee - 500 : goal === 'gain' ? tdee + 400 : tdee;
-      const proteinPerKg = (goal === 'maintain' || goal === 'health') ? 1.6 : 2.0;
-      daily_protein = Math.round(weight * proteinPerKg);
-      daily_fat = Math.round(weight * 0.9);
-      daily_carbs = Math.max(0, Math.round((daily_calories - (daily_protein * 4) - (daily_fat * 9)) / 4));
+      daily_calories = goal === 'lose' ? tdee - 500 : goal === 'gain' ? tdee + 300 : tdee;
+      daily_protein = Math.round(weight * 2.2);
+      daily_fat = Math.round((daily_calories * 0.25) / 9);
+      daily_carbs = Math.round((daily_calories - (daily_protein * 4) - (daily_fat * 9)) / 4);
     }
 
     if (d.name) await supabase.from('users').update({ name: d.name }).eq('id', req.userId);
@@ -458,28 +335,10 @@ app.get('/api/meals', async (req, res) => {
 
 app.post('/api/meals', async (req, res) => {
   try {
-    const body = req.body;
-    const id = body.id;
-    const name = body.name;
-    const type = body.type || body.meal_type || 'food';
-    const grams = body.grams;
-    const ingredients = body.ingredients;
-    const meal_window = body.meal_window;
-
-    // Support both flat fields and nested macros object (client sends macros: {cal,p,c,f})
-    const macros = body.macros || {};
-    const calories = body.calories ?? body.cals ?? macros.cal ?? macros.calories ?? 0;
-    const protein  = body.protein  ?? macros.p  ?? macros.protein  ?? 0;
-    const carbs    = body.carbs    ?? macros.c  ?? macros.carbs    ?? 0;
-    const fat      = body.fat      ?? macros.f  ?? macros.fat      ?? 0;
-
-    // Truncate base64 image to avoid DB size limits (store URL or null for large images)
-    let image_url = body.image_url || body.image || null;
-    if (image_url && image_url.startsWith('data:') && image_url.length > 200000) {
-      image_url = null; // Skip saving huge base64 blobs
-    }
+    const { id, name, type, calories, protein, carbs, fat, grams, ingredients, image_url, meal_window } = req.body;
 
     if (id) {
+      // Atualiza refeição existente
       const { data, error } = await supabase
         .from('meals')
         .update({ name, meal_type: type, calories, protein, carbs, fat, grams, ingredients, image_url, meal_window })
@@ -488,12 +347,14 @@ app.post('/api/meals', async (req, res) => {
         .select()
         .single();
       if (error) throw error;
+      // Map meal_type back to type for frontend compatibility
       return res.json({ success: true, meal: { ...data, type: data.meal_type } });
     }
 
+    // Nova refeição
     const { data, error } = await supabase
       .from('meals')
-      .insert({ user_id: req.userId, name, meal_type: type, calories, protein, carbs, fat, grams, ingredients, image_url, meal_window })
+      .insert({ user_id: req.userId, name, meal_type: type || 'food', calories, protein, carbs, fat, grams, ingredients, image_url, meal_window })
       .select()
       .single();
 
@@ -539,11 +400,11 @@ app.post('/api/checkins', async (req, res) => {
     const entries = Array.isArray(req.body) ? req.body : Object.entries(req.body).map(([date, data]) => ({ date, ...data }));
 
     for (const entry of entries) {
-      const { date, mood, workout_type, workout_specific, workout_duration, workout_intensity, sleep_minutes, water_ml, calories_burned } = entry;
-      const upsertData = { user_id: req.userId, date: date || new Date().toISOString().split('T')[0], mood, workout_type, workout_duration, workout_intensity, sleep_minutes, water_ml };
-      if (workout_specific !== undefined) upsertData.workout_specific = workout_specific;
-      if (calories_burned !== undefined) upsertData.calories_burned = calories_burned;
-      await supabase.from('checkins').upsert(upsertData, { onConflict: 'user_id,date' });
+      const { date, mood, workout_type, workout_duration, workout_intensity, sleep_minutes, water_ml } = entry;
+      await supabase.from('checkins').upsert(
+        { user_id: req.userId, date, mood, workout_type, workout_duration, workout_intensity, sleep_minutes, water_ml },
+        { onConflict: 'user_id,date' }
+      );
     }
     res.json({ success: true });
   } catch (e) {
@@ -612,40 +473,22 @@ app.get('/api/foods', (req, res) => res.json(FOOD_DB));
 // ── TREINOS ────────────────────────────────────────────────────
 
 // Lista programas disponíveis (públicos + criados pela academia do aluno)
-// O programa atribuído ao aluno vem primeiro com is_assigned:true e custom_exercises
 app.get('/api/workouts', async (req, res) => {
   try {
-    // Verifica se o aluno tem programa atribuído com exercícios customizados
-    const { data: link } = await supabase
-      .from('academia_students')
-      .select('assigned_program_id, academia_id, custom_exercises')
-      .eq('student_id', req.userId)
-      .eq('status', 'active')
-      .single();
-
-    let assignedProgram = null;
-    if (link?.assigned_program_id) {
-      const { data: ap } = await supabase
-        .from('workout_programs')
-        .select('*')
-        .eq('id', link.assigned_program_id)
-        .single();
-      if (ap) {
-        assignedProgram = {
-          ...ap,
-          is_assigned: true,
-          custom_exercises: link.custom_exercises || null
-        };
-      }
-    }
-
     const { data: publicPrograms } = await supabase
       .from('workout_programs')
       .select('*')
       .eq('is_public', true);
 
+    const { data: link } = await supabase
+      .from('academia_students')
+      .select('assigned_program_id, academia_id')
+      .eq('student_id', req.userId)
+      .eq('status', 'active')
+      .single();
+
     let academiaPrograms = [];
-    if (link?.academia_id) {
+    if (link) {
       const { data: ap } = await supabase
         .from('workout_programs')
         .select('*')
@@ -653,20 +496,29 @@ app.get('/api/workouts', async (req, res) => {
       academiaPrograms = ap || [];
     }
 
-    const others = [...(publicPrograms || []), ...academiaPrograms.filter(ap =>
+    const all = [...(publicPrograms || []), ...academiaPrograms.filter(ap =>
       !(publicPrograms || []).find(pp => pp.id === ap.id)
     )];
 
-    // Programa atribuído sempre primeiro; não duplicar na lista geral
-    const result = [];
-    if (assignedProgram) result.push(assignedProgram);
-    others.forEach(p => {
-      if (!assignedProgram || p.id !== assignedProgram.id) result.push(p);
-    });
-
-    res.json(result);
+    // Retorna { programs, assignedProgramId } para o front saber qual é o treino do aluno
+    res.json({ programs: all, assignedProgramId: link?.assigned_program_id || null });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao buscar treinos' });
+  }
+});
+
+// Remove aluno da academia
+app.delete('/api/academia/students/:studentId', async (req, res) => {
+  try {
+    if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
+    await supabase
+      .from('academia_students')
+      .delete()
+      .eq('academia_id', req.userId)
+      .eq('student_id', req.params.studentId);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao remover aluno' });
   }
 });
 
@@ -718,7 +570,7 @@ app.get('/api/academia/students', async (req, res) => {
     const { data, error } = await supabase
       .from('academia_students')
       .select(`
-        id, academia_id, student_id, assigned_program_id, status, custom_exercises,
+        *,
         student:student_id(id, name, email, avatar_url),
         program:assigned_program_id(id, name, category)
       `)
@@ -759,41 +611,21 @@ app.post('/api/academia/students', async (req, res) => {
   }
 });
 
-// Atualiza programa e/ou exercícios customizados do aluno
+// Atualiza programa do aluno
 app.patch('/api/academia/students/:studentId', async (req, res) => {
   try {
     if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
-    const { assigned_program_id, status, custom_exercises } = req.body;
-
-    const updateData = {};
-    if (assigned_program_id !== undefined) updateData.assigned_program_id = assigned_program_id;
-    if (status !== undefined) updateData.status = status;
-    if (custom_exercises !== undefined) updateData.custom_exercises = custom_exercises;
+    const { assigned_program_id, status } = req.body;
 
     await supabase
       .from('academia_students')
-      .update(updateData)
+      .update({ assigned_program_id, status })
       .eq('academia_id', req.userId)
-      .eq('id', req.params.studentId); // usa id do link, não student_id
+      .eq('student_id', req.params.studentId);
 
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao atualizar aluno' });
-  }
-});
-
-// Remove aluno da academia
-app.delete('/api/academia/students/:studentId', async (req, res) => {
-  try {
-    if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
-    await supabase
-      .from('academia_students')
-      .delete()
-      .eq('academia_id', req.userId)
-      .eq('id', req.params.studentId);
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: 'Erro ao remover aluno' });
   }
 });
 
@@ -830,6 +662,21 @@ app.post('/api/academia/programs', async (req, res) => {
   }
 });
 
+// Deleta programa de treino
+app.delete('/api/academia/programs/:id', async (req, res) => {
+  try {
+    if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
+    await supabase
+      .from('workout_programs')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('created_by', req.userId);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao deletar programa' });
+  }
+});
+
 // Atualiza programa de treino
 app.put('/api/academia/programs/:id', async (req, res) => {
   try {
@@ -853,17 +700,13 @@ app.put('/api/academia/programs/:id', async (req, res) => {
 const applyFoodDB = (result) => {
   if (result?.items && Array.isArray(result.items)) {
     result.items = result.items.map(item => {
-      // Only use FoodDB as fallback — never override values the AI already calculated
-      const aiHasMacros = (item.calories > 0) || (item.protein > 0) || (item.carbs > 0) || (item.fat > 0);
-      if (!aiHasMacros) {
-        const dbMatch = matchFood(item.name);
-        if (dbMatch) {
-          const grams = item.grams || 100;
-          item.calories = Math.round(dbMatch.cal * grams / 100);
-          item.protein = Math.round(dbMatch.p * grams / 100);
-          item.carbs = Math.round(dbMatch.c * grams / 100);
-          item.fat = Math.round(dbMatch.f * grams / 100);
-        }
+      const dbMatch = matchFood(item.name);
+      if (dbMatch) {
+        const grams = item.grams || 100;
+        item.calories = Math.round(dbMatch.cal * grams / 100);
+        item.protein = Math.round(dbMatch.p * grams / 100);
+        item.carbs = Math.round(dbMatch.c * grams / 100);
+        item.fat = Math.round(dbMatch.f * grams / 100);
       }
       return item;
     });
@@ -907,19 +750,7 @@ app.post('/api/analyze-image', async (req, res) => {
       if (!response.ok) throw new Error(`Groq API error: ${response.status}`);
       const json = await response.json();
       const content = json.choices?.[0]?.message?.content || '{}';
-      const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
-      let parsed;
-      try {
-        parsed = JSON.parse(cleaned);
-      } catch {
-        // GROQ sometimes wraps JSON in extra text — extract the first {...} block
-        const match = cleaned.match(/\{[\s\S]*\}/);
-        if (match) {
-          try { parsed = JSON.parse(match[0]); } catch { parsed = {}; }
-        } else {
-          parsed = {};
-        }
-      }
+      const parsed = JSON.parse(content.replace(/```json/g, '').replace(/```/g, '').trim());
       return res.json({ provider: 'groq', result: applyFoodDB(parsed) });
     }
 
@@ -932,12 +763,7 @@ app.post('/api/analyze-image', async (req, res) => {
       const base64Data = image?.includes('base64,') ? image.split('base64,')[1] : image;
       const result = await model.generateContent([prompt, { inlineData: { data: base64Data, mimeType: 'image/jpeg' } }]);
       const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-      let geminiParsed;
-      try { geminiParsed = JSON.parse(text); } catch {
-        const m = text.match(/\{[\s\S]*\}/);
-        try { geminiParsed = m ? JSON.parse(m[0]) : {}; } catch { geminiParsed = {}; }
-      }
-      return res.json({ provider: 'gemini', result: applyFoodDB(geminiParsed) });
+      return res.json({ provider: 'gemini', result: applyFoodDB(JSON.parse(text)) });
     }
 
     if (provider === 'openai') {
@@ -955,13 +781,8 @@ app.post('/api/analyze-image', async (req, res) => {
         })
       });
       const json = await response.json();
-      const rawContent = (json.choices?.[0]?.message?.content || '{}').replace(/```json/g, '').replace(/```/g, '').trim();
-      let openaiParsed;
-      try { openaiParsed = JSON.parse(rawContent); } catch {
-        const m = rawContent.match(/\{[\s\S]*\}/);
-        try { openaiParsed = m ? JSON.parse(m[0]) : {}; } catch { openaiParsed = {}; }
-      }
-      return res.json({ provider: 'openai', result: applyFoodDB(openaiParsed) });
+      const parsed = JSON.parse(json.choices?.[0]?.message?.content?.replace(/```json/g, '').replace(/```/g, '').trim() || '{}');
+      return res.json({ provider: 'openai', result: applyFoodDB(parsed) });
     }
 
     throw new Error('Nenhum provider de IA configurado');
@@ -979,7 +800,7 @@ app.post('/api/chat', async (req, res) => {
     const groqKey = process.env.GROQ_API_KEY;
     if (!groqKey) return res.status(401).json({ error: 'Chave Groq não configurada' });
 
-    const systemPrompt = `Você é o assistente de IA do app "AorType".
+    const systemPrompt = `Você é o assistente de IA do app "Macro AI".
 Você tem acesso total aos dados do usuário e deve usá-los nas respostas.
 
 DADOS DO USUÁRIO:
@@ -1018,6 +839,5 @@ REGRAS:
 export default app;
 
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => console.log(`AorType rodando em http://localhost:${PORT}`));
+  app.listen(PORT, () => console.log(`MacroAI rodando em http://localhost:${PORT}`));
 }
-
