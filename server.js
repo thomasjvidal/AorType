@@ -770,15 +770,46 @@ app.patch('/api/academia/students/:studentId', async (req, res) => {
     if (status !== undefined) updateData.status = status;
     if (custom_exercises !== undefined) updateData.custom_exercises = custom_exercises;
 
-    await supabase
+    if (Object.keys(updateData).length === 0) return res.json({ success: true });
+
+    const { error } = await supabase
       .from('academia_students')
       .update(updateData)
       .eq('academia_id', req.userId)
-      .eq('id', req.params.studentId); // usa id do link, não student_id
+      .eq('id', req.params.studentId);
 
+    if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao atualizar aluno' });
+  }
+});
+
+// Histórico do aluno (check-ins e treinos nos últimos N dias)
+app.get('/api/academia/students/:studentId/history', async (req, res) => {
+  try {
+    if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
+    const days = Math.min(parseInt(req.query.days) || 30, 90);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Verify the student belongs to this academia
+    const { data: link } = await supabase
+      .from('academia_students')
+      .select('student_id')
+      .eq('academia_id', req.userId)
+      .eq('id', req.params.studentId)
+      .single();
+
+    if (!link) return res.status(404).json({ error: 'Aluno não encontrado' });
+
+    const [{ data: checkins }, { data: sessions }] = await Promise.all([
+      supabase.from('daily_checkins').select('date, mood, note').eq('user_id', link.student_id).gte('date', since).order('date', { ascending: false }),
+      supabase.from('workout_sessions').select('date, exercises_done').eq('user_id', link.student_id).gte('date', since).order('date', { ascending: false })
+    ]);
+
+    res.json({ checkins: checkins || [], sessions: sessions || [] });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao buscar histórico' });
   }
 });
 
@@ -815,11 +846,11 @@ app.get('/api/academia/programs', async (req, res) => {
 app.post('/api/academia/programs', async (req, res) => {
   try {
     if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
-    const { name, category, description, exercises } = req.body;
+    const { name, category, categories, description, exercises } = req.body;
 
     const { data, error } = await supabase
       .from('workout_programs')
-      .insert({ name, category, description, exercises: exercises || [], created_by: req.userId, is_public: false })
+      .insert({ name, category, categories: categories || null, description, exercises: exercises || [], created_by: req.userId, is_public: false })
       .select()
       .single();
 
@@ -834,14 +865,15 @@ app.post('/api/academia/programs', async (req, res) => {
 app.put('/api/academia/programs/:id', async (req, res) => {
   try {
     if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
-    const { name, category, description, exercises } = req.body;
+    const { name, category, categories, description, exercises } = req.body;
 
-    await supabase
+    const { error } = await supabase
       .from('workout_programs')
-      .update({ name, category, description, exercises })
+      .update({ name, category, categories: categories || null, description, exercises })
       .eq('id', req.params.id)
       .eq('created_by', req.userId);
 
+    if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao atualizar programa' });
