@@ -114,6 +114,14 @@
             padding-bottom: env(safe-area-inset-bottom);
         }
 
+        .pt-safe-top {
+            padding-top: env(safe-area-inset-top);
+        }
+
+        .h-safe-top {
+            height: env(safe-area-inset-top);
+        }
+
         /* Animations */
         @keyframes slideUp {
             from {
@@ -2328,7 +2336,7 @@
         <div id="screen-treino" class="screen hidden fixed inset-0 z-50 bg-ios-bg dark:bg-dark-bg flex flex-col h-[100dvh]">
 
             <!-- Header -->
-            <header class="flex items-center justify-between px-4 py-3 border-b border-ios-separator/10 dark:border-gray-800 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md sticky top-0 z-10">
+            <header class="flex items-center justify-between px-4 py-3 pt-safe-top border-b border-ios-separator/10 dark:border-gray-800 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md sticky top-0 z-10">
                 <button onclick="app.navigate('dashboard')" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center">
                     <i data-lucide="arrow-left" class="w-5 h-5"></i>
                 </button>
@@ -2439,7 +2447,7 @@
         <div id="screen-academia" class="hidden fixed inset-0 z-[100] bg-ios-bg dark:bg-dark-bg flex flex-col h-[100dvh]">
 
             <!-- Header Academia -->
-            <header class="px-5 py-4 bg-black text-white flex items-center justify-between">
+            <header class="px-5 py-4 pt-safe-top bg-black text-white flex items-center justify-between">
                 <div>
                     <h1 class="text-xl font-black">Painel Academia</h1>
                     <p id="academia-name-display" class="text-brand-neon text-xs font-bold">Carregando...</p>
@@ -2530,16 +2538,10 @@
                             class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:border-brand-neon">
                     </div>
                     <div class="space-y-2">
-                        <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Categoria</label>
-                        <select id="edit-prog-category" class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none">
-                            <option value="chest-triceps">Peito & Tríceps</option>
-                            <option value="back-biceps">Costas & Bíceps</option>
-                            <option value="legs">Pernas</option>
-                            <option value="shoulders">Ombros</option>
-                            <option value="abs">Abdômen</option>
-                            <option value="full-body">Corpo Todo</option>
-                            <option value="cardio">Cardio</option>
-                        </select>
+                        <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Grupos Musculares</label>
+                        <div id="edit-prog-category-grid" class="grid grid-cols-2 gap-2">
+                            <!-- Populated by editProgram() -->
+                        </div>
                     </div>
                     <div class="space-y-2">
                         <div class="flex items-center justify-between">
@@ -2611,7 +2613,7 @@
             class="screen hidden fixed inset-0 z-50 bg-ios-bg dark:bg-dark-bg flex flex-col h-[100dvh] animate-fade-in">
             <!-- Top Bar -->
             <header
-                class="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-ios-separator/10 bg-ios-card/80 dark:bg-dark-card/50 backdrop-blur-md sticky top-0 z-10">
+                class="flex items-center justify-between px-4 py-3 pt-safe-top md:px-6 md:py-4 border-b border-ios-separator/10 bg-ios-card/80 dark:bg-dark-card/50 backdrop-blur-md sticky top-0 z-10">
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-lg md:text-xl font-black tracking-tight" data-translate="ai_title">IA</h1>
@@ -5570,21 +5572,25 @@
                     </button>`;
                 }
 
-                // ── Other programs ───────────────────────────────────
+                // ── Other programs carousel ──────────────────────────
                 if (others.length > 0) {
                     html += `<p class="text-xs text-ios-gray font-bold uppercase tracking-widest px-1 mb-3">${assigned ? 'Outros Programas' : 'Programas Disponíveis'}</p>
-                    <div class="space-y-3">
+                    <div class="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory no-scrollbar -mx-4 px-4">
                         ${others.map(p => {
-                            const exCount = Array.isArray(p.exercises) ? p.exercises.length : 0;
+                            const cats = Array.isArray(p.categories) && p.categories.length
+                                ? p.categories.slice(0,2).join(' · ')
+                                : (p.category ? p.category.split(',')[0].trim() : '');
+                            const icon = catIcons[p.category] || catIcons.default;
+                            const isFree = p.is_free !== false;
                             return `<button onclick="app.selectTreinoProgram('${p.id}')"
-                                class="w-full bg-white dark:bg-dark-card rounded-3xl p-5 border border-ios-separator/30 dark:border-gray-800 shadow-sm text-left flex items-center gap-4 hover:border-brand-neon/50 transition-all active:scale-[.98]">
-                                <div class="w-14 h-14 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">${catIcons[p.category] || catIcons.default}</div>
-                                <div class="flex-1 min-w-0">
-                                    <h3 class="font-black text-base">${p.name}</h3>
-                                    <p class="text-xs text-ios-gray mt-0.5">${exCount} exercício${exCount !== 1 ? 's' : ''}</p>
-                                    ${p.description ? `<p class="text-xs text-ios-gray truncate mt-0.5">${p.description}</p>` : ''}
+                                class="flex-shrink-0 w-52 bg-white dark:bg-dark-card rounded-3xl p-4 border border-ios-separator/30 dark:border-gray-800 shadow-sm text-left snap-start active:scale-[.97] transition-transform">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="w-11 h-11 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-2xl">${icon}</div>
+                                    <span class="text-[9px] font-black px-2 py-0.5 rounded-full ${isFree ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}">${isFree ? 'GRÁTIS' : 'PRO'}</span>
                                 </div>
-                                <i data-lucide="chevron-right" class="w-5 h-5 text-ios-gray flex-shrink-0"></i>
+                                <h3 class="font-black text-sm leading-tight mb-1">${p.name}</h3>
+                                <p class="text-[10px] text-ios-gray truncate">${cats || 'Protocolo geral'}</p>
+                                ${p.description ? `<p class="text-[10px] text-ios-gray truncate mt-0.5">${p.description}</p>` : ''}
                             </button>`;
                         }).join('')}
                     </div>`;
@@ -5958,16 +5964,23 @@
                     if (window.lucide) lucide.createIcons();
                     return;
                 }
-                listEl.innerHTML = programs.map(p => `
+                listEl.innerHTML = programs.map(p => {
+                    const cats = Array.isArray(p.categories) && p.categories.length
+                        ? p.categories
+                        : (p.category ? p.category.split(',').map(s => s.trim()) : []);
+                    const catLabel = cats.length ? cats.slice(0,3).join(' · ') : 'Protocolo geral';
+                    const studentCount = (this.state.academiaStudents || []).filter(s => s.assigned_program_id == p.id).length;
+                    return `
                     <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800 flex items-center gap-3">
                         <div class="w-12 h-12 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">🏋️</div>
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-sm">${p.name}</p>
-                            <p class="text-xs text-ios-gray">${Array.isArray(p.exercises) ? p.exercises.length : 0} exercícios</p>
+                            <p class="text-xs text-ios-gray truncate">${catLabel}</p>
+                            ${studentCount > 0 ? `<p class="text-[10px] text-brand-neon font-bold mt-0.5">${studentCount} aluno${studentCount !== 1 ? 's' : ''}</p>` : ''}
                         </div>
                         <button onclick="app.editProgram('${p.id}')" class="text-brand-neon text-xs font-bold border border-brand-neon/30 px-3 py-1.5 rounded-full">Editar</button>
-                    </div>
-                `).join('');
+                    </div>`;
+                }).join('');
             },
 
             populateProgramSelect(programs) {
@@ -6068,6 +6081,20 @@
             // ── STUDENT WORKOUT CONFIGURATOR ──────────────────────
             _studentWorkoutTarget: null, // { linkId, studentName, programId }
 
+            // Maps legacy English category keys → Portuguese EXERCISE_LIBRARY keys
+            _normalizeCats(cats) {
+                const MAP = {
+                    'chest-triceps': ['Peito','Tríceps'],
+                    'back-biceps':   ['Costas','Bíceps'],
+                    'legs':          ['Pernas'],
+                    'shoulders':     ['Ombros'],
+                    'abs':           ['Abdômen'],
+                    'cardio':        ['Cardio'],
+                    'full-body':     Object.keys(this.EXERCISE_LIBRARY),
+                };
+                return cats.flatMap(c => MAP[c] || [c]).filter(c => this.EXERCISE_LIBRARY[c]);
+            },
+
             openStudentWorkoutModal(linkId, studentName, programId) {
                 this._studentWorkoutTarget = { linkId, studentName, programId };
                 const modal = document.getElementById('modal-student-workout');
@@ -6082,6 +6109,8 @@
                     if (Array.isArray(prog.categories) && prog.categories.length) cats = prog.categories;
                     else if (prog.category) cats = prog.category.split(',').map(s => s.trim());
                 }
+                // Normalize any legacy English keys → Portuguese keys used by EXERCISE_LIBRARY
+                if (cats.length) cats = this._normalizeCats(cats);
                 if (!cats.length) cats = Object.keys(this.EXERCISE_LIBRARY);
 
                 // Load existing custom exercises for this student if available
@@ -6202,8 +6231,23 @@
 
                 document.getElementById('edit-prog-id').value = id;
                 document.getElementById('edit-prog-name').value = prog.name || '';
-                const catEl = document.getElementById('edit-prog-category');
-                if (catEl && prog.category) catEl.value = prog.category;
+
+                // Determine current Portuguese categories, normalizing legacy English keys
+                let currentCats = [];
+                if (Array.isArray(prog.categories) && prog.categories.length) {
+                    currentCats = prog.categories;
+                } else if (prog.category) {
+                    currentCats = this._normalizeCats(prog.category.split(',').map(s => s.trim()));
+                }
+                const grid = document.getElementById('edit-prog-category-grid');
+                if (grid) {
+                    grid.innerHTML = Object.keys(this.EXERCISE_LIBRARY).map(cat => `
+                        <label class="flex items-center gap-2 bg-gray-50 dark:bg-dark-elevated border-2 border-gray-200 dark:border-gray-700 rounded-2xl px-3 py-2.5 cursor-pointer has-[:checked]:border-brand-neon has-[:checked]:bg-brand-neon/10 transition-all">
+                            <input type="checkbox" class="sr-only edit-cat-check" value="${cat}" ${currentCats.includes(cat) ? 'checked' : ''}>
+                            <span class="text-lg">${this.CATEGORY_ICONS[cat] || '🏋️'}</span>
+                            <span class="text-sm font-bold">${cat}</span>
+                        </label>`).join('');
+                }
 
                 // Populate exercises
                 const listEl = document.getElementById('edit-prog-exercises-list');
@@ -6253,8 +6297,12 @@
             async saveEditedProgram() {
                 const id = document.getElementById('edit-prog-id').value;
                 const name = document.getElementById('edit-prog-name').value.trim();
-                const category = document.getElementById('edit-prog-category').value;
                 if (!name) { this.showToast('Digite o nome do programa'); return; }
+
+                const checks = document.querySelectorAll('.edit-cat-check:checked');
+                const categories = Array.from(checks).map(c => c.value);
+                if (categories.length === 0) { this.showToast('Selecione ao menos 1 grupo muscular'); return; }
+                const category = categories.join(',');
 
                 const rows = document.querySelectorAll('#edit-prog-exercises-list .flex');
                 const exercises = [];
@@ -6268,7 +6316,7 @@
                     const res = await fetch(`/api/academia/programs/${id}`, {
                         method: 'PUT',
                         headers: AUTH.headers(),
-                        body: JSON.stringify({ name, category, exercises })
+                        body: JSON.stringify({ name, category, categories, exercises })
                     });
                     if (!res.ok) throw new Error('Erro ao salvar');
                     this.showToast('Programa atualizado!');
