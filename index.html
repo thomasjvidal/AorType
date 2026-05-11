@@ -127,6 +127,9 @@
         .pt-safe-4 {
             padding-top: calc(env(safe-area-inset-top) + 1rem) !important;
         }
+        .pt-safe-6 {
+            padding-top: calc(env(safe-area-inset-top) + 1.5rem) !important;
+        }
         .h-safe-top {
             height: env(safe-area-inset-top);
         }
@@ -687,11 +690,10 @@
                         <!-- Inputs -->
                         <div class="space-y-5">
                             <div class="group space-y-2">
-                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider ml-1"
-                                    data-translate="email">Email</label>
-                                <input type="email" id="login-email"
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Email ou Username</label>
+                                <input type="text" id="login-email" autocomplete="username"
                                     class="w-full bg-gray-50/50 dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 focus:border-brand-neon focus:ring-4 focus:ring-brand-neon/10 rounded-2xl px-5 py-4 font-semibold text-black dark:text-white outline-none transition-all placeholder-gray-400 backdrop-blur-sm"
-                                    placeholder="seu@email.com">
+                                    placeholder="seu@email.com ou @username">
                             </div>
                             <div class="group space-y-2">
                                 <div class="flex items-center justify-between ml-1">
@@ -714,6 +716,7 @@
                         <!-- Main Action -->
                         <button onclick="app.handleAuth('login')"
                             class="w-full bg-[#1C1C1E] dark:bg-white text-white dark:text-black font-black py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02]  transition-all duration-300 text-lg tracking-wide uppercase mt-4"
+                            data-auth="login"
                             data-translate="login_button">
                             Entrar
                         </button>
@@ -1309,7 +1312,7 @@
                                                 class="text-[8px] font-black text-ios-blue/60 uppercase tracking-widest"
                                                 data-translate="water">Água</span>
                                             <div class="flex items-baseline gap-0.5">
-                                                <span class="text-lg font-black text-black dark:text-white">750</span>
+                                                <span id="dash-water-amount" class="text-lg font-black text-black dark:text-white">0</span>
                                                 <span class="text-[8px] font-bold text-ios-gray">ml</span>
                                             </div>
                                         </div>
@@ -1529,6 +1532,21 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Diário da Saúde -->
+                <div class="bg-white dark:bg-dark-card rounded-3xl p-6 shadow-soft border border-ios-separator/30 dark:border-gray-800">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-lg flex items-center gap-2">
+                            <i data-lucide="notebook-pen" class="w-5 h-5 text-brand-neon"></i>
+                            Diário da Saúde
+                        </h3>
+                        <button onclick="app.openCheckinModal()" class="text-[10px] font-black bg-brand-neon/10 text-brand-neon px-3 py-1 rounded-full uppercase tracking-wider">+ Check-in</button>
+                    </div>
+                    <div id="stats-health-diary" class="space-y-3">
+                        <p class="text-ios-gray text-sm text-center py-4">Nenhum registro ainda</p>
+                    </div>
+                </div>
+
             </div>
 
             <!-- PROFILE SCREEN -->
@@ -1892,12 +1910,16 @@
                                     <p id="analysis-confidence" class="text-white/40 text-xs hidden"></p>
                                 </div>
                                 <div class="flex gap-2">
+                                    <button onclick="app.rejectAnalysis()"
+                                        class="bg-red-500/20 text-red-400 px-3 py-2 rounded-xl font-bold text-xs border border-red-500/20 btn-press hover:bg-red-500/30 transition-colors">
+                                        ✕ Rejeitar
+                                    </button>
                                     <button onclick="app.readjustAnalysis()"
-                                        class="bg-white/10 text-white px-4 py-2 rounded-xl font-bold text-xs border border-white/10 btn-press hover:bg-white/20 transition-colors">
+                                        class="bg-white/10 text-white px-3 py-2 rounded-xl font-bold text-xs border border-white/10 btn-press hover:bg-white/20 transition-colors">
                                         Reajustar
                                     </button>
                                     <button onclick="app.confirmAllAnalysis(event)"
-                                        class="bg-brand-neon text-black px-6 py-2 rounded-xl font-bold text-sm btn-press shadow-neon hover:scale-105 transition-transform">
+                                        class="bg-brand-neon text-black px-5 py-2 rounded-xl font-bold text-sm btn-press shadow-neon hover:scale-105 transition-transform">
                                         Confirmar
                                     </button>
                                 </div>
@@ -1960,7 +1982,7 @@
                     <p id="streak-screen-message" class="text-ios-gray font-medium">Você está pegando fogo!</p>
                 </div>
 
-                <div id="streak-week-grid" class="grid grid-cols-7 gap-2">
+                <div id="streak-week-grid" class="grid grid-cols-7 gap-1">
                     <!-- Populated dynamically by renderStreakWeek() -->
                 </div>
 
@@ -2361,8 +2383,33 @@
             <!-- Content -->
             <div class="flex-1 overflow-y-auto no-scrollbar pb-8">
 
+                <!-- ── Carrossel de programas ── -->
+                <div id="workout-carousel-wrap" class="pt-4 pb-1">
+                    <div id="workout-carousel"
+                         class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-3 px-4"
+                         onscroll="app.handleCarouselScroll()">
+                        <!-- Cards injetados por renderTreinoProgramList -->
+                    </div>
+                    <!-- Indicadores -->
+                    <div id="workout-carousel-dots" class="flex justify-center gap-1.5 mt-2.5"></div>
+                </div>
+
+                <!-- Ações rápidas (Registrar / Check-in) -->
+                <div id="treino-quick-actions" class="px-4 pt-3 pb-1 grid grid-cols-2 gap-3">
+                    <button onclick="app.navigate('workout')"
+                        class="flex items-center justify-center gap-2 bg-brand-neon text-black font-black py-3 px-4 rounded-2xl text-xs shadow-neon btn-press transition-all">
+                        <i data-lucide="dumbbell" class="w-4 h-4"></i>
+                        <span>Registrar Exercício</span>
+                    </button>
+                    <button onclick="app.openCheckinModal()"
+                        class="flex items-center justify-center gap-2 bg-brand-electric/10 border border-brand-electric/30 text-brand-electric font-black py-3 px-4 rounded-2xl text-xs btn-press transition-all">
+                        <i data-lucide="activity" class="w-4 h-4"></i>
+                        <span>Check-in Diário</span>
+                    </button>
+                </div>
+
                 <!-- Seleção de programa -->
-                <div id="treino-program-list" class="px-4 pt-4 space-y-3">
+                <div id="treino-program-list" class="px-4 pt-2 space-y-3">
                     <p class="text-xs text-ios-gray font-bold uppercase tracking-widest px-1 mb-3">Programas Disponíveis</p>
                     <!-- Populado por JS -->
                     <div class="flex items-center justify-center py-16">
@@ -2391,6 +2438,23 @@
                                 <div id="treino-progress-bar" class="h-full bg-brand-neon rounded-full transition-all duration-500" style="width:0%"></div>
                             </div>
                             <span id="treino-progress-text" class="text-xs font-bold text-brand-neon">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Energia Ativa -->
+                    <div class="bg-brand-neon/5 border border-brand-neon/20 rounded-2xl px-4 py-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-xl bg-brand-hot/10 flex items-center justify-center">
+                                <i data-lucide="flame" class="w-4 h-4 text-brand-hot"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-widest text-ios-gray">Energia Ativa</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Kcal queimadas hoje</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span id="treino-energy-val" class="text-2xl font-black text-brand-hot">0</span>
+                            <span class="text-xs font-bold text-ios-gray ml-0.5">kcal</span>
                         </div>
                     </div>
 
@@ -2456,7 +2520,7 @@
         <div id="screen-academia" class="hidden fixed inset-0 z-[100] bg-ios-bg dark:bg-dark-bg flex flex-col h-[100dvh]">
 
             <!-- Header Academia -->
-            <header class="px-5 pb-4 pt-safe-4 bg-black text-white flex items-center justify-between">
+            <header class="px-5 pb-4 pt-safe-6 bg-black text-white flex items-center justify-between">
                 <div>
                     <h1 class="text-xl font-black">Painel Academia</h1>
                     <p id="academia-name-display" class="text-brand-neon text-xs font-bold">Carregando...</p>
@@ -2886,7 +2950,7 @@
                 </button>
 
                 <!-- Banco de alimentos -->
-                <button onclick="app.toggleScannerMenu()"
+                <button onclick="app.openFoodBank(); app.toggleScannerMenu()"
                     class="flex flex-col items-center justify-center gap-3 bg-gray-50 dark:bg-dark-elevated p-6 rounded-2xl border border-gray-100 dark:border-gray-700 btn-press  transition-transform hover:bg-gray-100 dark:hover:bg-gray-800">
                     <i data-lucide="search" class="w-8 h-8 text-black dark:text-white"></i>
                     <span class="text-xs font-bold text-center" data-translate="food_bank">Banco de<br>alimentos</span>
@@ -3078,6 +3142,21 @@
                     </div>
                 </div>
 
+                <!-- Nota do Dia -->
+                <div class="bg-white dark:bg-dark-elevated p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500">
+                            <i data-lucide="pencil-line" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-gray-900 dark:text-white">Nota do Dia</h3>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Como foi seu dia?</p>
+                        </div>
+                    </div>
+                    <textarea id="checkin-note" rows="2" placeholder="Ex: Treino pesado, dormi cedo, me senti ótimo..."
+                        class="w-full bg-gray-50 dark:bg-dark-card border border-gray-100 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 resize-none focus:outline-none focus:border-brand-neon transition-colors"></textarea>
+                </div>
+
                 <button type="submit"
                     class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(204,255,0,0.3)] btn-press flex items-center justify-center gap-2 group transition-all hover:shadow-[0_0_30px_rgba(204,255,0,0.5)] hover:scale-[1.02] ">
                     <span data-translate="save_checkin">Salvar Check-in</span>
@@ -3108,6 +3187,38 @@
                 <span class="text-ios-gray text-sm">ml</span>
             </div>
             <button onclick="app.confirmWaterAdd()" class="w-full py-4 bg-ios-blue text-white rounded-2xl font-bold text-lg  transition-transform">Adicionar</button>
+        </div>
+    </div>
+
+    <!-- FOOD BANK MODAL -->
+    <div id="food-bank-modal" class="fixed inset-0 z-[120] hidden flex flex-col bg-ios-bg dark:bg-dark-bg">
+        <!-- Header -->
+        <div class="flex items-center gap-3 px-4 pt-safe-3 pb-3 bg-white dark:bg-dark-card border-b border-ios-separator/20 dark:border-gray-800">
+            <button onclick="app.closeFoodBank()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center flex-shrink-0">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <input id="food-bank-search" type="text" placeholder="Buscar alimento..." autocomplete="off"
+                oninput="app.searchFoodBank(this.value)"
+                class="flex-1 bg-gray-100 dark:bg-dark-elevated px-4 py-2.5 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-neon">
+        </div>
+        <!-- Results -->
+        <div id="food-bank-results" class="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+            <p class="text-xs text-ios-gray text-center pt-8">Digite o nome de um alimento para buscar</p>
+        </div>
+        <!-- Add grams panel (hidden initially) -->
+        <div id="food-bank-add-panel" class="hidden bg-white dark:bg-dark-card border-t border-ios-separator/20 dark:border-gray-800 px-4 py-4">
+            <p id="food-bank-selected-name" class="font-black text-base mb-3"></p>
+            <div class="flex items-center gap-3 mb-4">
+                <input id="food-bank-grams" type="number" value="100" min="1" max="2000"
+                    oninput="app.updateFoodBankPreview()"
+                    class="w-28 bg-gray-100 dark:bg-dark-elevated px-4 py-2.5 rounded-2xl text-base font-black focus:outline-none focus:ring-2 focus:ring-brand-neon text-center">
+                <span class="text-sm text-ios-gray font-bold">gramas</span>
+                <div class="flex-1 text-right text-xs text-ios-gray" id="food-bank-macro-preview">--</div>
+            </div>
+            <button onclick="app.confirmFoodBankAdd()"
+                class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl text-base shadow-neon btn-press">
+                + Adicionar ao Dia
+            </button>
         </div>
     </div>
 
@@ -4414,21 +4525,49 @@
                 const customInput = document.getElementById('water-custom-amount');
                 const amount = (customInput && customInput.value) ? parseInt(customInput.value) : (this._selectedWaterAmount || 250);
                 if (!amount || amount < 50) { this.showToast('Informe uma quantidade válida'); return; }
+                const time = new Date();
                 const meal = {
-                    id: Math.random().toString(36).substr(2, 9),
+                    id: Date.now().toString(36) + Math.random().toString(36).substr(2),
                     name: 'Água',
                     grams: amount,
                     macros: { cal: 0, p: 0, c: 0, f: 0 },
-                    calories: 0, protein: 0, carbs: 0, fat: 0,
                     image: null, type: 'water', amount,
-                    timestamp: new Date().toISOString(),
-                    time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                    timestamp: time.toISOString(),
+                    time: `${String(time.getHours()).padStart(2,'0')}:${String(time.getMinutes()).padStart(2,'0')}`
                 };
+
+                // Add to today's meals list and persist to localStorage
                 this.state.mealsToday.push(meal);
-                this.saveState();
+                try {
+                    localStorage.setItem('wb_meals_today', JSON.stringify(this.state.mealsToday));
+                    localStorage.setItem('wb_meals_date', new Date().toLocaleDateString('pt-BR'));
+                } catch {}
+
+                // Persist water to /api/meals so server sync restores it on reload
+                fetch('/api/meals', {
+                    method: 'POST',
+                    headers: AUTH.headers(),
+                    body: JSON.stringify({ name: 'Água', grams: amount, meal_type: 'water', type: 'water', amount,
+                        macros: { cal: 0, p: 0, c: 0, f: 0 } })
+                }).catch(err => console.error('Water meal sync error:', err));
+
+                // Also update checkin water_ml total for the day
+                const today = time.toISOString().split('T')[0];
+                const totalWater = this.state.mealsToday
+                    .filter(m => m.type === 'water')
+                    .reduce((s, m) => s + (m.amount || m.grams || 0), 0);
+                fetch('/api/checkins', {
+                    method: 'POST',
+                    headers: AUTH.headers(),
+                    body: JSON.stringify([{ date: today, water_ml: totalWater }])
+                }).catch(err => console.error('Water checkin sync error:', err));
+
                 this.closeWaterModal();
                 this.showToast(`+${amount}ml de água adicionado! 💧`);
+                this.updateDashboardTotals();
                 this.renderTodayMeals();
+                this.calculateActivity();
+                this.updateHealthScore();
             },
 
             closeWaterModal() {
@@ -4458,18 +4597,34 @@
                 const key = 'wb_supplements_' + today;
                 const doses = JSON.parse(localStorage.getItem(key) || '[]');
                 const item = typeof supp === 'string' ? { name: supp, dose: '', macros: { cal: 0, p: 0, c: 0, f: 0 } } : supp;
+                const now = new Date();
                 const entry = {
                     ...item,
-                    time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                    timestamp: new Date().toISOString(),
-                    id: Math.random().toString(36).substr(2, 9),
-                    type: 'supplement'
+                    time: `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,
+                    timestamp: now.toISOString(),
+                    id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+                    type: 'supplement',
+                    macros: item.macros || { cal: 0, p: 0, c: 0, f: 0 }
                 };
                 doses.push(entry);
                 localStorage.setItem(key, JSON.stringify(doses));
-                // Add to recent items
-                this.addToRecentItems(entry);
+
+                // Add to today's meals so it appears in uploads recentes (igual água)
+                this.state.mealsToday.push(entry);
+                try {
+                    localStorage.setItem('wb_meals_today', JSON.stringify(this.state.mealsToday));
+                    localStorage.setItem('wb_meals_date', new Date().toLocaleDateString('pt-BR'));
+                } catch {}
+
+                // Sync to server /api/meals
+                fetch('/api/meals', {
+                    method: 'POST', headers: AUTH.headers(),
+                    body: JSON.stringify({ name: entry.name, grams: 1, meal_type: 'supplement', type: 'supplement',
+                        macros: entry.macros })
+                }).catch(() => {});
+
                 this.closeSupplementModal();
+                this.renderTodayMeals();
                 this.showToast(`✅ ${item.name} registrado!`);
                 // Update doses count display
                 const dosesEl = document.querySelector('[data-translate="doses"] + div .text-lg');
@@ -4566,13 +4721,15 @@
                         sleepVal.innerText = checkin.sleep + 'h';
                     }
 
-
-
                     // Set Mood
                     const moodInput = document.querySelector(`input[name="mood"][value="${checkin.mood}"]`);
                     if (moodInput) {
                         moodInput.checked = true;
                     }
+
+                    // Set Note
+                    const noteInput = document.getElementById('checkin-note');
+                    if (noteInput && checkin.note) noteInput.value = checkin.note;
                 } else {
                     // Reset to defaults
                     const sleepInput = document.getElementById('checkin-sleep');
@@ -4681,6 +4838,9 @@
                     return;
                 }
 
+                const noteInput = document.getElementById('checkin-note');
+                const note = noteInput ? noteInput.value.trim() : '';
+
                 const today = new Date().toLocaleDateString('pt-BR');
 
                 const existingCheckin = this.state.dailyCheckins[today] || {
@@ -4692,6 +4852,7 @@
                     ...existingCheckin,
                     sleep,
                     mood,
+                    note,
                     timestamp: new Date().toISOString()
                 };
 
@@ -4700,10 +4861,12 @@
 
                 // SYNC WITH SERVER — use server field names (sleep_minutes not sleep)
                 const isoDate = new Date().toISOString().split('T')[0];
+                const payload = [{ date: isoDate, mood, sleep_minutes: Math.round((sleep || 0) * 60) }];
+                if (note) payload[0].note = note;
                 fetch('/api/checkins', {
                     method: 'POST',
                     headers: AUTH.headers(),
-                    body: JSON.stringify([{ date: isoDate, mood, sleep_minutes: Math.round((sleep || 0) * 60) }])
+                    body: JSON.stringify(payload)
                 }).catch(err => console.error('Error saving checkin:', err));
 
                 this.showToast(`Checkin salvo!`);
@@ -4874,14 +5037,19 @@
                         const meals = await res.json();
                         this.state.mealHistory = {};
                         this.state.mealsToday = [];
-                        this.state.recentMeals = []; // Or keep max 20
+
+                        // Preserve any local pending/analyzing items not yet on server
+                        const pendingLocal = (this.state.recentMeals || []).filter(m => m.pendingResult || m.isAnalyzing);
 
                         const todayStr = new Date().toLocaleDateString('pt-BR');
 
                         // Sort meals by timestamp descending
                         meals.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                        this.state.recentMeals = meals.slice(0, 20);
+                        // Merge: server meals first, then pending local items (deduped)
+                        const serverIds = new Set(meals.map(m => m.id));
+                        const pendingUnique = pendingLocal.filter(m => !serverIds.has(m.id));
+                        this.state.recentMeals = [...pendingUnique, ...meals].slice(0, 20);
 
                         meals.forEach(meal => {
                             const d = new Date(meal.timestamp);
@@ -4920,10 +5088,30 @@
                 try {
                     const res = await fetch('/api/checkins', { headers: AUTH.headers() });
                     if (res.ok) {
-                        this.state.dailyCheckins = await res.json();
-                        console.log('Checkins loaded');
-                        // Update streak based on checkins? 
-                        // For now just load data.
+                        const raw = await res.json();
+                        // Normalize server format (YYYY-MM-DD / snake_case) → local format (DD/MM/YYYY / camelCase)
+                        const normalized = {};
+                        Object.entries(raw).forEach(([dateKey, c]) => {
+                            let localKey = dateKey;
+                            if (/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+                                const [y, m, d] = dateKey.split('-');
+                                localKey = `${d}/${m}/${y}`;
+                            }
+                            normalized[localKey] = {
+                                ...c,
+                                workout: !!(c.workout_type || c.workoutType),
+                                workoutType: c.workout_type || c.workoutType || c.workout_type,
+                                workoutSpecific: c.workout_specific || c.workoutSpecific || '',
+                                duration: c.workout_duration || c.duration || 0,
+                                caloriesBurned: c.calories_burned || c.caloriesBurned || 0,
+                                sleep: c.sleep_minutes || c.sleep || 0,
+                                mood: c.mood || '',
+                                note: c.note || '',
+                                water_ml: c.water_ml || 0
+                            };
+                        });
+                        this.state.dailyCheckins = { ...this.state.dailyCheckins, ...normalized };
+                        console.log('Checkins loaded:', Object.keys(normalized).length);
                     }
                 } catch (e) {
                     console.error('Failed to load Checkins:', e);
@@ -5102,6 +5290,36 @@
                     if (elVolume) elVolume.textContent = (totalVolume > 1000) ? `${(totalVolume/1000).toFixed(1)}k` : totalVolume;
                     if (elStreak) elStreak.textContent = streak;
 
+                    // Diário da Saúde
+                    const diaryEl = document.getElementById('stats-health-diary');
+                    if (diaryEl) {
+                        const checkins = this.state.dailyCheckins || {};
+                        const sorted = Object.entries(checkins).sort((a, b) => {
+                            // parse pt-BR dd/mm/yyyy
+                            const parse = s => { const [d,m,y] = s.split('/'); return new Date(+y, m-1, +d); };
+                            return parse(b[0]) - parse(a[0]);
+                        }).slice(0, 7);
+                        if (sorted.length === 0) {
+                            diaryEl.innerHTML = '<p class="text-ios-gray text-sm text-center py-4">Nenhum registro ainda</p>';
+                        } else {
+                            diaryEl.innerHTML = sorted.map(([date, c]) => {
+                                const moodEmoji = { great: '😄', good: '🙂', ok: '😐', bad: '😕', terrible: '😞' }[c.mood] || '📝';
+                                const hasWorkout = c.workout ? `<span class="text-[10px] bg-brand-neon/10 text-brand-neon px-2 py-0.5 rounded-full font-bold">🏋️ ${c.workoutType || 'Treino'}</span>` : '';
+                                const note = c.note ? `<p class="text-xs text-ios-gray mt-1 line-clamp-1">${c.note}</p>` : '';
+                                return `<div class="flex items-start gap-3 py-2 border-b border-ios-separator/20 last:border-0">
+                                    <span class="text-2xl leading-none mt-0.5">${moodEmoji}</span>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="text-xs font-bold">${date}</span>
+                                            ${hasWorkout}
+                                        </div>
+                                        ${note}
+                                    </div>
+                                </div>`;
+                            }).join('');
+                        }
+                    }
+
                 } catch (e) { console.error('Error rendering user stats:', e); }
             },
 
@@ -5125,7 +5343,7 @@
 
                         this.state.userProfile.lastOpenDate = today;
                         this.state.userProfile.streak = streak;
-                        localStorage.setItem('aortype_profile', JSON.stringify(this.state.userProfile));
+                        localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
                         fetch('/api/profile', { method: 'POST', headers: AUTH.headers(), body: JSON.stringify(this.state.userProfile) }).catch(() => {});
                         localStorage.setItem('wb_last_open_date', today);
                         localStorage.setItem('wb_streak', streak.toString());
@@ -5194,11 +5412,11 @@
                     const active = daysAgo < streak;
                     const isToday = daysAgo === 0;
                     grid.innerHTML += `
-                        <div class="flex flex-col items-center gap-3">
-                            <span class="text-[10px] font-bold text-ios-gray">${dayLetter}</span>
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center
+                        <div class="flex flex-col items-center gap-2">
+                            <span class="text-[9px] font-bold text-ios-gray">${dayLetter}</span>
+                            <div class="w-9 h-9 rounded-full flex items-center justify-center
                                 ${active ? 'bg-brand-hot shadow-lg shadow-brand-hot/20' : isToday ? 'border-2 border-brand-hot/50 bg-brand-hot/10' : 'bg-gray-100 dark:bg-dark-elevated'}">
-                                ${active ? '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                                ${active ? '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
                             </div>
                         </div>`;
                 }
@@ -5560,6 +5778,49 @@
                 const others   = programs.filter(p => !p.is_assigned);
                 const catIcons = { 'chest-triceps':'💪','back-biceps':'🦾','legs':'🦵','shoulders':'🏋️','abs':'🔥','cardio':'🏃','full-body':'⚡','default':'🏅' };
 
+                // ── Carrossel ──────────────────────────────────────────
+                const carousel = document.getElementById('workout-carousel');
+                const dots     = document.getElementById('workout-carousel-dots');
+                if (carousel) {
+                    const all = assigned ? [assigned, ...others] : others;
+                    carousel.innerHTML = all.map((p, i) => {
+                        let exCount = 0;
+                        if (p.custom_exercises && typeof p.custom_exercises === 'object') {
+                            Object.values(p.custom_exercises).forEach(arr => { exCount += (arr||[]).length; });
+                        } else if (Array.isArray(p.exercises)) { exCount = p.exercises.length; }
+
+                        const isAssigned = !!p.is_assigned;
+                        const icon = isAssigned ? '💪' : (catIcons[p.category] || catIcons.default);
+                        const bg   = isAssigned
+                            ? 'background: linear-gradient(135deg,#c8f542 0%,#a0d020 100%)'
+                            : 'background: linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%)';
+                        const textColor = isAssigned ? 'text-black' : 'text-white';
+
+                        return `<div class="workout-card flex-shrink-0 w-[72vw] max-w-[280px] snap-center rounded-3xl p-5 cursor-pointer active:scale-[.97] transition-transform"
+                                    style="${bg}" data-workout-id="${p.id}"
+                                    onclick="app.selectTreinoProgram('${p.id}')">
+                            <div class="text-3xl mb-3">${icon}</div>
+                            <p class="${textColor} font-black text-base leading-tight">${p.name}</p>
+                            ${isAssigned ? `<span class="text-[9px] font-black bg-black/20 text-black px-2 py-0.5 rounded-full uppercase mt-1 inline-block">Seu treino</span>` : ''}
+                            <p class="${isAssigned ? 'text-black/60' : 'text-white/50'} text-xs mt-2">${exCount} exercício${exCount!==1?'s':''}</p>
+                        </div>`;
+                    }).join('');
+
+                    if (dots) {
+                        dots.innerHTML = all.map((_, i) =>
+                            `<div class="w-1.5 h-1.5 rounded-full bg-brand-neon transition-opacity ${i===0?'opacity-100':'opacity-30'}"></div>`
+                        ).join('');
+                        // Atualiza dots ao scrollar
+                        carousel.onscroll = () => {
+                            const idx = Math.round(carousel.scrollLeft / (carousel.offsetWidth * 0.72));
+                            Array.from(dots.children).forEach((d,i) => {
+                                d.classList.toggle('opacity-100', i===idx);
+                                d.classList.toggle('opacity-30', i!==idx);
+                            });
+                        };
+                    }
+                }
+
                 // Check-in status for today
                 const todayStr = new Date().toISOString().split('T')[0];
                 const todayCI  = (this.state.dailyCheckins || {})[todayStr];
@@ -5650,6 +5911,8 @@
                 this.state.treinoSetsCompleted = {};
 
                 document.getElementById('treino-program-list').classList.add('hidden');
+                document.getElementById('workout-carousel-wrap')?.classList.add('hidden');
+                document.getElementById('treino-quick-actions')?.classList.add('hidden');
                 const exView = document.getElementById('treino-exercises-view');
                 exView.classList.remove('hidden');
 
@@ -5674,10 +5937,21 @@
                     exercises = program.exercises;
                 }
 
+                // Store flattened exercises on state so updateTreinoProgress can count sets correctly
+                this.state.activeTreinoExercises = exercises;
+
                 document.getElementById('treino-active-desc').textContent = `${exercises.length} exercício${exercises.length !== 1 ? 's' : ''}`;
 
                 this.renderTreinoExercises(exercises);
                 this.updateTreinoProgress();
+
+                // Update energia ativa card
+                const today = new Date().toLocaleDateString('pt-BR');
+                const checkin = this.state.dailyCheckins[today] || {};
+                const burnedKcal = checkin.caloriesBurned || 0;
+                const energyEl = document.getElementById('treino-energy-val');
+                if (energyEl) energyEl.textContent = burnedKcal;
+                lucide.createIcons();
             },
 
             renderTreinoExercises(exercises) {
@@ -5739,12 +6013,23 @@
                     btn.querySelector('span:last-child').classList.remove('text-brand-neon');
                 }
                 this.updateTreinoProgress();
+
+                // Auto-save progress to server on every set toggle
+                const prog = this.state.activeTreinoProgram;
+                if (prog && AUTH.getToken()) {
+                    const today = new Date().toISOString().split('T')[0];
+                    fetch('/api/workouts/progress', {
+                        method: 'POST', headers: AUTH.headers(),
+                        body: JSON.stringify({ [today]: { [prog.id]: this.state.treinoSetsCompleted } })
+                    }).catch(() => {});
+                }
             },
 
             updateTreinoProgress() {
-                const program = this.state.activeTreinoProgram;
-                if (!program || !program.exercises) return;
-                const totalSets = program.exercises.reduce((t, ex) => t + (ex.sets || 3), 0);
+                // Use flattened exercises (covers custom_exercises protocols too)
+                const exercises = this.state.activeTreinoExercises;
+                if (!exercises || exercises.length === 0) return;
+                const totalSets = exercises.reduce((t, ex) => t + (ex.sets || 3), 0);
                 const doneSets = Object.values(this.state.treinoSetsCompleted || {}).filter(Boolean).length;
                 const pct = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
                 const bar = document.getElementById('treino-progress-bar');
@@ -5762,10 +6047,43 @@
                 if (doneCount === 0) { this.showToast('Complete ao menos uma série antes de finalizar!'); return; }
 
                 try {
-                    const body = { [today]: { [program.id]: completedSets } };
+                    // Estimar calorias com base nas séries completadas (aprox. 5 kcal/série)
+                    const estCalories = Math.round(doneCount * 5);
+                    const workoutType = program.category || 'strength';
+                    const workoutName = program.name || '';
+
+                    // Save workout_sessions with rich data (name + duration as backup)
+                    const body = { [today]: { [program.id]: { completed_sets: completedSets, notes: workoutName, duration_minutes: 60 } } };
                     await fetch('/api/workouts/progress', { method: 'POST', headers: AUTH.headers(), body: JSON.stringify(body) });
-                    await fetch('/api/checkins', { method: 'POST', headers: AUTH.headers(), body: JSON.stringify([{ date: today, workout_type: program.category || 'strength', workout_duration: 60 }]) });
-                    this.showToast('Treino finalizado! 💪');
+                    await fetch('/api/checkins', { method: 'POST', headers: AUTH.headers(), body: JSON.stringify([{
+                        date: today,
+                        workout_type: workoutType,
+                        workout_specific: workoutName,
+                        workout_duration: 60,
+                        calories_burned: estCalories
+                    }]) });
+
+                    // Update local state immediately so history shows right away
+                    const localToday = new Date().toLocaleDateString('pt-BR');
+                    this.state.dailyCheckins[localToday] = {
+                        ...(this.state.dailyCheckins[localToday] || {}),
+                        workout: true,
+                        workoutType,
+                        workoutSpecific: workoutName,
+                        duration: 60,
+                        caloriesBurned: estCalories
+                    };
+                    localStorage.setItem('wb_health_checkin', JSON.stringify(this.state.dailyCheckins));
+
+                    // Atualiza energia ativa no treino
+                    const energyEl = document.getElementById('treino-energy-val');
+                    if (energyEl) energyEl.textContent = estCalories;
+
+                    // Atualiza energia ativa no dashboard
+                    const dashEnergy = document.getElementById('energy-burned-val');
+                    if (dashEnergy) dashEnergy.textContent = estCalories;
+
+                    this.showToast(`Treino finalizado! 🔥 ~${estCalories} kcal`);
                     setTimeout(() => this.navigate('dashboard'), 1200);
                 } catch {
                     this.showToast('Erro ao salvar treino');
@@ -5775,6 +6093,8 @@
             voltarListaTreino() {
                 document.getElementById('treino-exercises-view').classList.add('hidden');
                 document.getElementById('treino-program-list').classList.remove('hidden');
+                document.getElementById('workout-carousel-wrap')?.classList.remove('hidden');
+                document.getElementById('treino-quick-actions')?.classList.remove('hidden');
                 document.getElementById('treino-subtitle').textContent = 'Selecione um programa';
                 this.state.activeTreinoProgram = null;
             },
@@ -5956,11 +6276,15 @@
                 if (!modal) return;
                 const emailEl = document.getElementById('add-student-email');
                 const progEl = document.getElementById('add-student-program');
-                if (emailEl) { emailEl.value = student.email || ''; emailEl.readOnly = true; }
-                if (progEl && link.assigned_program_id) progEl.value = link.assigned_program_id;
-                // Change modal title
+                if (emailEl) { emailEl.value = student.email || ''; emailEl.readOnly = true; emailEl.style.opacity = '0.6'; }
+                if (progEl) progEl.value = link.assigned_program_id || '';
+                // Change modal title and button
                 const titleEl = modal.querySelector('h3');
                 if (titleEl) titleEl.textContent = `Editar — ${student.name || student.email}`;
+                const saveBtn = modal.querySelector('button[onclick*="addStudent"]');
+                if (saveBtn) saveBtn.textContent = 'Salvar';
+                // Track which link is being edited
+                this._editingStudentLinkId = link.id;
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
             },
@@ -6010,28 +6334,40 @@
                     }
 
                     let html = '';
-                    if (data.checkins?.length) {
-                        html += `<p class="text-xs font-black text-ios-gray uppercase tracking-widest mb-2">Check-ins (${data.checkins.length})</p>`;
-                        data.checkins.slice(0, 10).forEach(ci => {
-                            const moodEmoji = ['😔','😐','😊','😁','🤩'][parseInt(ci.mood)-1] || '📋';
-                            html += `<div class="flex items-center gap-3 bg-gray-50 dark:bg-dark-elevated rounded-2xl p-3">
-                                <span class="text-xl">${moodEmoji}</span>
-                                <div class="flex-1">
-                                    <p class="text-xs font-bold">${new Date(ci.date).toLocaleDateString('pt-BR')}</p>
-                                    ${ci.note ? `<p class="text-[10px] text-ios-gray truncate">${ci.note}</p>` : ''}
+                    // View unificada por data: merge checkins + treinos
+                    const allDates = new Set([
+                        ...(data.checkins || []).map(c => c.date),
+                        ...(data.sessions || []).map(s => s.date)
+                    ]);
+                    const byDate = {};
+                    (data.checkins || []).forEach(c => { byDate[c.date] = { ...byDate[c.date], checkin: c }; });
+                    (data.sessions || []).forEach(s => { byDate[s.date] = { ...byDate[s.date], session: s }; });
+
+                    const sortedDates = [...allDates].sort((a, b) => b.localeCompare(a));
+                    if (sortedDates.length) {
+                        html += `<p class="text-xs font-black text-ios-gray uppercase tracking-widest mb-3">Últimos ${days} dias · ${sortedDates.length} registros</p>`;
+                        sortedDates.slice(0, 20).forEach(date => {
+                            const { checkin: ci, session: s } = byDate[date];
+                            const dateLabel = new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', weekday: 'short' });
+                            const moodMap = {'1':'😔','2':'😐','3':'😊','4':'😁','5':'🤩','great':'😄','good':'🙂','ok':'😐','bad':'😕','terrible':'😞'};
+                            const moodEmoji = moodMap[ci?.mood] || '';
+                            const details = [];
+                            if (ci?.workout_specific) details.push('🏋️ ' + ci.workout_specific);
+                            else if (ci?.workout_type) details.push('🏋️ ' + ci.workout_type);
+                            if (s?.completed_sets) {
+                                const done = Object.values(s.completed_sets).filter(Boolean).length;
+                                details.push(done + ' séries concluídas');
+                            }
+                            if (ci?.calories_burned) details.push('🔥 ' + ci.calories_burned + ' kcal');
+                            if (ci?.water_ml) details.push('💧 ' + ci.water_ml + 'ml');
+                            if (ci?.note) details.push('"' + ci.note.substring(0, 40) + '"');
+                            html += `<div class="bg-gray-50 dark:bg-dark-elevated rounded-2xl p-3 mb-2">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-base">${moodEmoji || '📋'}</span>
+                                    <p class="text-xs font-black flex-1">${dateLabel}</p>
+                                    ${s ? '<span class="text-[10px] bg-brand-neon/10 text-brand-neon px-2 py-0.5 rounded-full font-bold">Treino ✓</span>' : ''}
                                 </div>
-                            </div>`;
-                        });
-                    }
-                    if (data.sessions?.length) {
-                        html += `<p class="text-xs font-black text-ios-gray uppercase tracking-widest mb-2 mt-4">Treinos (${data.sessions.length})</p>`;
-                        data.sessions.slice(0, 10).forEach(s => {
-                            html += `<div class="flex items-center gap-3 bg-gray-50 dark:bg-dark-elevated rounded-2xl p-3">
-                                <span class="text-xl">🏋️</span>
-                                <div class="flex-1">
-                                    <p class="text-xs font-bold">${new Date(s.date).toLocaleDateString('pt-BR')}</p>
-                                    <p class="text-[10px] text-ios-gray">${s.exercises_done || 0} exercícios</p>
-                                </div>
+                                ${details.length ? '<p class="text-[11px] text-ios-gray leading-relaxed">' + details.join(' · ') + '</p>' : ''}
                             </div>`;
                         });
                     }
@@ -6058,10 +6394,16 @@
                 try {
                     const res = await fetch('/api/academia/programs', { headers: AUTH.headers() });
                     const programs = await res.json();
+                    // Normaliza: garante que categories seja sempre array
+                    (programs || []).forEach(p => {
+                        if (!Array.isArray(p.categories) || !p.categories.length) {
+                            p.categories = p.category ? p.category.split(',').map(s => s.trim()).filter(Boolean) : [];
+                        }
+                    });
                     this.state.academiaPrograms = programs;
                     this.renderAcademiaPrograms(programs);
                     this.populateProgramSelect(programs);
-                } catch { }
+                } catch (e) { console.error('loadAcademiaPrograms error:', e); }
             },
 
             renderAcademiaPrograms(programs) {
@@ -6108,23 +6450,45 @@
             },
 
             closeAddStudentModal() {
-                document.getElementById('modal-add-student').classList.add('hidden');
-                document.getElementById('modal-add-student').classList.remove('flex');
-                document.getElementById('add-student-email').value = '';
+                const modal = document.getElementById('modal-add-student');
+                if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+                const emailEl = document.getElementById('add-student-email');
+                if (emailEl) { emailEl.value = ''; emailEl.readOnly = false; emailEl.style.opacity = ''; }
+                // Reset modal title and button
+                const titleEl = modal && modal.querySelector('h3');
+                if (titleEl) titleEl.textContent = 'Adicionar Aluno';
+                const saveBtn = modal && modal.querySelector('button[onclick*="addStudent"]');
+                if (saveBtn) saveBtn.textContent = 'Adicionar';
+                // Clear edit state
+                this._editingStudentLinkId = null;
             },
 
             async addStudent() {
                 const email = document.getElementById('add-student-email').value.trim();
                 const programId = document.getElementById('add-student-program').value;
-                if (!email) { this.showToast('Digite o email do aluno'); return; }
+                const isEditing = !!this._editingStudentLinkId;
+
                 try {
-                    const res = await fetch('/api/academia/students', {
-                        method: 'POST', headers: AUTH.headers(),
-                        body: JSON.stringify({ student_email: email, assigned_program_id: programId || null })
-                    });
-                    const data = await res.json();
-                    if (!res.ok) { this.showToast(data.error || 'Erro ao adicionar aluno'); return; }
-                    this.showToast('Aluno adicionado!');
+                    if (isEditing) {
+                        // Update existing student's program via PATCH
+                        const res = await fetch(`/api/academia/students/${this._editingStudentLinkId}`, {
+                            method: 'PATCH', headers: AUTH.headers(),
+                            body: JSON.stringify({ assigned_program_id: programId || null })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) { this.showToast(data.error || 'Erro ao atualizar aluno'); return; }
+                        this.showToast('Programa atualizado!');
+                    } else {
+                        // Add new student via POST
+                        if (!email) { this.showToast('Digite o email do aluno'); return; }
+                        const res = await fetch('/api/academia/students', {
+                            method: 'POST', headers: AUTH.headers(),
+                            body: JSON.stringify({ student_email: email, assigned_program_id: programId || null })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) { this.showToast(data.error || 'Erro ao adicionar aluno'); return; }
+                        this.showToast('Aluno adicionado!');
+                    }
                     this.closeAddStudentModal();
                     await this.loadAcademiaStudents();
                 } catch { this.showToast('Erro de conexão'); }
@@ -6157,7 +6521,7 @@
                 const grid = document.getElementById('prog-category-grid');
                 if (grid) {
                     grid.innerHTML = Object.keys(this.EXERCISE_LIBRARY).map(cat => `
-                        <label onclick="this.classList.toggle('cat-label-active'); this.querySelector('input').checked = this.classList.contains('cat-label-active')"
+                        <label onclick="event.preventDefault(); this.classList.toggle('cat-label-active'); this.querySelector('input').checked = this.classList.contains('cat-label-active')"
                             class="flex items-center gap-2 bg-gray-50 dark:bg-dark-elevated border-2 border-gray-200 dark:border-gray-700 rounded-2xl px-3 py-2.5 cursor-pointer transition-all select-none">
                             <input type="checkbox" class="sr-only prog-cat-check" value="${cat}">
                             <span class="text-lg">${this.CATEGORY_ICONS[cat] || '🏋️'}</span>
@@ -6193,6 +6557,12 @@
 
             // ── STUDENT WORKOUT CONFIGURATOR ──────────────────────
             _studentWorkoutTarget: null, // { linkId, studentName, programId }
+
+            // Returns userProfile without avatar fields — safe to store in localStorage
+            _profileForStorage() {
+                const { avatar, avatar_url, ...rest } = this.state.userProfile;
+                return rest;
+            },
 
             // Maps legacy English category keys → Portuguese EXERCISE_LIBRARY keys
             _normalizeCats(cats) {
@@ -6356,7 +6726,7 @@
                 if (grid) {
                     grid.innerHTML = Object.keys(this.EXERCISE_LIBRARY).map(cat => {
                         const active = currentCats.includes(cat);
-                        return `<label onclick="this.classList.toggle('cat-label-active'); this.querySelector('input').checked = this.classList.contains('cat-label-active')"
+                        return `<label onclick="event.preventDefault(); this.classList.toggle('cat-label-active'); this.querySelector('input').checked = this.classList.contains('cat-label-active')"
                             class="flex items-center gap-2 bg-gray-50 dark:bg-dark-elevated border-2 border-gray-200 dark:border-gray-700 rounded-2xl px-3 py-2.5 cursor-pointer transition-all select-none${active ? ' cat-label-active' : ''}">
                             <input type="checkbox" class="sr-only edit-cat-check" value="${cat}" ${active ? 'checked' : ''}>
                             <span class="text-lg">${this.CATEGORY_ICONS[cat] || '🏋️'}</span>
@@ -6778,7 +7148,7 @@
                             this.state.userType = 'academia';
                             this.state.userProfile = { ...this.state.userProfile, email, name: regData.name || name };
                             this.state.userName = this.state.userProfile.name;
-                            localStorage.setItem('aortype_profile', JSON.stringify(this.state.userProfile));
+                            localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
                             hideAuthScreen();
                             this.showAcademiaPanel();
                             return;
@@ -6807,22 +7177,38 @@
                     localStorage.setItem('aortype_user_type', data.userType || 'aluno');
                     this.state.isLoggedIn = true;
                     this.state.userType   = data.userType || 'aluno';
-                    this.state.userProfile = { ...this.state.userProfile, email, name: data.name || name || email.split('@')[0] };
-                    this.state.userName   = this.state.userProfile.name;
-                    localStorage.setItem('aortype_profile', JSON.stringify(this.state.userProfile));
+                    // Use real email from server (input may be a username)
+                    // Never store avatar_url in localStorage — can be a huge base64 blob
+                    this.state.userProfile = {
+                        ...this.state.userProfile,
+                        email:    data.email    || email,
+                        name:     data.name     || name || (data.email || email).split('@')[0],
+                        username: data.username || this.state.userProfile.username || ''
+                        // avatar loaded separately by loadUserProfile → kept in memory only
+                    };
+                    this.state.userName = this.state.userProfile.name;
+                    // Save to localStorage WITHOUT avatar (avoid QuotaExceededError)
+                    const { avatar, avatar_url, ...profileToSave } = this.state.userProfile;
+                    localStorage.setItem('aortype_profile', JSON.stringify(profileToSave));
+                    restoreBtn();
                     hideAuthScreen();
 
+                    // Navigate OUTSIDE the try/catch so render errors don't show "Erro de conexão"
                     if (this.state.userType === 'academia') {
-                        this.showAcademiaPanel();
+                        try { this.showAcademiaPanel(); } catch(navErr) { console.error('Academia panel error:', navErr); }
                     } else {
-                        this.navigate('dashboard');
-                        // Pull fresh server data immediately after login
-                        this.loadRemoteData();
+                        try {
+                            this.navigate('dashboard');
+                            // Pull fresh server data (foods, workouts, meals) + full profile
+                            this.loadRemoteData();
+                            this.loadUserProfile();
+                        } catch(navErr) { console.error('Post-login navigation error:', navErr); }
                     }
+                    return; // Skip the finally restoreBtn (already called above)
                 } catch (e) {
                     this.showToast('Erro de conexão. Tente novamente.');
                 } finally {
-                    restoreBtn(); // Always re-enable button
+                    restoreBtn(); // Always re-enable button on failure
                 }
             },
 
@@ -6951,7 +7337,7 @@
                         this.state.userProfile.email = profile.email || this.state.userProfile.email;
                         if (profile.avatar) this.state.userProfile.avatar = profile.avatar;
                         this.state.userName = this.state.userProfile.name || 'Usuário';
-                        localStorage.setItem('aortype_profile', JSON.stringify(this.state.userProfile));
+                        localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
                     }
                     const authScreen = document.getElementById('screen-auth');
                     if (authScreen) {
@@ -7051,7 +7437,7 @@
                 this.state.totals = { protein: 0, carbs: 0, fat: 0, calories: 0 };
 
                 // Save to storage
-                localStorage.setItem('aortype_profile', JSON.stringify(this.state.userProfile));
+                localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
                 localStorage.setItem('aortype_goals', JSON.stringify(this.state.goals));
                 localStorage.setItem('aortype_auth', 'true');
 
@@ -7131,7 +7517,7 @@
                             if (profileAvatar) profileAvatar.src = dataUrl;
                             // Persiste já
                             try {
-                                localStorage.setItem('aortype_profile', JSON.stringify(this.state.userProfile));
+                                localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
                             } catch (_) { }
                             // Feedback
                             this.showToast('Foto atualizada!');
@@ -7152,7 +7538,14 @@
             },
 
             updateOnboardingProfile() {
-                // Name and Email are already handled in registration
+                // Save phone if provided
+                const phoneEl = document.getElementById('onb-phone');
+                if (phoneEl && phoneEl.value.trim()) {
+                    this.state.userProfile.phone = phoneEl.value.trim();
+                    // Sync phone to server
+                    fetch('/api/profile', { method: 'POST', headers: AUTH.headers(),
+                        body: JSON.stringify({ phone: phoneEl.value.trim() }) }).catch(() => {});
+                }
                 this.nextOnboardingStep();
             },
 
@@ -7224,6 +7617,13 @@
                                     </div>
                                     
                                     <p class="mt-8 text-sm text-gray-400 font-medium animate-pulse">Toque para escolher uma foto</p>
+                                </div>
+                                <!-- Telefone -->
+                                <div class="mt-6">
+                                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 text-center">Telefone (opcional)</label>
+                                    <input type="tel" id="onb-phone" placeholder="(11) 99999-9999"
+                                        value="${p.phone || ''}"
+                                        class="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 focus:border-brand-neon rounded-2xl px-5 py-3.5 font-semibold text-black dark:text-white outline-none transition-all placeholder-gray-400 text-center text-lg tracking-wider">
                                 </div>
                                 ${nextBtn('app.updateOnboardingProfile()', 'Continuar')}
                             </div>
@@ -8489,30 +8889,47 @@
                         `;
                         break;
 
-                    case 13: // Reminders
+                    case 13: // Condições Médicas / Lesões
                         content = `
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-20 h-full overflow-y-auto">
                                 ${backBtn}
-                                <div class="flex-1">
-                                    <h2 class="text-3xl font-black mb-2" data-translate="notifications_title">Notificações</h2>
-                                    <p class="text-ios-gray mb-8">O que podemos te lembrar?</p>
-                                    
-                                    <div class="space-y-4 pb-20">
-                                        ${['enabled:Ativar Notificações:🔔', 'audioSuggestion:Sugestões em Áudio:🎧', 'widget:Widget na Tela:📱'].map(opt => {
-                            const [key, label, icon] = opt.split(':');
-                            const isActive = data.notifications[key];
-                            return `
-                                                <div class="flex items-center justify-between p-4 bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-white/5">
-                                                    <div class="flex items-center gap-3">
-                                                        <span class="text-2xl">${icon}</span>
-                                                        <span class="font-bold">${label}</span>
-                                                    </div>
-                                                    <button onclick="app.toggleOnboardingNotification('${key}')" class="w-14 h-8 rounded-full transition-colors relative ${isActive ? 'bg-brand-neon' : 'bg-gray-300 dark:bg-white/20'}">
-                                                        <div class="w-6 h-6 bg-white rounded-full absolute top-1 transition-transform shadow-sm ${isActive ? 'left-7' : 'left-1'}"></div>
-                                                    </button>
-                                                </div>
-                                            `;
-                        }).join('')}
+                                <div class="flex-1 pb-4">
+                                    <h2 class="text-4xl font-black tracking-tight mb-2">Saúde &<br>Lesões</h2>
+                                    <p class="text-ios-gray text-[15px] mb-8">Essas informações ficam salvas e o sistema sempre as considera ao montar seu plano.</p>
+
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="text-xs font-black uppercase tracking-widest text-ios-gray mb-2 block">Possui alguma lesão?</label>
+                                            <div class="grid grid-cols-2 gap-2 mb-3">
+                                                ${['Joelho','Ombro','Coluna','Quadril','Tornozelo','Cotovelo','Punho','Pescoço'].map(part => {
+                                                    const active = (data.injuries || []).includes(part);
+                                                    return `<button onclick="app.toggleMedicalItem('injuries','${part}',this)"
+                                                        class="py-3 px-4 rounded-2xl border-2 text-sm font-bold transition-all btn-press ${active ? 'border-brand-neon bg-brand-neon/10 text-brand-neon' : 'border-gray-200 dark:border-gray-700'}">
+                                                        ${part}
+                                                    </button>`;
+                                                }).join('')}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label class="text-xs font-black uppercase tracking-widest text-ios-gray mb-2 block">Condições médicas</label>
+                                            <div class="grid grid-cols-2 gap-2 mb-3">
+                                                ${['Hipertensão','Diabetes','Cardiopatia','Escoliose','Hérnia de Disco','Osteoporose'].map(cond => {
+                                                    const active = (data.medicalConditions || []).includes(cond);
+                                                    return `<button onclick="app.toggleMedicalItem('medicalConditions','${cond}',this)"
+                                                        class="py-3 px-4 rounded-2xl border-2 text-sm font-bold transition-all btn-press ${active ? 'border-brand-neon bg-brand-neon/10 text-brand-neon' : 'border-gray-200 dark:border-gray-700'}">
+                                                        ${cond}
+                                                    </button>`;
+                                                }).join('')}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label class="text-xs font-black uppercase tracking-widest text-ios-gray mb-2 block">Observações adicionais (opcional)</label>
+                                            <textarea id="onb-medical-notes" rows="3" placeholder="Ex: operei o joelho em 2023, evito agachamento..."
+                                                class="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 focus:border-brand-neon rounded-2xl px-4 py-3 text-sm font-medium outline-none resize-none transition-all"
+                                                oninput="app.setOnboardingData('medicalNotes', this.value)">${data.medicalNotes || ''}</textarea>
+                                        </div>
                                     </div>
                                 </div>
                                 ${nextBtn()}
@@ -8713,8 +9130,9 @@
                                         </div>
                                     </div>
                                     <div class="text-right">
-                                        <span class="text-3xl font-black text-cyan-500 tracking-tight">${waterGoal}</span>
-                                        <span class="text-sm font-bold text-gray-400 ml-0.5">ml</span>
+                                        <span class="text-3xl font-black text-cyan-500 tracking-tight">${Math.round(waterGoal/250)}</span>
+                                        <span class="text-sm font-bold text-gray-400 ml-0.5">copos</span>
+                                        <p class="text-xs text-gray-400 mt-0.5">${waterGoal} ml</p>
                                     </div>
                                 </div>
 
@@ -8797,11 +9215,16 @@
 
                 // Save to main state
                 this.state.goals = macros;
-                this.state.userProfile.weight = this.state.onboarding.data.weight;
-                this.state.userProfile.height = this.state.onboarding.data.height;
-                this.state.userProfile.age = this.state.onboarding.data.age;
-                this.state.userProfile.gender = this.state.onboarding.data.gender;
-                this.state.userProfile.goal = this.state.onboarding.data.goal;
+                const od = this.state.onboarding.data;
+                this.state.userProfile.weight = od.weight;
+                this.state.userProfile.height = od.height;
+                this.state.userProfile.age = od.age;
+                this.state.userProfile.gender = od.gender;
+                this.state.userProfile.goal = od.goal;
+                this.state.userProfile.phone = od.phone || this.state.userProfile.phone;
+                this.state.userProfile.injuries = od.injuries || [];
+                this.state.userProfile.medicalConditions = od.medicalConditions || [];
+                this.state.userProfile.medicalNotes = od.medicalNotes || '';
 
                 // Map meal times
                 const onbTimes = this.state.onboarding.data.mealTimes;
@@ -8870,7 +9293,7 @@
                 // Persiste localmente após conta criada/atualizada
                 localStorage.setItem('aortype_auth', 'true');
                 localStorage.setItem('aortype_goals', JSON.stringify(this.state.goals));
-                localStorage.setItem('aortype_profile', JSON.stringify(this.state.userProfile));
+                localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
 
                 // Clear any stale meal/session data from previous users
                 localStorage.removeItem('wb_meals_today');
@@ -8903,6 +9326,21 @@
                 this.renderOnboardingStep(); // Re-render to show selection
             },
 
+            toggleMedicalItem(category, value, btn) {
+                if (!this.state.onboarding.data[category]) this.state.onboarding.data[category] = [];
+                const arr = this.state.onboarding.data[category];
+                const idx = arr.indexOf(value);
+                if (idx >= 0) {
+                    arr.splice(idx, 1);
+                    btn.classList.remove('border-brand-neon', 'bg-brand-neon/10', 'text-brand-neon');
+                    btn.classList.add('border-gray-200', 'dark:border-gray-700');
+                } else {
+                    arr.push(value);
+                    btn.classList.add('border-brand-neon', 'bg-brand-neon/10', 'text-brand-neon');
+                    btn.classList.remove('border-gray-200', 'dark:border-gray-700');
+                }
+            },
+
             nextOnboardingStep() {
                 const step = this.state.onboarding.currentStep;
                 const data = this.state.onboarding.data;
@@ -8915,8 +9353,8 @@
                 if (step === 5 && !data.weight) return this.showToast('Informe seu peso');
 
                 let next = step + 1;
-                // Skip notifications (13) and integrations (14) — removed from onboarding
-                if (next === 13 || next === 14) next = 15;
+                // Skip integrations (14) — step 13 now = Condições Médicas
+                if (next === 14) next = 15;
                 this.state.onboarding.currentStep = next;
                 this.renderOnboardingStep();
             },
@@ -8924,8 +9362,8 @@
             prevOnboardingStep() {
                 if (this.state.onboarding.currentStep > 0) {
                     let prev = this.state.onboarding.currentStep - 1;
-                    // Skip back over notifications (13) and integrations (14)
-                    if (prev === 14 || prev === 13) prev = 12;
+                    // Skip back over integrations (14) — step 13 = Condições Médicas
+                    if (prev === 14) prev = 13;
                     this.state.onboarding.currentStep = prev;
                     this.renderOnboardingStep();
                 }
@@ -9001,11 +9439,19 @@
                     .then(res => res.json())
                     .then(data => {
                         if (data && (data.name || data.email)) {
-                            // Normalize: server uses avatar_url, client uses avatar
-                            if (data.avatar_url && !data.avatar) data.avatar = data.avatar_url;
+                            // avatar_url from /api/profile may be '__base64__' flag or a real URL
+                            // Keep avatar in memory only — never save base64 to localStorage
+                            const avatarFlag = data.avatar_url;
+                            delete data.avatar_url;
+                            delete data.avatar;
+
                             this.state.userProfile = { ...this.state.userProfile, ...data };
                             this.state.userName = data.name || this.state.userName;
-                            localStorage.setItem('aortype_profile', JSON.stringify(this.state.userProfile));
+
+                            // Save to localStorage WITHOUT avatar
+                            const { avatar, avatar_url: _av, ...profileToSave } = this.state.userProfile;
+                            try { localStorage.setItem('aortype_profile', JSON.stringify(profileToSave)); } catch(e) { console.warn('Profile save failed:', e); }
+
                             // Sync goals from server if available
                             if (data.daily_calories) {
                                 this.state.goals = {
@@ -9021,12 +9467,28 @@
                                 if (document.getElementById('profile-carbs')) document.getElementById('profile-carbs').textContent = data.daily_carbs + 'g';
                                 if (document.getElementById('profile-fat')) document.getElementById('profile-fat').textContent = data.daily_fat + 'g';
                             }
-                            // Update UI with server data
-                            const headerAvatar = document.getElementById('user-avatar');
-                            const profileAvatar = document.getElementById('profile-screen-avatar');
-                            const avatarSrc = data.avatar || data.avatar_url;
-                            if (headerAvatar && avatarSrc) headerAvatar.src = avatarSrc;
-                            if (profileAvatar && avatarSrc) profileAvatar.src = avatarSrc;
+
+                            // Load avatar separately (may be large base64) — only update UI, not localStorage
+                            if (avatarFlag === '__base64__') {
+                                fetch('/api/profile/avatar', { headers: AUTH.headers() })
+                                    .then(r => r.json())
+                                    .then(av => {
+                                        if (av.avatar_url) {
+                                            this.state.userProfile.avatar = av.avatar_url;
+                                            const headerAvatar = document.getElementById('user-avatar');
+                                            const profileAvatar = document.getElementById('profile-screen-avatar');
+                                            if (headerAvatar) headerAvatar.src = av.avatar_url;
+                                            if (profileAvatar) profileAvatar.src = av.avatar_url;
+                                        }
+                                    }).catch(() => {});
+                            } else if (avatarFlag && avatarFlag !== 'null') {
+                                this.state.userProfile.avatar = avatarFlag;
+                                const headerAvatar = document.getElementById('user-avatar');
+                                const profileAvatar = document.getElementById('profile-screen-avatar');
+                                if (headerAvatar) headerAvatar.src = avatarFlag;
+                                if (profileAvatar) profileAvatar.src = avatarFlag;
+                            }
+
                             // Update name/username display
                             const profileNameEl = document.getElementById('profile-name-display') || document.querySelector('#screen-profile h2');
                             const profileUserEl = document.getElementById('profile-username-display') || document.querySelector('#screen-profile p');
@@ -9115,15 +9577,28 @@
 
             handleProfileImageChange(event) {
                 const file = event.target.files && event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Compress to max 300×300 JPEG ~150KB for DB storage
+                        const MAX = 300;
+                        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+                        const w = Math.round(img.width * scale);
+                        const h = Math.round(img.height * scale);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        // Quality 0.75 keeps it well under 200KB
+                        const compressed = canvas.toDataURL('image/jpeg', 0.75);
                         const preview = document.getElementById('edit-profile-preview');
-                        if (preview) preview.src = e.target.result;
-                        this.state.tempProfileImage = e.target.result;
+                        if (preview) preview.src = compressed;
+                        this.state.tempProfileImage = compressed;
                     };
-                    reader.readAsDataURL(file);
-                }
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
             },
 
             openEditProfile() {
@@ -9226,7 +9701,7 @@
                     }
                 });
                 this.state.userProfile.mealTimes = mt;
-                localStorage.setItem('aortype_profile', JSON.stringify(this.state.userProfile));
+                localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
                 fetch('/api/profile', {
                     method: 'POST',
                     headers: AUTH.headers(),
@@ -9281,7 +9756,7 @@
                 }
 
                 // Save to LocalStorage
-                localStorage.setItem('aortype_profile', JSON.stringify(this.state.userProfile));
+                localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
 
                 // SYNC WITH SERVER
                 fetch('/api/profile', {
@@ -11802,11 +12277,21 @@ Rules:
                 if (this.state.recentMeals.length > 10) this.state.recentMeals = this.state.recentMeals.slice(0, 10);
                 try { localStorage.setItem('wb_meals_recent', JSON.stringify(this.state.recentMeals)); } catch { }
 
-                // SYNC WITH SERVER
+                // SYNC WITH SERVER — não enviar id local (Supabase gera UUID)
+                const serverEntry = {
+                    name:        entry.name,
+                    grams:       entry.grams,
+                    macros:      entry.macros,
+                    ingredients: entry.ingredients,
+                    meal_window: entry.meal_window,
+                    image_url: (entry.image && entry.image.length < 200000) ? entry.image : null
+                };
                 fetch('/api/meals', {
                     method: 'POST',
                     headers: AUTH.headers(),
-                    body: JSON.stringify(entry)
+                    body: JSON.stringify(serverEntry)
+                }).then(r => r.json()).then(data => {
+                    if (data?.meal?.id) { entry.serverId = data.meal.id; }
                 }).catch(err => console.error('Error saving meal:', err));
 
                 this.updateDashboardTotals();
@@ -11833,6 +12318,109 @@ Rules:
                 this.state.lastAnalysis = null;
             },
 
+            // ── BANCO DE ALIMENTOS ────────────────────────────────
+            openFoodBank() {
+                const modal = document.getElementById('food-bank-modal');
+                if (!modal) return;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.getElementById('food-bank-search').value = '';
+                document.getElementById('food-bank-add-panel').classList.add('hidden');
+                document.getElementById('food-bank-results').innerHTML = '<p class="text-xs text-ios-gray text-center pt-8">Digite o nome de um alimento para buscar</p>';
+                if (window.lucide) lucide.createIcons();
+                setTimeout(() => document.getElementById('food-bank-search').focus(), 200);
+            },
+
+            closeFoodBank() {
+                const modal = document.getElementById('food-bank-modal');
+                if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+                this._foodBankSelected = null;
+            },
+
+            searchFoodBank(query) {
+                const q = (query || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+                const db = this.state.foodDB || {};
+                const results = document.getElementById('food-bank-results');
+                document.getElementById('food-bank-add-panel').classList.add('hidden');
+
+                if (!q) {
+                    results.innerHTML = '<p class="text-xs text-ios-gray text-center pt-8">Digite o nome de um alimento para buscar</p>';
+                    return;
+                }
+
+                const matches = Object.entries(db)
+                    .filter(([name]) => name !== 'default' && name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q))
+                    .slice(0, 20);
+
+                if (!matches.length) {
+                    results.innerHTML = '<p class="text-xs text-ios-gray text-center pt-8">Nenhum alimento encontrado</p>';
+                    return;
+                }
+
+                results.innerHTML = matches.map(([name, macros]) => `
+                    <button onclick="app.selectFoodBankItem('${name.replace(/'/g, "\\'")}', ${macros.cal}, ${macros.p}, ${macros.c}, ${macros.f})"
+                        class="w-full flex items-center justify-between bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/20 dark:border-gray-800 text-left btn-press transition-all hover:border-brand-neon/40">
+                        <div>
+                            <p class="font-bold text-sm capitalize">${name}</p>
+                            <p class="text-[11px] text-ios-gray mt-0.5">${macros.cal} kcal · ${macros.p}g prot · ${macros.c}g carb · ${macros.f}g gord <span class="text-[10px]">(por 100g)</span></p>
+                        </div>
+                        <i data-lucide="plus-circle" class="w-5 h-5 text-brand-neon flex-shrink-0 ml-2"></i>
+                    </button>`).join('');
+                if (window.lucide) lucide.createIcons();
+            },
+
+            selectFoodBankItem(name, cal, p, c, f) {
+                this._foodBankSelected = { name, cal, p, c, f };
+                document.getElementById('food-bank-selected-name').textContent = name.charAt(0).toUpperCase() + name.slice(1);
+                document.getElementById('food-bank-grams').value = 100;
+                this.updateFoodBankPreview();
+                document.getElementById('food-bank-add-panel').classList.remove('hidden');
+                document.getElementById('food-bank-grams').focus();
+            },
+
+            updateFoodBankPreview() {
+                const sel = this._foodBankSelected;
+                if (!sel) return;
+                const g = parseFloat(document.getElementById('food-bank-grams').value) || 100;
+                const factor = g / 100;
+                const cals = Math.round(sel.cal * factor);
+                const prot = Math.round(sel.p * factor);
+                const carb = Math.round(sel.c * factor);
+                const fat  = Math.round(sel.f * factor);
+                document.getElementById('food-bank-macro-preview').textContent =
+                    `${cals} kcal · ${prot}P · ${carb}C · ${fat}G`;
+            },
+
+            confirmFoodBankAdd() {
+                const sel = this._foodBankSelected;
+                if (!sel) return;
+                const g = parseFloat(document.getElementById('food-bank-grams').value) || 100;
+                const factor = g / 100;
+                const macros = {
+                    cal: Math.round(sel.cal * factor),
+                    p:   Math.round(sel.p   * factor),
+                    c:   Math.round(sel.c   * factor),
+                    f:   Math.round(sel.f   * factor)
+                };
+                const name = sel.name.charAt(0).toUpperCase() + sel.name.slice(1);
+                this.mealAddEntry(name, g, macros, [{ name, grams: g }], null);
+                this.closeFoodBank();
+                this.showToast(`✅ ${name} adicionado!`);
+                this.updateDashboardTotals();
+                this.navigate('dashboard');
+            },
+
+            rejectAnalysis() {
+                // Descarta a análise e volta ao scanner
+                const panel = document.getElementById('analysis-panel');
+                const imgPreview = document.getElementById('analysis-preview-img');
+                if (panel) panel.classList.add('hidden');
+                if (imgPreview) { imgPreview.classList.add('hidden'); imgPreview.src = ''; }
+                this.state.lastAnalysis = null;
+                this.navigate('scanner');
+                this.showToast('Foto rejeitada. Tente novamente.');
+            },
+
             async readjustAnalysis() {
                 const refinement = prompt("O que deseja corrigir? (Ex: 'Tem arroz integral')");
                 if (!refinement || !this.state.lastAnalysis) return;
@@ -11845,7 +12433,7 @@ Rules:
                         body: JSON.stringify({
                             image: this.state.lastAnalysis.image,
                             audio: refinement, // Using the prompt as "audio" context
-                            provider: 'gemini'
+                            provider: 'groq'
                         })
                     });
 
@@ -11942,14 +12530,21 @@ Rules:
                     meals = this.state.mealHistory[this.state.selectedDate] || [];
                 }
 
-                // Recalculate totals from meals
-                this.state.totals = { protein: 0, carbs: 0, fat: 0, calories: 0 };
+                // Recalculate totals from meals (including water entries)
+                this.state.totals = { protein: 0, carbs: 0, fat: 0, calories: 0, water: 0 };
                 meals.forEach(m => {
-                    this.state.totals.calories += (m.macros.cal || 0);
-                    this.state.totals.protein += (m.macros.p || 0);
-                    this.state.totals.carbs += (m.macros.c || 0);
-                    this.state.totals.fat += (m.macros.f || 0);
+                    if (m.type === 'water') {
+                        this.state.totals.water += (m.amount || m.grams || 0);
+                    } else {
+                        this.state.totals.calories += (m.macros?.cal || 0);
+                        this.state.totals.protein  += (m.macros?.p   || 0);
+                        this.state.totals.carbs    += (m.macros?.c   || 0);
+                        this.state.totals.fat      += (m.macros?.f   || 0);
+                    }
                 });
+                // Update water card
+                const waterEl = document.getElementById('dash-water-amount');
+                if (waterEl) waterEl.textContent = this.state.totals.water;
 
                 const pr = document.getElementById('protein-remaining');
                 const cr = document.getElementById('carbs-remaining');
@@ -12025,11 +12620,20 @@ Rules:
                     localStorage.setItem('wb_meals_date', new Date().toLocaleDateString('pt-BR'));
                 } catch { }
 
-                // SYNC WITH SERVER
+                // SYNC WITH SERVER — não enviar id local (Supabase gera UUID)
+                const serverEntryManual = {
+                    name:        entry.name,
+                    grams:       entry.grams,
+                    macros:      entry.macros,
+                    ingredients: entry.ingredients,
+                    image_url: (entry.image && entry.image.length < 200000) ? entry.image : null
+                };
                 fetch('/api/meals', {
                     method: 'POST',
                     headers: AUTH.headers(),
-                    body: JSON.stringify(entry)
+                    body: JSON.stringify(serverEntryManual)
+                }).then(r => r.json()).then(data => {
+                    if (data?.meal?.id) { entry.serverId = data.meal.id; }
                 }).catch(err => console.error('Error saving meal:', err));
 
                 // Add to Recents
@@ -12269,7 +12873,7 @@ Rules:
                     const res = await fetch('/api/analyze-image', {
                         method: 'POST',
                         headers: AUTH.headers(),
-                        body: JSON.stringify({ audio: base64Audio, provider: 'gemini' })
+                        body: JSON.stringify({ audio: base64Audio, provider: 'groq' })
                     });
 
                     if (!res.ok) {
@@ -12531,9 +13135,16 @@ Rules:
                     const chip = document.createElement('div');
                     chip.className = 'px-3 py-1 rounded-full bg-black/10 dark:bg-white/10 border border-white/10 text-xs font-bold flex items-center gap-2';
                     const dot = document.createElement('span');
-                    dot.className = 'w-2 h-2 rounded-full bg-brand-neon';
+                    dot.className = `w-2 h-2 rounded-full ${e.type === 'water' ? 'bg-ios-blue' : e.type === 'supplement' ? 'bg-purple-400' : 'bg-brand-neon'}`;
                     const label = document.createElement('span');
-                    label.textContent = `${e.name} ${e.grams}g • ${e.macros.p}P ${e.macros.c}C ${e.macros.f}G`;
+                    if (e.type === 'water') {
+                        label.textContent = `💧 ${e.name} ${e.amount || e.grams}ml`;
+                    } else if (e.type === 'supplement') {
+                        label.textContent = `💊 ${e.name}`;
+                    } else {
+                        const m = e.macros || {};
+                        label.textContent = `${e.name} ${e.grams}g • ${Math.round(m.p||0)}P ${Math.round(m.c||0)}C ${Math.round(m.f||0)}G`;
+                    }
                     const time = document.createElement('span');
                     time.className = 'text-[10px] text-ios-gray dark:text-dark-gray';
                     time.textContent = e.time;

@@ -177,11 +177,16 @@ app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Dados inválidos' });
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
+    // Accept email OR @username
+    const isUsername = email.startsWith('@') || (!email.includes('@'));
+    let userQuery = supabase.from('users').select('*');
+    if (isUsername) {
+      const uname = email.startsWith('@') ? email : '@' + email;
+      userQuery = userQuery.eq('username', uname);
+    } else {
+      userQuery = userQuery.eq('email', email);
+    }
+    const { data: user } = await userQuery.single();
 
     if (!user) return res.status(401).json({ error: 'Credenciais inválidas' });
 
@@ -194,7 +199,8 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: '30d' }
     );
 
-    res.json({ token, userId: user.id, email: user.email, name: user.name, userType: user.user_type });
+    // Never send avatar_url in login response — can be a huge base64 blob; use GET /api/profile
+    res.json({ token, userId: user.id, email: user.email, name: user.name, username: user.username, userType: user.user_type });
   } catch (e) {
     console.error('Login error:', e);
     res.status(500).json({ error: 'Erro ao autenticar' });
@@ -328,17 +334,36 @@ app.get('/api/profile', async (req, res) => {
       .eq('user_id', req.userId)
       .single();
 
-    res.json({ ...user, ...profile });
+    // Truncate huge base64 avatars — send a boolean flag instead so the client
+    // knows an avatar exists but fetches it on demand via GET /api/profile/avatar
+    const avatar_url = user?.avatar_url;
+    const isBase64 = avatar_url && avatar_url.startsWith('data:');
+    const safeAvatarUrl = isBase64 ? '__base64__' : (avatar_url || null);
+
+    res.json({ ...user, avatar_url: safeAvatarUrl, ...profile });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao buscar perfil' });
+  }
+});
+
+// Retorna apenas o avatar (pode ser grande — chamada separada e opcional)
+app.get('/api/profile/avatar', async (req, res) => {
+  try {
+    const { data: user } = await supabase.from('users').select('avatar_url').eq('id', req.userId).single();
+    res.json({ avatar_url: user?.avatar_url || null });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao buscar avatar' });
   }
 });
 
 app.post('/api/profile', async (req, res) => {
   try {
     const { name, username, phone, weight, height, age, gender, goal, activity_level, biotype, diet, streak, lastOpenDate } = req.body;
-    // Accept both 'avatar_url' and 'avatar' from frontend
-    const avatar_url = req.body.avatar_url || req.body.avatar || undefined;
+    // Accept both 'avatar_url' and 'avatar' from frontend; skip huge base64 blobs
+    let avatar_url = req.body.avatar_url || req.body.avatar || undefined;
+    if (avatar_url && avatar_url.startsWith('data:') && avatar_url.length > 200000) {
+      avatar_url = undefined; // Too large — client must compress before sending
+    }
 
     const userUpdate = { name, username, phone };
     if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url;
@@ -539,11 +564,25 @@ app.post('/api/checkins', async (req, res) => {
     const entries = Array.isArray(req.body) ? req.body : Object.entries(req.body).map(([date, data]) => ({ date, ...data }));
 
     for (const entry of entries) {
-      const { date, mood, workout_type, workout_specific, workout_duration, workout_intensity, sleep_minutes, water_ml, calories_burned } = entry;
+      const { date, mood, workout_type, workout_specific, workout_duration, workout_intensity, sleep_minutes, water_ml, calories_burned, note } = entry;
       const upsertData = { user_id: req.userId, date: date || new Date().toISOString().split('T')[0], mood, workout_type, workout_duration, workout_intensity, sleep_minutes, water_ml };
       if (workout_specific !== undefined) upsertData.workout_specific = workout_specific;
       if (calories_burned !== undefined) upsertData.calories_burned = calories_burned;
-      await supabase.from('checkins').upsert(upsertData, { onConflict: 'user_id,date' });
+      if (note !== undefined) upsertData.note = note;
+
+      const { error } = await supabase.from('checkins').upsert(upsertData, { onConflict: 'user_id,date' });
+      if (error) {
+        console.error('Checkin upsert error:', JSON.stringify(error));
+        // If extra columns don't exist yet (migration not run), retry with base columns only
+        const isColumnError = error.code === 'PGRST204' || error.code === '42703' ||
+          (error.message && (error.message.includes('column') || error.message.includes('does not exist')));
+        if (isColumnError) {
+          const baseData = { user_id: req.userId, date: upsertData.date, mood: upsertData.mood, workout_type: upsertData.workout_type, workout_duration: upsertData.workout_duration, workout_intensity: upsertData.workout_intensity, sleep_minutes: upsertData.sleep_minutes, water_ml: upsertData.water_ml };
+          const { error: e2 } = await supabase.from('checkins').upsert(baseData, { onConflict: 'user_id,date' });
+          if (e2) console.error('Checkin base upsert error:', JSON.stringify(e2));
+          else console.log('Checkin saved (base fields only — run migrate.sql to enable full saving)');
+        }
+      }
     }
     res.json({ success: true });
   } catch (e) {
@@ -615,13 +654,20 @@ app.get('/api/foods', (req, res) => res.json(FOOD_DB));
 // O programa atribuído ao aluno vem primeiro com is_assigned:true e custom_exercises
 app.get('/api/workouts', async (req, res) => {
   try {
-    // Verifica se o aluno tem programa atribuído com exercícios customizados
-    const { data: link } = await supabase
+    // Busca vínculo ativo — aluno pode estar em múltiplas academias, prioriza quem tem programa atribuído
+    let link = null;
+    const { data: links } = await supabase
       .from('academia_students')
       .select('assigned_program_id, academia_id, custom_exercises')
       .eq('student_id', req.userId)
-      .eq('status', 'active')
-      .single();
+      .eq('status', 'active');
+
+    if (links?.length) {
+      // Prefere o link que tem assigned_program_id E custom_exercises
+      link = links.find(l => l.assigned_program_id && l.custom_exercises)
+            || links.find(l => l.assigned_program_id)
+            || links[0];
+    }
 
     let assignedProgram = null;
     if (link?.assigned_program_id) {
@@ -693,13 +739,18 @@ app.get('/api/workouts/progress', async (req, res) => {
 
 app.post('/api/workouts/progress', async (req, res) => {
   try {
+    // Accept either { date: { programId: completed_sets } } or
+    // { date: { programId: { completed_sets, notes, duration_minutes } } }
     const entries = req.body;
     for (const [date, programs] of Object.entries(entries)) {
-      for (const [programId, completed_sets] of Object.entries(programs)) {
-        await supabase.from('workout_sessions').upsert(
-          { user_id: req.userId, program_id: programId || null, date, completed_sets },
-          { onConflict: 'user_id,program_id,date' }
-        );
+      for (const [programId, payload] of Object.entries(programs)) {
+        const isRich = payload && typeof payload === 'object' && !Array.isArray(payload) && ('completed_sets' in payload || 'notes' in payload);
+        const completed_sets = isRich ? payload.completed_sets : payload;
+        const upsertRow = { user_id: req.userId, program_id: programId || null, date, completed_sets };
+        if (isRich && payload.notes) upsertRow.notes = payload.notes;
+        if (isRich && payload.duration_minutes) upsertRow.duration_minutes = payload.duration_minutes;
+        const { error } = await supabase.from('workout_sessions').upsert(upsertRow, { onConflict: 'user_id,program_id,date' });
+        if (error) console.error('Workout session upsert error:', JSON.stringify(error));
       }
     }
     res.json({ success: true });
@@ -802,12 +853,34 @@ app.get('/api/academia/students/:studentId/history', async (req, res) => {
 
     if (!link) return res.status(404).json({ error: 'Aluno não encontrado' });
 
-    const [{ data: checkins }, { data: sessions }] = await Promise.all([
-      supabase.from('daily_checkins').select('date, mood, note').eq('user_id', link.student_id).gte('date', since).order('date', { ascending: false }),
-      supabase.from('workout_sessions').select('date, exercises_done').eq('user_id', link.student_id).gte('date', since).order('date', { ascending: false })
-    ]);
+    // Try full select first (requires migrate.sql to have been run)
+    let checkinData = null;
+    const fullSelect = await supabase.from('checkins').select('date, mood, note, workout_type, workout_specific, workout_duration, calories_burned, water_ml').eq('user_id', link.student_id).gte('date', since).order('date', { ascending: false });
+    if (fullSelect.error) {
+      console.warn('Full checkin select failed (missing columns?), falling back to base columns:', fullSelect.error.message);
+      const baseSelect = await supabase.from('checkins').select('date, mood, workout_type, workout_duration, water_ml').eq('user_id', link.student_id).gte('date', since).order('date', { ascending: false });
+      checkinData = baseSelect.data;
+    } else {
+      checkinData = fullSelect.data;
+    }
 
-    res.json({ checkins: checkins || [], sessions: sessions || [] });
+    const { data: sessions } = await supabase.from('workout_sessions').select('date, program_id, completed_sets, duration_minutes, notes').eq('user_id', link.student_id).gte('date', since).order('date', { ascending: false });
+
+    // Merge workout session names into checkins as fallback for missing columns
+    const sessionsByDate = {};
+    (sessions || []).forEach(s => {
+      if (!sessionsByDate[s.date]) sessionsByDate[s.date] = s;
+    });
+    const mergedCheckins = (checkinData || []).map(c => {
+      const s = sessionsByDate[c.date];
+      return {
+        ...c,
+        workout_specific: c.workout_specific || (s && s.notes) || null,
+        workout_duration: c.workout_duration || (s && s.duration_minutes) || null
+      };
+    });
+
+    res.json({ checkins: mergedCheckins, sessions: sessions || [] });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao buscar histórico' });
   }
@@ -848,15 +921,34 @@ app.post('/api/academia/programs', async (req, res) => {
     if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
     const { name, category, categories, description, exercises } = req.body;
 
+    // Normaliza: category = string CSV, categories derivado do mesmo
+    const categoryStr = category || (Array.isArray(categories) ? categories.join(',') : '');
+
+    // Insert robusto — apenas campos que certamente existem na tabela
+    const insertData = {
+      name,
+      category: categoryStr,
+      created_by: req.userId,
+      is_public: false
+    };
+    // Campos opcionais — só inclui se tiver valor (evita erro de coluna inexistente)
+    if (description) insertData.description = description;
+    if (exercises && exercises.length) insertData.exercises = exercises;
+
     const { data, error } = await supabase
       .from('workout_programs')
-      .insert({ name, category, categories: categories || null, description, exercises: exercises || [], created_by: req.userId, is_public: false })
+      .insert(insertData)
       .select()
       .single();
 
-    if (error) throw error;
-    res.json({ success: true, program: data });
+    if (error) {
+      console.error('Supabase insert program error:', JSON.stringify(error));
+      return res.status(500).json({ error: error.message || 'Erro ao criar programa' });
+    }
+    // Retorna com categories como array para o frontend
+    res.json({ success: true, program: { ...data, categories: categoryStr.split(',').map(s => s.trim()).filter(Boolean) } });
   } catch (e) {
+    console.error('Create program error:', e);
     res.status(500).json({ error: 'Erro ao criar programa' });
   }
 });
@@ -867,15 +959,25 @@ app.put('/api/academia/programs/:id', async (req, res) => {
     if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
     const { name, category, categories, description, exercises } = req.body;
 
+    const categoryStr = category || (Array.isArray(categories) ? categories.join(',') : '');
+
+    const updateData = { name, category: categoryStr };
+    if (description !== undefined) updateData.description = description;
+    if (exercises !== undefined) updateData.exercises = exercises;
+
     const { error } = await supabase
       .from('workout_programs')
-      .update({ name, category, categories: categories || null, description, exercises })
+      .update(updateData)
       .eq('id', req.params.id)
       .eq('created_by', req.userId);
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error('Supabase update program error:', JSON.stringify(error));
+      return res.status(500).json({ error: error.message });
+    }
     res.json({ success: true });
   } catch (e) {
+    console.error('Update program error:', e);
     res.status(500).json({ error: 'Erro ao atualizar programa' });
   }
 });
