@@ -902,6 +902,90 @@ app.delete('/api/academia/students/:studentId', async (req, res) => {
 });
 
 // Programas criados pela academia
+// ── IA: interpreta treino colado em texto livre e retorna exercícios estruturados
+app.post('/api/academia/programs/parse-ai', async (req, res) => {
+  try {
+    if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
+    const { text } = req.body;
+    if (!text || text.trim().length < 10) return res.status(400).json({ error: 'Texto muito curto para analisar' });
+
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) return res.status(500).json({ error: 'IA não configurada' });
+
+    const prompt = `Você é especialista em educação física. Analise o texto de treino abaixo e retorne APENAS um JSON válido, sem nenhum texto extra antes ou depois.
+
+TEXTO DO TREINO:
+${text.substring(0, 3000)}
+
+FORMATO DE SAÍDA (JSON puro):
+{
+  "name": "nome do protocolo se houver, senão deixe vazio",
+  "categories": ["grupos musculares em português: Peito, Costas, Bíceps, Tríceps, Ombros, Pernas, Abdômen, Cardio"],
+  "exercises": [
+    {
+      "name": "nome do exercício em português",
+      "sets": 3,
+      "reps": "10-12",
+      "rest_seconds": 60,
+      "target_weight": 0,
+      "video_url": ""
+    }
+  ]
+}
+
+REGRAS:
+- Traduza exercícios para português brasileiro
+- sets: número inteiro (padrão 3)
+- reps: string como "10-12" ou "12" (padrão "10-12")
+- rest_seconds: inteiro em segundos (padrão 60)
+- target_weight sempre 0, video_url sempre ""
+- Detecte automaticamente os grupos musculares dos exercícios
+- Retorne APENAS o JSON, absolutamente nada mais`;
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+        max_tokens: 3000
+      })
+    });
+
+    const aiData = await response.json();
+    const raw = aiData.choices?.[0]?.message?.content || '';
+
+    // Extract JSON block from response
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('AI parse: no JSON found in response:', raw.substring(0, 200));
+      return res.status(500).json({ error: 'IA não conseguiu interpretar o treino. Tente reformatar o texto.' });
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(parsed.exercises) || parsed.exercises.length === 0) {
+      return res.status(400).json({ error: 'Nenhum exercício encontrado no texto. Verifique o formato.' });
+    }
+
+    // Normalize exercise fields
+    parsed.exercises = parsed.exercises.map(ex => ({
+      name:         ex.name || 'Exercício',
+      sets:         parseInt(ex.sets) || 3,
+      reps:         String(ex.reps || '10-12'),
+      rest_seconds: parseInt(ex.rest_seconds) || 60,
+      target_weight: 0,
+      video_url:    ''
+    }));
+
+    if (!Array.isArray(parsed.categories)) parsed.categories = [];
+    res.json(parsed);
+  } catch (e) {
+    console.error('AI parse error:', e);
+    res.status(500).json({ error: 'Erro ao analisar com IA: ' + e.message });
+  }
+});
+
 app.get('/api/academia/programs', async (req, res) => {
   try {
     if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
