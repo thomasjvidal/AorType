@@ -5907,17 +5907,9 @@
                     healthRingEl.style.strokeDasharray = circumference;
                     healthRingEl.style.strokeDashoffset = circumference - (score / 100) * circumference;
                 }
-                // Update health card values
-                const calAdherenceEl = document.getElementById('health-cal-adherence');
-                if (calAdherenceEl) calAdherenceEl.textContent = `${Math.round(calPct * 100)}%`;
-                const protAdherenceEl = document.getElementById('health-prot-adherence');
-                if (protAdherenceEl) protAdherenceEl.textContent = `${Math.round(protPct * 100)}%`;
-                const consistencyEl = document.getElementById('health-consistency');
-                if (consistencyEl) consistencyEl.textContent = `${consistencyPct}%`;
-                // Hydration
-                const goalWater = Math.round((parseFloat((this.state.userProfile && this.state.userProfile.weight) || '70') * 35));
-                const waterDone = (this.state.totals && this.state.totals.water) || 0;
-                const waterPct = goalWater > 0 ? Math.min(1, waterDone / goalWater) : 0;
+                // Update health card values (usando goalWater já declarado acima)
+                const waterDoneCurrent = (this.state.totals && this.state.totals.water) || 0;
+                const waterPct = goalWater > 0 ? Math.min(1, waterDoneCurrent / goalWater) : 0;
                 const hydrationEl = document.getElementById('health-hydration-val');
                 if (hydrationEl) {
                     const hydLabel = waterPct >= 0.9 ? 'Excelente' : waterPct >= 0.6 ? 'Bom' : waterPct >= 0.3 ? 'Regular' : 'Baixo';
