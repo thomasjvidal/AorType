@@ -891,27 +891,47 @@ app.post('/api/academia/students', async (req, res) => {
       return res.status(400).json({ error: 'Informe o email ou @username do aluno' });
     }
 
-    const baseQ = () => supabase.from('users').select('id').eq('user_type', 'aluno');
+    // Busca em users — sem filtro user_type pois alunos podem ter diferentes tipos
+    const baseQ = () => supabase.from('users').select('id, name, email, username, user_type');
+
+    console.log(`[add-student] identifier="${identifier}"`);
 
     if (identifier.startsWith('@')) {
       // @username — case-insensitive
-      const { data } = await baseQ().ilike('username', identifier.slice(1)).limit(1);
+      const uname = identifier.slice(1);
+      const { data, error } = await baseQ().ilike('username', uname).limit(1);
+      console.log(`[add-student] @username lookup "${uname}":`, JSON.stringify(data), error?.message);
       student = data?.[0] || null;
     } else if (identifier.includes('@')) {
       // email
-      const { data } = await baseQ().eq('email', identifier.toLowerCase()).limit(1);
+      const { data, error } = await baseQ().eq('email', identifier.toLowerCase()).limit(1);
+      console.log(`[add-student] email lookup:`, JSON.stringify(data), error?.message);
       student = data?.[0] || null;
     } else {
-      // Texto livre: tenta username (case-insensitive) primeiro, depois nome
-      const { data: byUser } = await baseQ().ilike('username', identifier).limit(1);
+      // Texto livre: tenta username primeiro, depois nome, depois email parcial
+      const { data: byUser, error: e1 } = await baseQ().ilike('username', identifier).limit(1);
+      console.log(`[add-student] username lookup "${identifier}":`, JSON.stringify(byUser), e1?.message);
       if (byUser?.[0]) {
         student = byUser[0];
       } else {
-        const { data: byName } = await baseQ().ilike('name', `%${identifier}%`).limit(1);
-        student = byName?.[0] || null;
+        const { data: byName, error: e2 } = await baseQ().ilike('name', `%${identifier}%`).limit(1);
+        console.log(`[add-student] name lookup:`, JSON.stringify(byName), e2?.message);
+        if (byName?.[0]) {
+          student = byName[0];
+        } else {
+          const { data: byEmail, error: e3 } = await baseQ().ilike('email', `%${identifier}%`).limit(1);
+          console.log(`[add-student] email-partial lookup:`, JSON.stringify(byEmail), e3?.message);
+          student = byEmail?.[0] || null;
+        }
       }
     }
 
+    // Rejeita academia tentando adicionar outra academia como aluno
+    if (student && student.user_type === 'academia') {
+      return res.status(400).json({ error: 'Este usuário é uma academia, não pode ser adicionado como aluno.' });
+    }
+
+    console.log(`[add-student] student found:`, student ? `id=${student.id} type=${student.user_type}` : 'NOT FOUND');
     if (!student) return res.status(404).json({ error: 'Aluno não encontrado. Verifique o email ou @username.' });
 
     // Busca link existente com maybeSingle() — não lança exceção se não encontrar
