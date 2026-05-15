@@ -2383,8 +2383,8 @@
             <!-- Content -->
             <div class="flex-1 overflow-y-auto no-scrollbar pb-8">
 
-                <!-- ── Card "Treino de Hoje" (injetado por renderTreinoHojeCard) ── -->
-                <div id="treino-hoje-card-wrap" class="px-4 pt-4 pb-1 hidden"></div>
+                <!-- ── Card "Treino de Hoje" + calendário semanal (injetado por renderTreinoHojeCard) ── -->
+                <div id="treino-hoje-card-wrap" class="hidden"></div>
 
                 <!-- ── Carrossel de programas ── -->
                 <div id="workout-carousel-wrap" class="pt-4 pb-1">
@@ -2397,16 +2397,11 @@
                     <div id="workout-carousel-dots" class="flex justify-center gap-1.5 mt-2.5"></div>
                 </div>
 
-                <!-- Ações rápidas (Registrar / Check-in) -->
-                <div id="treino-quick-actions" class="px-4 pt-3 pb-1 grid grid-cols-2 gap-3">
-                    <button onclick="app.navigate('workout')"
-                        class="flex items-center justify-center gap-2 bg-brand-neon text-black font-black py-3 px-4 rounded-2xl text-xs shadow-neon btn-press transition-all">
-                        <i data-lucide="dumbbell" class="w-4 h-4"></i>
-                        <span>Registrar Exercício</span>
-                    </button>
+                <!-- Ações rápidas (Check-in da Vida) -->
+                <div id="treino-quick-actions" class="px-4 pt-3 pb-1">
                     <button onclick="app.openCheckinModal()"
-                        class="flex items-center justify-center gap-2 bg-brand-electric/10 border border-brand-electric/30 text-brand-electric font-black py-3 px-4 rounded-2xl text-xs btn-press transition-all">
-                        <i data-lucide="activity" class="w-4 h-4"></i>
+                        class="w-full flex items-center justify-center gap-3 bg-white dark:bg-dark-card border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-black py-4 px-5 rounded-3xl text-sm btn-press transition-all shadow-sm">
+                        <i data-lucide="activity" class="w-5 h-5 text-brand-neon"></i>
                         <span>Check-in Diário</span>
                     </button>
                 </div>
@@ -5857,30 +5852,47 @@
             },
 
             updateHealthScore() {
-                const goalCals = (this.state.goals && this.state.goals.calories) || 2000;
-                const goalProt = (this.state.goals && this.state.goals.protein) || 120;
-                const currentCals = (this.state.totals && this.state.totals.calories) || 0;
-                const currentProt = (this.state.totals && this.state.totals.protein) || 0;
-                const streak = (this.state.userProfile && this.state.userProfile.streak) || parseInt(localStorage.getItem('wb_streak') || '0');
+                // Score semanal rolling (últimos 7 dias) — pesos fixos:
+                // Treino concluído: 40% | Check-in: 20% | Água: 10% | Sono: 10% | Cardio: 10% | Alimentação: 10%
+                const checkins = this.state.dailyCheckins || {};
+                const history = this._exerciseHistoryCache || {};
+                const goalWater = (this.state.goals && this.state.goals.water) || 2000;
+                const goalSleep = (this.state.goals && this.state.goals.sleep) || 7;
 
-                // 7-day consistency from activity log
-                const log = JSON.parse(localStorage.getItem('wb_activity_log') || '{}');
-                let activeDays7 = 0;
+                let total = 0;
                 for (let i = 0; i < 7; i++) {
                     const d = new Date(); d.setDate(d.getDate() - i);
-                    const k = d.toLocaleDateString('pt-BR');
-                    if (log[k] > 0) activeDays7++;
-                }
-                const consistencyPct = Math.round((activeDays7 / 7) * 100);
+                    const dateIso = d.toISOString().split('T')[0];
+                    const datePt = d.toLocaleDateString('pt-BR');
+                    const ci = checkins[datePt] || checkins[dateIso] || {};
+                    const histDay = history[dateIso] || {};
 
-                // Weighted score: 40% consistency, 30% calorie adherence, 30% protein adherence
-                const calPct = goalCals > 0 ? Math.min(1, currentCals / goalCals) : 0;
-                const protPct = goalProt > 0 ? Math.min(1, currentProt / goalProt) : 0;
-                let score = Math.round(consistencyPct * 0.4 + calPct * 30 + protPct * 30);
-                // Streak bonus (up to +5)
-                if (streak >= 7) score = Math.min(100, score + 5);
-                else if (streak >= 3) score = Math.min(100, score + 2);
-                score = Math.max(0, Math.min(100, score));
+                    // Treino concluído (40/7 por dia) — verifica se alguma sessão foi 100%
+                    const workoutDone = Object.values(histDay).some(s => s && s._pct >= 100) || !!ci.workout;
+                    if (workoutDone) total += 40 / 7;
+
+                    // Check-in preenchido (20/7 por dia)
+                    const checkinDone = !!(ci.mood || ci.energy || ci.notes || ci.water_ml > 0 || ci.sleep_hours > 0);
+                    if (checkinDone) total += 20 / 7;
+
+                    // Hidratação (10/7 por dia) — ≥ meta de água
+                    const waterOk = (ci.water_ml || 0) >= goalWater;
+                    if (waterOk) total += 10 / 7;
+
+                    // Sono (10/7 por dia) — ≥ meta de horas
+                    const sleepOk = (ci.sleep_hours || 0) >= goalSleep;
+                    if (sleepOk) total += 10 / 7;
+
+                    // Cardio (10/7 por dia)
+                    const cardioDone = !!(ci.cardio || ci.workout_type === 'cardio' || ci.cardio_done);
+                    if (cardioDone) total += 10 / 7;
+
+                    // Alimentação registrada (10/7 por dia) — tem calorias registradas
+                    const goalCals = (this.state.goals && this.state.goals.calories) || 2000;
+                    const foodLogged = (ci.calories || 0) >= goalCals * 0.5; // pelo menos 50% da meta
+                    if (foodLogged) total += 10 / 7;
+                }
+                let score = Math.max(0, Math.min(100, Math.round(total)));
 
                 // Update dashboard widget
                 const scoreEl = document.getElementById('dash-health-score');
@@ -6078,7 +6090,7 @@
 
             // ── FASE 2: WORKOUT EXECUTION LAYER ──────────────────────────────
 
-            // P1a: Card "Treino de Hoje" — aparece na aba treino quando aluno tem programa atribuído
+            // P1a: Card "Treino de Hoje" + calendário semanal navegável
             renderTreinoHojeCard(programs) {
                 const wrap = document.getElementById('treino-hoje-card-wrap');
                 if (!wrap) return;
@@ -6088,27 +6100,170 @@
                     wrap.innerHTML = '';
                     return;
                 }
-                const d = new Date();
-                const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-                const dias = this._getProgramDays(assigned);
-                const hasDays = dias.length > 0;
                 wrap.classList.remove('hidden');
+
+                const today = new Date();
+                const todayWd = today.getDay();
+                const days = this._getProgramDays(assigned);
+                const hasDays = days.length > 0;
+                const weekLabels = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+                // Descobre o índice do treino de hoje (pelo weekday)
+                const todayDayIdx = this._computeTodayDayIndex(assigned);
+                const todayDay = todayDayIdx >= 0 ? days[todayDayIdx] : null;
+
+                // Calendário semanal: Dom→Sáb
+                let calendarHtml = '';
+                if (hasDays) {
+                    const weekCells = Array.from({ length: 7 }, (_, i) => {
+                        const d = new Date(today);
+                        d.setDate(today.getDate() - todayWd + i);
+                        const wd = d.getDay();
+                        const dayDef = days.find(x => x.weekday != null && x.weekday === wd);
+                        const dateStr = d.toISOString().split('T')[0];
+                        const pct = this._getDayProgress(assigned.id, dateStr);
+                        const isToday = wd === todayWd;
+                        const isRest = !dayDef;
+                        const label = dayDef ? (dayDef.name.replace('Treino ', '') || weekLabels[wd]) : '🛌';
+                        return { wd, dateStr, dayDef, pct, isToday, isRest, label, d };
+                    });
+
+                    calendarHtml = `
+                        <div class="flex gap-1 mb-4">
+                          ${weekCells.map((cell, i) => `
+                            <button onclick="app.openCalendarDay('${assigned.id}', ${days.indexOf(cell.dayDef)}, '${cell.dateStr}', ${cell.isRest})"
+                                class="flex-1 flex flex-col items-center py-2 rounded-2xl transition-all btn-press
+                                    ${cell.isToday ? 'bg-brand-neon text-black' : cell.pct >= 100 ? 'bg-brand-neon/15 text-brand-neon' : 'bg-white/5 dark:bg-white/5 text-ios-gray'}">
+                                <span class="text-[9px] font-bold uppercase mb-1">${weekLabels[cell.wd]}</span>
+                                <span class="text-[11px] font-black">${cell.isRest ? '·' : cell.label}</span>
+                                <span class="text-[9px] mt-0.5">${cell.pct >= 100 ? '✓' : cell.pct > 0 ? cell.pct + '%' : ''}</span>
+                            </button>`).join('')}
+                        </div>`;
+                } else if (days.length === 0) {
+                    // Programa sem mapeamento de weekday — mostra treinos em sequência
+                    const noMapCells = days.map((d, i) => `
+                        <button onclick="app.startCalendarDayByIndex('${assigned.id}', ${i})"
+                            class="flex-1 flex flex-col items-center py-2 rounded-2xl bg-white/5 text-ios-gray btn-press transition-all">
+                            <span class="text-[9px] font-bold uppercase mb-1">${d.name.replace('Treino ', '')}</span>
+                            <span class="text-[9px] mt-0.5">${d.focus || ''}</span>
+                        </button>`).join('');
+                    calendarHtml = noMapCells ? `<div class="flex gap-1 mb-4">${noMapCells}</div>` : '';
+                }
+
+                // Card "Treino de Hoje"
+                let hojeHtml = '';
+                if (hasDays && todayDay) {
+                    const pct = this._getDayProgress(assigned.id, today.toISOString().split('T')[0]);
+                    const barW = Math.round(pct);
+                    hojeHtml = `
+                        <div class="bg-white dark:bg-dark-card rounded-3xl p-4 border border-ios-separator/30 dark:border-gray-800 shadow-sm">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <p class="text-[10px] text-brand-neon font-black uppercase tracking-widest mb-0.5">Treino de Hoje</p>
+                                    <p class="font-black text-base leading-tight">${todayDay.name}</p>
+                                    <p class="text-xs text-ios-gray mt-0.5">${todayDay.focus || ''} · ${(todayDay.exercises || []).length} exercícios</p>
+                                </div>
+                                ${pct > 0 ? `<span class="text-sm font-black ${pct >= 100 ? 'text-brand-neon' : 'text-ios-gray'}">${pct >= 100 ? '✓' : Math.round(pct) + '%'}</span>` : ''}
+                            </div>
+                            ${pct > 0 ? `<div class="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full mb-3 overflow-hidden"><div class="h-full bg-brand-neon rounded-full transition-all" style="width:${barW}%"></div></div>` : ''}
+                            <button onclick="app.startTreinoHoje('${assigned.id}')"
+                                class="w-full bg-brand-neon text-black font-black py-3 rounded-2xl text-sm">
+                                ${pct >= 100 ? '✓ Treino Concluído' : pct > 0 ? 'Continuar Treino ▶' : 'Começar Treino ▶'}
+                            </button>
+                        </div>`;
+                } else if (!hasDays) {
+                    // Programa sem estrutura de dias
+                    hojeHtml = `
+                        <div class="bg-white dark:bg-dark-card rounded-3xl p-4 border border-ios-separator/30 dark:border-gray-800 shadow-sm">
+                            <p class="text-[10px] text-brand-neon font-black uppercase tracking-widest mb-1">Seu Treino</p>
+                            <p class="font-black text-base">${assigned.name}</p>
+                            <button onclick="app.startTreinoHoje('${assigned.id}')"
+                                class="mt-3 w-full bg-brand-neon text-black font-black py-3 rounded-2xl text-sm">Começar Treino ▶</button>
+                        </div>`;
+                } else {
+                    // Hoje é descanso
+                    hojeHtml = `
+                        <div class="bg-white dark:bg-dark-card rounded-3xl p-4 border border-ios-separator/30 dark:border-gray-800 shadow-sm text-center py-6">
+                            <div class="text-3xl mb-2">🛌</div>
+                            <p class="font-black text-base">Dia de Descanso</p>
+                            <p class="text-xs text-ios-gray mt-1">Recuperação é parte do treinamento.</p>
+                        </div>`;
+                }
+
                 wrap.innerHTML = `
-                    <div class="bg-dark-card rounded-3xl p-5 border border-brand-neon/20">
-                        <p class="text-[10px] text-brand-neon font-black uppercase tracking-widest mb-1">Treino de Hoje</p>
-                        <p class="text-base font-black">${diasSemana[d.getDay()]} · ${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</p>
-                        <p class="text-xs text-ios-gray mt-0.5">${assigned.name}</p>
-                        <button onclick="app.startTreinoHoje('${assigned.id}')"
-                            class="mt-3 w-full bg-brand-neon text-black font-black py-3 rounded-2xl text-sm">
-                            Começar Treino ▶
-                        </button>
+                    <div class="px-4 pt-3 pb-1">
+                        <p class="text-[10px] font-black text-ios-gray uppercase tracking-widest mb-3">Esta Semana</p>
+                        ${calendarHtml}
+                        ${hojeHtml}
                     </div>`;
+            },
+
+            // Abre um dia específico do calendário (pode ser passado ou futuro)
+            openCalendarDay(programId, dayIdx, dateStr, isRest) {
+                if (isRest || dayIdx < 0) {
+                    // Dia de descanso: mostra modal/overlay simples sem entrar no treino
+                    this._showRestDayOverlay(dateStr);
+                    return;
+                }
+                this._calendarDateContext = dateStr; // data real que está sendo executada
+                this._autoStartToday = false;
+                this.selectTreinoProgram(programId);
+                setTimeout(() => this.selectTreinoDay(dayIdx), 200);
+            },
+
+            // Overlay de dia de descanso
+            _showRestDayOverlay(dateStr) {
+                let overlay = document.getElementById('rest-day-overlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'rest-day-overlay';
+                    overlay.className = 'fixed inset-x-6 top-1/3 bg-white dark:bg-dark-card rounded-3xl shadow-2xl z-50 p-8 text-center border border-ios-separator/20 dark:border-gray-800';
+                    document.body.appendChild(overlay);
+                }
+                const d = new Date(dateStr + 'T12:00:00');
+                const label = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
+                overlay.innerHTML = `
+                    <div class="text-5xl mb-4">🛌</div>
+                    <p class="font-black text-lg capitalize">${label}</p>
+                    <p class="font-black text-base mt-1">Dia de Descanso</p>
+                    <p class="text-sm text-ios-gray mt-2">Recuperação é parte do treinamento.</p>
+                    <button onclick="document.getElementById('rest-day-overlay').style.display='none'"
+                        class="mt-5 w-full bg-gray-100 dark:bg-dark-elevated text-gray-700 dark:text-gray-300 font-black py-3 rounded-2xl text-sm">
+                        Fechar
+                    </button>`;
+                overlay.style.display = 'block';
+                // Fechar ao clicar fora
+                setTimeout(() => {
+                    const close = (e) => { if (!overlay.contains(e.target)) { overlay.style.display = 'none'; document.removeEventListener('click', close); } };
+                    document.addEventListener('click', close);
+                }, 100);
+            },
+
+            // Para programas sem mapeamento de weekday
+            startCalendarDayByIndex(programId, dayIdx) {
+                this._calendarDateContext = new Date().toISOString().split('T')[0];
+                this._autoStartToday = false;
+                this._autoSelectedDayIndex = dayIdx;
+                this.selectTreinoProgram(programId);
+                setTimeout(() => this.selectTreinoDay(dayIdx), 200);
+            },
+
+            // Retorna progresso (0-100) de uma data específica para um programa
+            _getDayProgress(programId, dateStr) {
+                const history = this._exerciseHistoryCache || {};
+                // Procura por data (performed_at) em todas as sessões
+                const byDate = history[dateStr];
+                if (!byDate) return 0;
+                const session = byDate[programId];
+                if (!session) return 0;
+                return Math.round(session._pct || 0);
             },
 
             // P1a: Iniciar treino direto do card "Treino de Hoje" (pula seletor)
             startTreinoHoje(programId) {
                 this._autoStartToday = true; // G9: flag modo "Hoje"
                 this._autoSelectedDayIndex = null;
+                this._calendarDateContext = new Date().toISOString().split('T')[0]; // sempre hoje
                 this.selectTreinoProgram(programId);
             },
 
@@ -6174,6 +6329,10 @@
                 const days = this._getProgramDays(program);
                 const day = days[dayIdx];
                 if (!day) return;
+                // Garante que _calendarDateContext tem a data correta (hoje se não definido)
+                if (!this._calendarDateContext) {
+                    this._calendarDateContext = new Date().toISOString().split('T')[0];
+                }
                 this.state.activeTreinoDay = dayIdx;
                 this.state.activeTreinoDayName = day.name;
                 // P0-D: Limpar sets apenas ao TROCAR de dia (correto)
@@ -6300,9 +6459,10 @@
             },
 
             // P0-B: Carrega progresso — localStorage primeiro, servidor como fallback, merge strategy G11
+            // Suporta sessões históricas: usa _calendarDateContext se definido
             async loadTodayProgress(programId) {
                 try {
-                    const today = new Date().toISOString().split('T')[0];
+                    const today = this._calendarDateContext || new Date().toISOString().split('T')[0];
                     const MAX_AGE_MS = 48 * 60 * 60 * 1000;
 
                     // 1) PRIMEIRO: cache local (instantâneo)
@@ -6508,22 +6668,35 @@
             },
 
             // P0-A: Save com localStorage imediato + debounce servidor
+            // Usa _calendarDateContext para suportar sessões históricas (dias passados editáveis)
             _saveTreinoProgress() {
                 clearTimeout(this._saveDebounce);
                 const prog = this.state.activeTreinoProgram;
                 if (!prog) return;
-                const today = new Date().toISOString().split('T')[0];
+                // performed_at = data real que está sendo trabalhada (pode ser dia passado)
+                const performedAt = this._calendarDateContext || new Date().toISOString().split('T')[0];
                 const s = this._serializeWorkoutState();
+
+                // Adiciona metadados de sessão (separa estrutural de cronológico)
+                const days = this._getProgramDays(prog);
+                const dayIdx = this.state.activeTreinoDay ?? -1;
+                const dayDef = dayIdx >= 0 ? days[dayIdx] : null;
+                s.performed_at = performedAt;
+                s.scheduled_weekday = dayDef?.weekday ?? null; // weekday estrutural do programa
+                s.completed_at = s._status === 'concluido' ? (s.completed_at || new Date().toISOString()) : null;
+
                 // IMEDIATO: cache local (offline-safe)
-                try { localStorage.setItem(`tp_${today}_${prog.id}`, JSON.stringify(s)); } catch {}
+                try { localStorage.setItem(`tp_${performedAt}_${prog.id}`, JSON.stringify(s)); } catch {}
                 // DEBOUNCE: sincronizar com servidor
                 this._saveDebounce = setTimeout(async () => {
                     if (!AUTH.getToken()) return;
                     try {
                         await fetch('/api/workouts/progress', {
                             method: 'POST', headers: AUTH.headers(),
-                            body: JSON.stringify({ [today]: { [prog.id]: s } })
+                            body: JSON.stringify({ [performedAt]: { [prog.id]: s } })
                         });
+                        // Invalida cache do histórico para o calendário reflectir o progresso
+                        this._exerciseHistoryCache = null;
                         this._showSaveIndicator();
                     } catch {}
                 }, 400);
@@ -6577,26 +6750,24 @@
                 return { lastWeight, bestWeight, suggested: lastWeight > 0 ? lastWeight + 2.5 : 0 };
             },
 
-            // D2-D: Motor de rotação temporal — computa próximo dia A/B/C
+            // D2-D: Computa dia de hoje pelo weekday do programa (não mais por rotação)
+            // Retorna índice no array days[], ou -1 se hoje é descanso / sem mapeamento
             async _computeNextTrainingDay(programId, days) {
-                if (!days || days.length <= 1) return 0;
-                await this._loadExerciseHistory();
-                const history = this._exerciseHistoryCache || {};
-                let lastDayName = null, lastRotPos = null;
-                for (const date of Object.keys(history).sort().reverse()) {
-                    const session = history[date]?.[programId];
-                    if (!session) continue;
-                    lastDayName = session._day || null;
-                    lastRotPos = session._rotation_pos ?? null;
-                    break;
-                }
-                if (!lastDayName) return 0; // nunca treinou → começa do início
-                // TODO(skip-day): se aluno faltou N dias, a rotação não deve avançar N vezes.
-                // Usar _last_completed_day (não _last_started_day) para calcular next.
-                // Por ora: avança 1 independente de dias perdidos.
-                if (lastRotPos !== null) return (lastRotPos + 1) % days.length;
-                const lastIdx = days.findIndex(d => d.name === lastDayName);
-                return lastIdx >= 0 ? (lastIdx + 1) % days.length : 0;
+                if (!days || days.length === 0) return 0;
+                return this._computeTodayDayIndex({ days });
+            },
+
+            // Novo: resolve "hoje" pelo weekday estrutural do programa
+            _computeTodayDayIndex(program) {
+                const days = this._getProgramDays(program);
+                if (!days.length) return -1;
+                const todayWeekday = new Date().getDay(); // 0=Dom…6=Sáb
+                // Procura dia com weekday explícito que bate com hoje
+                const idx = days.findIndex(d => d.weekday != null && d.weekday === todayWeekday);
+                if (idx >= 0) return idx;
+                // Se nenhum dia tem weekday definido → sem mapeamento, retorna -1
+                // (o seletor manual será exibido para o aluno escolher)
+                return -1;
             },
 
             // ── FIM DEPLOY 2 (funções auxiliares) ───────────────────────────
@@ -6630,11 +6801,16 @@
                     // P1b: Se veio do card "Treino de Hoje", pular seletor e ir direto
                     if (this._autoStartToday) {
                         this._autoSelectedDayIndex = suggestedIdx;
-                        setTimeout(() => this.selectTreinoDay(suggestedIdx), 50);
                         const todayLocal2 = new Date().toLocaleDateString('pt-BR');
                         const checkinNow2 = this.state.dailyCheckins[todayLocal2] || {};
                         const energyEl3 = document.getElementById('treino-energy-val');
                         if (energyEl3) energyEl3.textContent = checkinNow2.caloriesBurned || 0;
+                        if (suggestedIdx >= 0) {
+                            setTimeout(() => this.selectTreinoDay(suggestedIdx), 50);
+                        } else {
+                            // Hoje é descanso ou programa sem mapeamento → mostra seletor
+                            this.renderTreinoDaySelector(program, -1);
+                        }
                         return;
                     }
                     this.renderTreinoDaySelector(program, suggestedIdx);
@@ -6800,12 +6976,10 @@
                                 </div>
                                 ${hasVideo ? `
                                     <button onclick="app.openTreinoVideo('${ex.video_url}', '${ex.name}', '${ex.reps} reps')"
-                                        class="flex items-center gap-1.5 bg-red-500 text-white text-xs font-black px-3 py-1.5 rounded-full ml-3 flex-shrink-0">
-                                        <i data-lucide="play" class="w-3 h-3 fill-white"></i> Vídeo
+                                        class="text-[11px] text-brand-neon/80 font-semibold ml-3 flex-shrink-0 active:opacity-60 transition-opacity">
+                                        ▶ Ver execução
                                     </button>
-                                ` : `
-                                    <span class="text-[10px] text-ios-gray border border-ios-separator dark:border-gray-700 px-2 py-1 rounded-full ml-3 flex-shrink-0">Sem vídeo</span>
-                                `}
+                                ` : ''}
                             </div>
                             <div class="grid grid-cols-${Math.min(ex.sets, 4)} gap-2">
                                 ${sets.map(si => `
@@ -6960,10 +7134,20 @@
                 try {
                 const program = this.state.activeTreinoProgram;
                 if (!program) { this._finishingWorkout = false; return; }
-                const today = new Date().toISOString().split('T')[0];
+                // performed_at = data real (suporta conclusão de sessões históricas)
+                const performedAt = this._calendarDateContext || new Date().toISOString().split('T')[0];
                 const completedSets = this.state.treinoSetsCompleted || {};
                 const doneCount = Object.values(completedSets).filter(Boolean).length;
                 if (doneCount === 0) { this.showToast('Complete ao menos uma série antes de finalizar!'); this._finishingWorkout = false; return; }
+
+                // Exige 100% para finalizar
+                const totalSetsCheck = (this.state.activeTreinoExercises || []).reduce((t, ex) => t + (ex.sets || 3), 0);
+                const pctCheck = totalSetsCheck > 0 ? Math.round((doneCount / totalSetsCheck) * 100) : 0;
+                if (pctCheck < 100) {
+                    this.showToast(`Complete 100% das séries para finalizar (${pctCheck}% concluído)`);
+                    this._finishingWorkout = false;
+                    return;
+                }
 
                 try {
                     // Estimar calorias com base nas séries completadas (aprox. 5 kcal/série)
@@ -6971,27 +7155,35 @@
                     const workoutType = program.category || 'strength';
                     const workoutName = program.name || '';
 
-                    // Fase 2: calcular % e incluir pesos + dia no payload
-                    const totalSets = (this.state.activeTreinoExercises || []).reduce((t, ex) => t + (ex.sets || 3), 0);
-                    const pct = totalSets > 0 ? Math.round((doneCount / totalSets) * 100) : 0;
+                    // calcular % e incluir pesos + dia + metadados de sessão
+                    const totalSets = totalSetsCheck;
+                    const pct = pctCheck;
                     const trainingDay = this.state.activeTreinoDayName || null;
 
+                    // Metadados de sessão (separa estrutural de cronológico)
+                    const days = this._getProgramDays(program);
+                    const dayIdx = this.state.activeTreinoDay ?? -1;
+                    const dayDef = dayIdx >= 0 ? days[dayIdx] : null;
+
                     // P0-F: Save com _status: 'concluido' (servidor ganha na merge strategy)
-                    const body = { [today]: { [program.id]: { completed_sets: {
+                    const sessionData = {
                         ...completedSets,
                         _weights: this.state.treinoWeights || {},
                         _day: trainingDay,
                         _pct: pct,
-                        _rotation_pos: this.state.activeTreinoDay ?? null,
                         _status: 'concluido',
                         _updated_at: Date.now(),
-                        _version: 1
-                    }, notes: trainingDay || workoutName, duration_minutes: 60 } } };
+                        _version: 1,
+                        performed_at: performedAt,
+                        scheduled_weekday: dayDef?.weekday ?? null,
+                        completed_at: new Date().toISOString()
+                    };
+                    const body = { [performedAt]: { [program.id]: { completed_sets: sessionData, notes: trainingDay || workoutName, duration_minutes: 60 } } };
                     // Atualizar localStorage também como concluido
-                    try { localStorage.setItem(`tp_${today}_${program.id}`, JSON.stringify(body[today][program.id].completed_sets)); } catch {}
+                    try { localStorage.setItem(`tp_${performedAt}_${program.id}`, JSON.stringify(sessionData)); } catch {}
                     await fetch('/api/workouts/progress', { method: 'POST', headers: AUTH.headers(), body: JSON.stringify(body) });
                     await fetch('/api/checkins', { method: 'POST', headers: AUTH.headers(), body: JSON.stringify([{
-                        date: today,
+                        date: performedAt,
                         workout_type: workoutType,
                         workout_specific: workoutName,
                         workout_duration: 60,
@@ -7042,9 +7234,10 @@
                 if (hojeWrap && hojeWrap.innerHTML) hojeWrap.classList.remove('hidden');
                 document.getElementById('treino-subtitle').textContent = 'Selecione um programa';
                 this.state.activeTreinoProgram = null;
-                // P1b: limpar flags de modo "Treino de Hoje"
+                // P1b: limpar flags de modo "Treino de Hoje" e contexto de data
                 this._autoStartToday = false;
                 this._autoSelectedDayIndex = null;
+                this._calendarDateContext = null; // reset para próxima sessão usar hoje
             },
 
             handleTreinoBack() {

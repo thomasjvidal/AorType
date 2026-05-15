@@ -1146,6 +1146,8 @@ FORMATO DE SAÍDA (JSON puro):
       "name": "Treino A",
       "focus": "Peito/Bíceps",
       "rest_label": "35-45s",
+      "weekday": null,
+      "order": 1,
       "exercises": [
         {
           "name": "nome do exercício em português",
@@ -1166,6 +1168,12 @@ REGRA CRÍTICA — DETECÇÃO DE DIAS:
 - Se o texto contiver cabeçalhos como "Treino A:", "Treino B:", "Treino C:", "Dia 1:", "Dia 2:", "Dia A:", "Dia B:", ou qualquer seção com label que identifique dias/blocos distintos de treino → você DEVE retorná-los como objetos separados no array "days". NUNCA achate um programa multi-dia em uma lista única de exercícios.
 - Cada dia deve preservar seus próprios exercícios, foco e informações de descanso.
 - Se NÃO houver blocos distintos → "days" = [] e os exercícios vão em "exercises" (flat).
+
+REGRAS DE WEEKDAY:
+- "weekday" só deve ser preenchido se o texto EXPLICITAMENTE mencionar o dia da semana (ex: "Treino A - Segunda", "Terça-feira", "Monday").
+- weekday: 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
+- Se o dia da semana NÃO for mencionado explicitamente → use weekday: null e adicione "order": 1, 2, 3... (ordem sequencial no texto).
+- NUNCA infira ou distribua weekdays automaticamente (ex: Treino A = seg, Treino B = ter). Só preencha weekday quando o texto disser explicitamente.
 
 REGRAS OBRIGATÓRIAS:
 - Traduza exercícios para português brasileiro
@@ -1219,10 +1227,12 @@ REGRAS OBRIGATÓRIAS:
       video_url:     ''
     });
 
-    parsed.days = parsed.days.map(d => ({
-      name:       d.name || 'Treino',
+    parsed.days = parsed.days.map((d, i) => ({
+      name:       d.name || `Treino ${String.fromCharCode(65 + i)}`,
       focus:      d.focus || '',
       rest_label: d.rest_label || '',
+      weekday:    (d.weekday != null && Number.isInteger(d.weekday)) ? d.weekday : null,
+      order:      d.order ?? (i + 1),
       exercises:  Array.isArray(d.exercises) ? d.exercises.map(normalizeEx) : []
     }));
 
