@@ -6096,17 +6096,25 @@
 
                 const today = new Date();
                 const todayWd = today.getDay();
+                const todayIso = today.toISOString().split('T')[0];
                 const days = this._getProgramDays(assigned);
                 const hasDays = days.length > 0;
                 const weekLabels = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
-                // Descobre o índice do treino de hoje (pelo weekday)
-                const todayDayIdx = this._computeTodayDayIndex(assigned);
-                const todayDay = todayDayIdx >= 0 ? days[todayDayIdx] : null;
+                // Verifica se o programa tem mapeamento de weekday (qualquer dia com weekday != null)
+                const hasWeekdayMapping = hasDays && days.some(d => d.weekday != null);
 
-                // Calendário semanal: Dom→Sáb
+                // Índice do treino de hoje (só funciona quando tem weekday mapeado)
+                const todayDayIdx = hasWeekdayMapping ? this._computeTodayDayIndex(assigned) : -1;
+                const todayDay = todayDayIdx >= 0 ? days[todayDayIdx] : null;
+                // Verdadeiro descanso: tem mapeamento E hoje não tem treino
+                const isTrueRestDay = hasWeekdayMapping && todayDay === null;
+
+                // ── CALENDÁRIO ─────────────────────────────────────────
                 let calendarHtml = '';
-                if (hasDays) {
+
+                if (hasWeekdayMapping) {
+                    // Modo: calendário semanal Dom→Sáb com dias mapeados
                     const weekCells = Array.from({ length: 7 }, (_, i) => {
                         const d = new Date(today);
                         d.setDate(today.getDate() - todayWd + i);
@@ -6116,37 +6124,43 @@
                         const pct = this._getDayProgress(assigned.id, dateStr);
                         const isToday = wd === todayWd;
                         const isRest = !dayDef;
-                        const label = dayDef ? (dayDef.name.replace('Treino ', '') || weekLabels[wd]) : '🛌';
-                        return { wd, dateStr, dayDef, pct, isToday, isRest, label, d };
+                        const label = dayDef ? dayDef.name.replace('Treino ', '') : '·';
+                        return { wd, dateStr, dayDef, pct, isToday, isRest, label };
                     });
-
                     calendarHtml = `
                         <div class="flex gap-1 mb-4">
-                          ${weekCells.map((cell, i) => `
+                          ${weekCells.map(cell => `
                             <button onclick="app.openCalendarDay('${assigned.id}', ${days.indexOf(cell.dayDef)}, '${cell.dateStr}', ${cell.isRest})"
                                 class="flex-1 flex flex-col items-center py-2 rounded-2xl transition-all btn-press
-                                    ${cell.isToday ? 'bg-brand-neon text-black' : cell.pct >= 100 ? 'bg-brand-neon/15 text-brand-neon' : 'bg-white/5 dark:bg-white/5 text-ios-gray'}">
+                                    ${cell.isToday ? 'bg-brand-neon text-black' : cell.pct >= 100 ? 'bg-brand-neon/15 text-brand-neon' : 'bg-white/5 text-ios-gray'}">
                                 <span class="text-[9px] font-bold uppercase mb-1">${weekLabels[cell.wd]}</span>
-                                <span class="text-[11px] font-black">${cell.isRest ? '·' : cell.label}</span>
+                                <span class="text-[11px] font-black">${cell.label}</span>
                                 <span class="text-[9px] mt-0.5">${cell.pct >= 100 ? '✓' : cell.pct > 0 ? cell.pct + '%' : ''}</span>
                             </button>`).join('')}
                         </div>`;
-                } else if (days.length === 0) {
-                    // Programa sem mapeamento de weekday — mostra treinos em sequência
-                    const noMapCells = days.map((d, i) => `
-                        <button onclick="app.startCalendarDayByIndex('${assigned.id}', ${i})"
-                            class="flex-1 flex flex-col items-center py-2 rounded-2xl bg-white/5 text-ios-gray btn-press transition-all">
-                            <span class="text-[9px] font-bold uppercase mb-1">${d.name.replace('Treino ', '')}</span>
-                            <span class="text-[9px] mt-0.5">${d.focus || ''}</span>
-                        </button>`).join('');
-                    calendarHtml = noMapCells ? `<div class="flex gap-1 mb-4">${noMapCells}</div>` : '';
+
+                } else if (hasDays) {
+                    // Modo: sem mapeamento de weekday → mostra os treinos em fila (T1, T2, T3…)
+                    calendarHtml = `
+                        <div class="flex gap-1.5 flex-wrap mb-4">
+                          ${days.map((d, i) => {
+                            const pct = this._getDayProgress(assigned.id, todayIso);
+                            return `
+                            <button onclick="app.startCalendarDayByIndex('${assigned.id}', ${i})"
+                                class="flex-1 min-w-[60px] flex flex-col items-center py-2.5 rounded-2xl bg-white/5 text-ios-gray btn-press transition-all active:bg-brand-neon/20">
+                                <span class="text-[11px] font-black text-white">${d.name.replace('Treino ', '')}</span>
+                                <span class="text-[9px] mt-0.5 text-ios-gray truncate max-w-full px-1">${d.focus || ''}</span>
+                            </button>`;
+                          }).join('')}
+                        </div>`;
                 }
 
-                // Card "Treino de Hoje"
+                // ── CARD PRINCIPAL ──────────────────────────────────────
                 let hojeHtml = '';
-                if (hasDays && todayDay) {
-                    const pct = this._getDayProgress(assigned.id, today.toISOString().split('T')[0]);
-                    const barW = Math.round(pct);
+
+                if (hasWeekdayMapping && todayDay) {
+                    // Hoje tem treino mapeado
+                    const pct = this._getDayProgress(assigned.id, todayIso);
                     hojeHtml = `
                         <div class="bg-white dark:bg-dark-card rounded-3xl p-4 border border-ios-separator/30 dark:border-gray-800 shadow-sm">
                             <div class="flex items-start justify-between mb-3">
@@ -6157,14 +6171,24 @@
                                 </div>
                                 ${pct > 0 ? `<span class="text-sm font-black ${pct >= 100 ? 'text-brand-neon' : 'text-ios-gray'}">${pct >= 100 ? '✓' : Math.round(pct) + '%'}</span>` : ''}
                             </div>
-                            ${pct > 0 ? `<div class="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full mb-3 overflow-hidden"><div class="h-full bg-brand-neon rounded-full transition-all" style="width:${barW}%"></div></div>` : ''}
+                            ${pct > 0 ? `<div class="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full mb-3 overflow-hidden"><div class="h-full bg-brand-neon rounded-full" style="width:${pct}%"></div></div>` : ''}
                             <button onclick="app.startTreinoHoje('${assigned.id}')"
                                 class="w-full bg-brand-neon text-black font-black py-3 rounded-2xl text-sm">
                                 ${pct >= 100 ? '✓ Treino Concluído' : pct > 0 ? 'Continuar Treino ▶' : 'Começar Treino ▶'}
                             </button>
                         </div>`;
+
+                } else if (hasDays && !hasWeekdayMapping) {
+                    // Tem dias mas sem calendário fixo → aluno escolhe qual fazer hoje
+                    hojeHtml = `
+                        <div class="bg-white dark:bg-dark-card rounded-3xl p-4 border border-ios-separator/30 dark:border-gray-800 shadow-sm">
+                            <p class="text-[10px] text-brand-neon font-black uppercase tracking-widest mb-1">Escolha o Treino de Hoje</p>
+                            <p class="font-black text-base">${assigned.name}</p>
+                            <p class="text-xs text-ios-gray mt-0.5">${days.length} treinos disponíveis — selecione acima</p>
+                        </div>`;
+
                 } else if (!hasDays) {
-                    // Programa sem estrutura de dias
+                    // Programa flat sem dias
                     hojeHtml = `
                         <div class="bg-white dark:bg-dark-card rounded-3xl p-4 border border-ios-separator/30 dark:border-gray-800 shadow-sm">
                             <p class="text-[10px] text-brand-neon font-black uppercase tracking-widest mb-1">Seu Treino</p>
@@ -6172,8 +6196,9 @@
                             <button onclick="app.startTreinoHoje('${assigned.id}')"
                                 class="mt-3 w-full bg-brand-neon text-black font-black py-3 rounded-2xl text-sm">Começar Treino ▶</button>
                         </div>`;
+
                 } else {
-                    // Hoje é descanso
+                    // Verdadeiro dia de descanso (tem weekday mapeado e hoje é folga)
                     hojeHtml = `
                         <div class="bg-white dark:bg-dark-card rounded-3xl p-4 border border-ios-separator/30 dark:border-gray-800 shadow-sm text-center py-6">
                             <div class="text-3xl mb-2">🛌</div>
@@ -6184,7 +6209,9 @@
 
                 wrap.innerHTML = `
                     <div class="px-4 pt-3 pb-1">
-                        <p class="text-[10px] font-black text-ios-gray uppercase tracking-widest mb-3">Esta Semana</p>
+                        <p class="text-[10px] font-black text-ios-gray uppercase tracking-widest mb-3">
+                            ${hasWeekdayMapping ? 'Esta Semana' : assigned.name}
+                        </p>
                         ${calendarHtml}
                         ${hojeHtml}
                     </div>`;
