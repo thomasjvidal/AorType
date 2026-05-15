@@ -33,8 +33,17 @@ const supabase = new Proxy({}, {
 });
 
 const app = express();
+app.set('etag', false); // Desabilita ETags globalmente — evita respostas 304 com dados antigos
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
+
+// Desabilita cache HTTP em todas as rotas /api — dados sempre frescos
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
 
 const PORT = process.env.PORT || 3000;
 
@@ -259,6 +268,12 @@ app.post('/api/auth/register-complete', async (req, res) => {
       .select()
       .single();
     if (userErr) throw userErr;
+
+    // Salva avatar se enviado
+    const avatarUrl = profile?.avatar || profile?.avatar_url;
+    if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.startsWith('data:') && avatarUrl.length <= 200000) {
+      await supabase.from('users').update({ avatar_url: avatarUrl }).eq('id', user.id);
+    }
 
     // Salva perfil + onboarding juntos
     const d = onboardingData || {};
@@ -654,65 +669,124 @@ app.get('/api/foods', (req, res) => res.json(FOOD_DB));
 // O programa atribuído ao aluno vem primeiro com is_assigned:true e custom_exercises
 app.get('/api/workouts', async (req, res) => {
   try {
-    // Busca vínculo ativo — aluno pode estar em múltiplas academias, prioriza quem tem programa atribuído
+    // Busca vínculos ativos — ordenados por updated_at DESC para garantir que o mais recente seja o card 1
     let link = null;
-    const { data: links } = await supabase
+    const { data: links, error: linksErr } = await supabase
       .from('academia_students')
       .select('assigned_program_id, academia_id, custom_exercises')
       .eq('student_id', req.userId)
       .eq('status', 'active');
 
+    if (linksErr) console.error('[workouts] links query error:', linksErr.message);
+    console.log(`[workouts] student=${req.userId} found ${links?.length || 0} academia links`, JSON.stringify(links));
+
     if (links?.length) {
-      // Prefere o link que tem assigned_program_id E custom_exercises
-      link = links.find(l => l.assigned_program_id && l.custom_exercises)
-            || links.find(l => l.assigned_program_id)
-            || links[0];
+      // O mais recente (links[0]) é sempre o plano principal
+      link = links[0];
     }
 
     let assignedProgram = null;
+
+    // Caso 1: tem programa atribuído pela academia
     if (link?.assigned_program_id) {
-      const { data: ap } = await supabase
+      console.log(`[workouts] fetching assigned program id=${link.assigned_program_id}`);
+      const { data: ap, error: apErr } = await supabase
         .from('workout_programs')
         .select('*')
         .eq('id', link.assigned_program_id)
         .single();
+      if (apErr) console.error('[workouts] program fetch error:', apErr.message);
+      console.log(`[workouts] program found:`, ap ? ap.name : 'NOT FOUND');
       if (ap) {
         assignedProgram = {
           ...ap,
           is_assigned: true,
-          custom_exercises: link.custom_exercises || null
+          custom_exercises: link.custom_exercises || null,
+          is_custom: !!link.custom_exercises
         };
       }
     }
 
-    const { data: publicPrograms } = await supabase
+    // Caso 2: tem plano personalizado (custom_exercises sem assigned_program_id)
+    if (!assignedProgram && link?.custom_exercises) {
+      const ce = link.custom_exercises;
+      let exercises = [];
+      let customName = 'Meu Plano Personalizado';
+      if (Array.isArray(ce)) {
+        exercises = ce;
+      } else if (ce && typeof ce === 'object') {
+        exercises = Array.isArray(ce.exercises) ? ce.exercises : [];
+        if (ce.name) customName = ce.name;
+      }
+      if (exercises.length > 0) {
+        assignedProgram = {
+          id: 'custom_' + req.userId,
+          name: customName,
+          category: 'Personalizado',
+          categories: [],
+          exercises: exercises,
+          is_assigned: true,
+          is_custom: true,
+          custom_exercises: link.custom_exercises
+        };
+      }
+    }
+
+    // Programas inscritos pelo próprio aluno (Personal Shop)
+    const { data: profileData } = await supabase
+      .from('profiles').select('onboarding_data').eq('user_id', req.userId).single();
+    const subscribedIds = profileData?.onboarding_data?.subscribed_programs || [];
+    let subscribedPrograms = [];
+    if (subscribedIds.length > 0) {
+      const { data: sp } = await supabase
+        .from('workout_programs').select('*').in('id', subscribedIds);
+      subscribedPrograms = (sp || []).map(p => ({ ...p, is_subscribed: true }));
+    }
+
+    // Programas do shop — qualquer programa marcado como is_public (built-in ou de academia que optou)
+    const { data: fp } = await supabase
       .from('workout_programs')
       .select('*')
       .eq('is_public', true);
+    const freePrograms = fp || [];
 
-    let academiaPrograms = [];
-    if (link?.academia_id) {
-      const { data: ap } = await supabase
-        .from('workout_programs')
-        .select('*')
-        .eq('created_by', link.academia_id);
-      academiaPrograms = ap || [];
-    }
+    console.log(`[workouts] assignedProgram=${assignedProgram?.name || 'none'} subscribed=${subscribedPrograms.length} shop=${freePrograms.length}`);
 
-    const others = [...(publicPrograms || []), ...academiaPrograms.filter(ap =>
-      !(publicPrograms || []).find(pp => pp.id === ap.id)
-    )];
-
-    // Programa atribuído sempre primeiro; não duplicar na lista geral
+    // Ordem: atribuído → inscritos → shop (sem duplicatas)
     const result = [];
     if (assignedProgram) result.push(assignedProgram);
-    others.forEach(p => {
-      if (!assignedProgram || p.id !== assignedProgram.id) result.push(p);
+    subscribedPrograms.forEach(p => {
+      if (!result.some(r => r.id === p.id)) result.push(p);
+    });
+    freePrograms.forEach(p => {
+      if (!result.some(r => r.id === p.id)) result.push({ ...p, is_shop: true });
     });
 
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Erro ao buscar treinos' });
+  }
+});
+
+// Inscrição do aluno em programa do shop
+app.post('/api/workouts/subscribe', async (req, res) => {
+  try {
+    const { program_id, set_as_main } = req.body;
+    if (!program_id) return res.status(400).json({ error: 'program_id obrigatório' });
+
+    const { data: profile } = await supabase
+      .from('profiles').select('onboarding_data').eq('user_id', req.userId).single();
+    const od = profile?.onboarding_data || {};
+    const subs = Array.isArray(od.subscribed_programs) ? [...od.subscribed_programs] : [];
+
+    if (!subs.includes(program_id)) subs.push(program_id);
+    if (set_as_main) od.main_program_id = program_id;
+    od.subscribed_programs = subs;
+
+    await supabase.from('profiles').update({ onboarding_data: od }).eq('user_id', req.userId);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao salvar inscrição' });
   }
 });
 
@@ -766,18 +840,39 @@ app.get('/api/academia/students', async (req, res) => {
   try {
     if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
 
-    const { data, error } = await supabase
+    // Busca links de alunos
+    const { data: links, error } = await supabase
       .from('academia_students')
-      .select(`
-        id, academia_id, student_id, assigned_program_id, status, custom_exercises,
-        student:student_id(id, name, email, avatar_url),
-        program:assigned_program_id(id, name, category)
-      `)
+      .select('id, academia_id, student_id, assigned_program_id, status, custom_exercises')
       .eq('academia_id', req.userId);
-
     if (error) throw error;
-    res.json(data || []);
+    if (!links || links.length === 0) return res.json([]);
+
+    // Busca dados dos alunos separadamente (evita depender de FK no Supabase)
+    const studentIds = [...new Set(links.map(l => l.student_id).filter(Boolean))];
+    const programIds = [...new Set(links.map(l => l.assigned_program_id).filter(Boolean))];
+
+    const [studentsRes, programsRes] = await Promise.all([
+      studentIds.length > 0
+        ? supabase.from('users').select('id, name, email').in('id', studentIds)
+        : Promise.resolve({ data: [] }),
+      programIds.length > 0
+        ? supabase.from('workout_programs').select('id, name, category').in('id', programIds)
+        : Promise.resolve({ data: [] })
+    ]);
+
+    const studentsMap = Object.fromEntries((studentsRes.data || []).map(s => [s.id, s]));
+    const programsMap = Object.fromEntries((programsRes.data || []).map(p => [p.id, p]));
+
+    const result = links.map(link => ({
+      ...link,
+      student: studentsMap[link.student_id] || null,
+      program: link.assigned_program_id ? (programsMap[link.assigned_program_id] || null) : null
+    }));
+
+    res.json(result);
   } catch (e) {
+    console.error('academia/students error:', e);
     res.status(500).json({ error: 'Erro ao buscar alunos' });
   }
 });
@@ -786,26 +881,98 @@ app.get('/api/academia/students', async (req, res) => {
 app.post('/api/academia/students', async (req, res) => {
   try {
     if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
-    const { student_email, assigned_program_id } = req.body;
+    const { student_email, student_username, assigned_program_id, custom_exercises } = req.body;
 
-    const { data: student } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', student_email)
-      .eq('user_type', 'aluno')
-      .single();
+    // Busca por email ou por @username ou por nome
+    const identifier = (student_username || student_email || '').trim();
+    let student = null;
 
-    if (!student) return res.status(404).json({ error: 'Aluno não encontrado' });
+    if (!identifier) {
+      return res.status(400).json({ error: 'Informe o email ou @username do aluno' });
+    }
 
-    const { data, error } = await supabase
+    const baseQ = () => supabase.from('users').select('id').eq('user_type', 'aluno');
+
+    if (identifier.startsWith('@')) {
+      // @username — case-insensitive
+      const { data } = await baseQ().ilike('username', identifier.slice(1)).limit(1);
+      student = data?.[0] || null;
+    } else if (identifier.includes('@')) {
+      // email
+      const { data } = await baseQ().eq('email', identifier.toLowerCase()).limit(1);
+      student = data?.[0] || null;
+    } else {
+      // Texto livre: tenta username (case-insensitive) primeiro, depois nome
+      const { data: byUser } = await baseQ().ilike('username', identifier).limit(1);
+      if (byUser?.[0]) {
+        student = byUser[0];
+      } else {
+        const { data: byName } = await baseQ().ilike('name', `%${identifier}%`).limit(1);
+        student = byName?.[0] || null;
+      }
+    }
+
+    if (!student) return res.status(404).json({ error: 'Aluno não encontrado. Verifique o email ou @username.' });
+
+    // Busca link existente com maybeSingle() — não lança exceção se não encontrar
+    const { data: existing } = await supabase
       .from('academia_students')
-      .upsert({ academia_id: req.userId, student_id: student.id, assigned_program_id, status: 'active' })
-      .select()
-      .single();
+      .select('id, assigned_program_id')
+      .eq('academia_id', req.userId)
+      .eq('student_id', student.id)
+      .maybeSingle();
 
-    if (error) throw error;
-    res.json({ success: true, data });
+    const prevProgramId = existing?.assigned_program_id || null;
+
+    const linkFields = {
+      assigned_program_id: assigned_program_id ?? null,
+      status: 'active'
+    };
+    if (custom_exercises !== undefined) linkFields.custom_exercises = custom_exercises;
+
+    let result;
+    if (existing) {
+      // Atualiza link existente
+      const { data: upd, error: updErr } = await supabase
+        .from('academia_students')
+        .update(linkFields)
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (updErr) {
+        console.error('[add-student update]', JSON.stringify(updErr));
+        return res.status(500).json({ error: 'Erro ao atualizar vínculo do aluno' });
+      }
+      result = upd;
+    } else {
+      // Insere novo link
+      const { data: ins, error: insErr } = await supabase
+        .from('academia_students')
+        .insert({ academia_id: req.userId, student_id: student.id, ...linkFields })
+        .select()
+        .single();
+      if (insErr) {
+        console.error('[add-student insert]', JSON.stringify(insErr));
+        return res.status(500).json({ error: 'Erro ao criar vínculo do aluno' });
+      }
+      result = ins;
+    }
+
+    // Preserva histórico: move programa anterior para subscribed_programs do aluno
+    // NÃO toca em pinned_program_id — isso é escolha do próprio aluno
+    if (assigned_program_id && student?.id && prevProgramId && prevProgramId !== assigned_program_id) {
+      const { data: profData } = await supabase
+        .from('profiles').select('onboarding_data').eq('user_id', student.id).single();
+      const od = profData?.onboarding_data || {};
+      const subs = Array.isArray(od.subscribed_programs) ? [...od.subscribed_programs] : [];
+      if (!subs.includes(prevProgramId)) subs.push(prevProgramId);
+      od.subscribed_programs = subs;
+      await supabase.from('profiles').update({ onboarding_data: od }).eq('user_id', student.id);
+    }
+
+    res.json({ success: true, data: result });
   } catch (e) {
+    console.error('[add-student exception]', e.message, JSON.stringify(e));
     res.status(500).json({ error: 'Erro ao adicionar aluno' });
   }
 });
@@ -816,12 +983,19 @@ app.patch('/api/academia/students/:studentId', async (req, res) => {
     if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
     const { assigned_program_id, status, custom_exercises } = req.body;
 
+    // Busca student_id e programa anterior para preservar histórico
+    const { data: linkData } = await supabase
+      .from('academia_students')
+      .select('student_id, assigned_program_id')
+      .eq('academia_id', req.userId)
+      .eq('id', req.params.studentId)
+      .single();
+
     const updateData = {};
     if (assigned_program_id !== undefined) updateData.assigned_program_id = assigned_program_id;
     if (status !== undefined) updateData.status = status;
     if (custom_exercises !== undefined) updateData.custom_exercises = custom_exercises;
-
-    if (Object.keys(updateData).length === 0) return res.json({ success: true });
+    if (Object.keys(updateData).length === 0) return res.json({ success: true }); // nada mudou
 
     const { error } = await supabase
       .from('academia_students')
@@ -830,6 +1004,20 @@ app.patch('/api/academia/students/:studentId', async (req, res) => {
       .eq('id', req.params.studentId);
 
     if (error) return res.status(500).json({ error: error.message });
+
+    // Preserva histórico: move programa anterior para subscribed_programs do aluno
+    // NÃO toca em pinned_program_id — isso é escolha do próprio aluno
+    const prevProgramId = linkData?.assigned_program_id || null;
+    if (assigned_program_id && linkData?.student_id && prevProgramId && prevProgramId !== assigned_program_id) {
+      const { data: profData } = await supabase
+        .from('profiles').select('onboarding_data').eq('user_id', linkData.student_id).single();
+      const od = profData?.onboarding_data || {};
+      const subs = Array.isArray(od.subscribed_programs) ? [...od.subscribed_programs] : [];
+      if (!subs.includes(prevProgramId)) subs.push(prevProgramId);
+      od.subscribed_programs = subs;
+      await supabase.from('profiles').update({ onboarding_data: od }).eq('user_id', linkData.student_id);
+    }
+
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao atualizar aluno' });
@@ -864,7 +1052,7 @@ app.get('/api/academia/students/:studentId/history', async (req, res) => {
       checkinData = fullSelect.data;
     }
 
-    const { data: sessions } = await supabase.from('workout_sessions').select('date, program_id, completed_sets, duration_minutes, notes').eq('user_id', link.student_id).gte('date', since).order('date', { ascending: false });
+    const { data: sessions } = await supabase.from('workout_sessions').select('date, program_id, completed_sets, duration_minutes, notes, created_at').eq('user_id', link.student_id).gte('date', since).order('date', { ascending: false });
 
     // Merge workout session names into checkins as fallback for missing columns
     const sessionsByDate = {};
@@ -880,7 +1068,37 @@ app.get('/api/academia/students/:studentId/history', async (req, res) => {
       };
     });
 
-    res.json({ checkins: mergedCheckins, sessions: sessions || [] });
+    // D2-I — Montar exercises_detail cruzando completed_sets com exercícios do programa
+    const programIds = [...new Set((sessions||[]).map(s=>s.program_id).filter(Boolean))];
+    let programsMap = {};
+    if (programIds.length) {
+      const { data: progs } = await supabase
+        .from('workout_programs').select('id,name,exercises').in('id', programIds);
+      (progs||[]).forEach(p => { programsMap[p.id] = p; });
+    }
+    const sessionsWithDetail = (sessions||[]).map(s => {
+      const prog = programsMap[s.program_id];
+      if (!prog || !s.completed_sets) return s;
+      let flatEx = [];
+      const ex = prog.exercises;
+      if (Array.isArray(ex)) { flatEx = ex; }
+      else if (ex?._structured) {
+        const day = ex.days?.find(d => d.name === s.completed_sets._day);
+        flatEx = day ? (day.exercises||[]) : (ex.flat||[]);
+      }
+      const sessionStatus = s.completed_sets?._status;
+      const exercises_detail = flatEx.map((e, i) => {
+        const total = e.sets || 3;
+        const done = Array.from({length:total},(_,si)=>s.completed_sets[`${i}-${si}`]===true).filter(Boolean).length;
+        const w = s.completed_sets._weights?.[e.name]
+            ?? s.completed_sets._weights?.[String(i)] ?? 0;
+        return { name:e.name, sets_done:done, sets_total:total, weight:w, reps:e.reps||'?' };
+      // Fix 4A: Para sessões em andamento, mostrar todos os exercícios (não só os concluídos)
+      }).filter(e => e.sets_done > 0 || sessionStatus === 'em_andamento');
+      return { ...s, program_name: prog.name, exercises_detail };
+    });
+
+    res.json({ checkins: mergedCheckins, sessions: sessionsWithDetail });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao buscar histórico' });
   }
@@ -915,31 +1133,50 @@ app.post('/api/academia/programs/parse-ai', async (req, res) => {
     const prompt = `Você é especialista em educação física. Analise o texto de treino abaixo e retorne APENAS um JSON válido, sem nenhum texto extra antes ou depois.
 
 TEXTO DO TREINO:
-${text.substring(0, 3000)}
+${text.substring(0, 4000)}
 
 FORMATO DE SAÍDA (JSON puro):
 {
   "name": "nome do protocolo se houver, senão deixe vazio",
-  "categories": ["grupos musculares em português: Peito, Costas, Bíceps, Tríceps, Ombros, Pernas, Abdômen, Cardio"],
-  "exercises": [
+  "observations": "instruções gerais extraídas do texto (ex: progressão de carga, frequência semanal, instruções do personal). Deixe '' se não houver.",
+  "cardio": "prescrição de cardio extraída do texto (ex: '20min esteira zona 2 antes do treino'). Deixe '' se não houver.",
+  "categories": ["lista EXATA de grupos presentes: Peito, Costas, Bíceps, Tríceps, Ombros, Pernas, Abdômen, Cardio"],
+  "days": [
     {
-      "name": "nome do exercício em português",
-      "sets": 3,
-      "reps": "10-12",
-      "rest_seconds": 60,
-      "target_weight": 0,
-      "video_url": ""
+      "name": "Treino A",
+      "focus": "Peito/Bíceps",
+      "rest_label": "35-45s",
+      "exercises": [
+        {
+          "name": "nome do exercício em português",
+          "sets": 4,
+          "reps": "10-12",
+          "rest_seconds": 45,
+          "target_weight": 0,
+          "notes": "observações especiais se houver (ex: até a falha, drop set, isometria 10s)",
+          "video_url": ""
+        }
+      ]
     }
-  ]
+  ],
+  "exercises": []
 }
 
-REGRAS:
+REGRA CRÍTICA — DETECÇÃO DE DIAS:
+- Se o texto contiver cabeçalhos como "Treino A:", "Treino B:", "Treino C:", "Dia 1:", "Dia 2:", "Dia A:", "Dia B:", ou qualquer seção com label que identifique dias/blocos distintos de treino → você DEVE retorná-los como objetos separados no array "days". NUNCA achate um programa multi-dia em uma lista única de exercícios.
+- Cada dia deve preservar seus próprios exercícios, foco e informações de descanso.
+- Se NÃO houver blocos distintos → "days" = [] e os exercícios vão em "exercises" (flat).
+
+REGRAS OBRIGATÓRIAS:
 - Traduza exercícios para português brasileiro
 - sets: número inteiro (padrão 3)
 - reps: string como "10-12" ou "12" (padrão "10-12")
-- rest_seconds: inteiro em segundos (padrão 60)
+- rest_seconds: inteiro em segundos baseado no intervalo do bloco (padrão 60)
 - target_weight sempre 0, video_url sempre ""
-- Detecte automaticamente os grupos musculares dos exercícios
+- notes: capture observações do exercício (ex: "até a falha", "drop set 6/6/falha", "isometria 10s", "execução lenta", "2x 12-15 + 2x 10-12"). Deixe "" se não houver.
+- Detecte TODOS os grupos musculares. Use EXATAMENTE: Peito, Costas, Bíceps, Tríceps, Ombros, Pernas, Abdômen, Cardio
+- "days" SEMPRE presente — mesmo que vazio []
+- "exercises" raiz = TODOS os exercícios de TODOS os dias juntos numa lista plana (fallback de compatibilidade)
 - Retorne APENAS o JSON, absolutamente nada mais`;
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -968,17 +1205,43 @@ REGRAS:
       return res.status(400).json({ error: 'Nenhum exercício encontrado no texto. Verifique o formato.' });
     }
 
-    // Normalize exercise fields
-    parsed.exercises = parsed.exercises.map(ex => ({
-      name:         ex.name || 'Exercício',
-      sets:         parseInt(ex.sets) || 3,
-      reps:         String(ex.reps || '10-12'),
-      rest_seconds: parseInt(ex.rest_seconds) || 60,
+    // Garante days como array
+    if (!Array.isArray(parsed.days)) parsed.days = [];
+
+    // Normaliza exercícios dentro de cada dia
+    const normalizeEx = ex => ({
+      name:          ex.name || 'Exercício',
+      sets:          parseInt(ex.sets) || 3,
+      reps:          String(ex.reps || '10-12'),
+      rest_seconds:  parseInt(ex.rest_seconds) || 60,
       target_weight: 0,
-      video_url:    ''
+      notes:         ex.notes || '',
+      video_url:     ''
+    });
+
+    parsed.days = parsed.days.map(d => ({
+      name:       d.name || 'Treino',
+      focus:      d.focus || '',
+      rest_label: d.rest_label || '',
+      exercises:  Array.isArray(d.exercises) ? d.exercises.map(normalizeEx) : []
     }));
 
+    // Reconstrói exercises flat a partir dos dias (se days preenchido) — ou normaliza o que veio
+    if (parsed.days.length > 0) {
+      parsed.exercises = parsed.days.flatMap(d => d.exercises);
+    } else {
+      if (!Array.isArray(parsed.exercises)) parsed.exercises = [];
+      parsed.exercises = parsed.exercises.map(normalizeEx);
+    }
+
+    if (Array.isArray(parsed.exercises) && parsed.exercises.length === 0 && parsed.days.length === 0) {
+      return res.status(400).json({ error: 'Nenhum exercício encontrado no texto. Verifique o formato.' });
+    }
+
     if (!Array.isArray(parsed.categories)) parsed.categories = [];
+    // Fix 1B: Garantir que observations e cardio estão no response
+    if (typeof parsed.observations !== 'string') parsed.observations = '';
+    if (typeof parsed.cardio !== 'string') parsed.cardio = '';
     res.json(parsed);
   } catch (e) {
     console.error('AI parse error:', e);
@@ -1003,10 +1266,19 @@ app.get('/api/academia/programs', async (req, res) => {
 app.post('/api/academia/programs', async (req, res) => {
   try {
     if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
-    const { name, category, categories, description, exercises } = req.body;
+    const { name, category, categories, description, exercises, days, observations = '', cardio = '' } = req.body;
 
     // Normaliza: category = string CSV, categories derivado do mesmo
     const categoryStr = category || (Array.isArray(categories) ? categories.join(',') : '');
+
+    // Se há dias estruturados, salvar exercises como objeto { _structured, days, flat, observations, cardio }
+    // Isso evita dependência de coluna extra no banco
+    let exercisesPayload = exercises;
+    if (Array.isArray(days) && days.length > 0) {
+      exercisesPayload = { _structured: true, observations, cardio, days, flat: exercises || [] };
+    } else if (observations || cardio) {
+      exercisesPayload = { _structured: true, observations, cardio, days: [], flat: exercises || [] };
+    }
 
     // Insert robusto — apenas campos que certamente existem na tabela
     const insertData = {
@@ -1017,7 +1289,7 @@ app.post('/api/academia/programs', async (req, res) => {
     };
     // Campos opcionais — só inclui se tiver valor (evita erro de coluna inexistente)
     if (description) insertData.description = description;
-    if (exercises && exercises.length) insertData.exercises = exercises;
+    if (exercisesPayload) insertData.exercises = exercisesPayload;
 
     const { data, error } = await supabase
       .from('workout_programs')
@@ -1041,13 +1313,17 @@ app.post('/api/academia/programs', async (req, res) => {
 app.put('/api/academia/programs/:id', async (req, res) => {
   try {
     if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
-    const { name, category, categories, description, exercises } = req.body;
+    const { name, category, categories, description, exercises, is_public } = req.body;
 
-    const categoryStr = category || (Array.isArray(categories) ? categories.join(',') : '');
-
-    const updateData = { name, category: categoryStr };
+    // Só atualiza campos enviados — permite toggle de is_public sem sobrescrever nome/categoria
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (category !== undefined || categories !== undefined) {
+      updateData.category = category || (Array.isArray(categories) ? categories.join(',') : '');
+    }
     if (description !== undefined) updateData.description = description;
     if (exercises !== undefined) updateData.exercises = exercises;
+    if (is_public !== undefined) updateData.is_public = is_public;
 
     const { error } = await supabase
       .from('workout_programs')
@@ -1063,6 +1339,83 @@ app.put('/api/academia/programs/:id', async (req, res) => {
   } catch (e) {
     console.error('Update program error:', e);
     res.status(500).json({ error: 'Erro ao atualizar programa' });
+  }
+});
+
+// Toggle visibilidade no Shop (is_public) — endpoint dedicado para simplicidade e confiabilidade
+app.patch('/api/academia/programs/:id/shop', async (req, res) => {
+  try {
+    if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
+    const { is_public } = req.body;
+    if (typeof is_public !== 'boolean') return res.status(400).json({ error: 'is_public deve ser true ou false' });
+
+    const { data, error } = await supabase
+      .from('workout_programs')
+      .update({ is_public })
+      .eq('id', req.params.id)
+      .eq('created_by', req.userId)
+      .select('id, is_public')
+      .single();
+
+    if (error) {
+      console.error('Shop toggle error:', JSON.stringify(error));
+      return res.status(500).json({ error: error.message });
+    }
+    if (!data) return res.status(404).json({ error: 'Programa não encontrado ou sem permissão' });
+
+    console.log(`[shop toggle] programa ${req.params.id} → is_public=${data.is_public}`);
+    res.json({ success: true, is_public: data.is_public });
+  } catch (e) {
+    console.error('Shop toggle exception:', e);
+    res.status(500).json({ error: 'Erro ao atualizar visibilidade' });
+  }
+});
+
+// Exclui programa de treino
+app.delete('/api/academia/programs/:id', async (req, res) => {
+  try {
+    if (req.userType !== 'academia') return res.status(403).json({ error: 'Acesso negado' });
+    // Remove o programa (apenas se foi criado por esta academia)
+    const { error } = await supabase
+      .from('workout_programs')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('created_by', req.userId);
+    if (error) return res.status(500).json({ error: error.message });
+
+    const deletedId = req.params.id;
+
+    // 1. Limpa assigned_program_id em academia_students (evita referência órfã)
+    await supabase
+      .from('academia_students')
+      .update({ assigned_program_id: null })
+      .eq('assigned_program_id', deletedId);
+
+    // 2. Limpa subscribed_programs, main_program_id e pinned_program_id em profiles
+    const { data: affectedProfiles } = await supabase
+      .from('profiles')
+      .select('user_id, onboarding_data')
+      .not('onboarding_data', 'is', null);
+
+    for (const prof of (affectedProfiles || [])) {
+      const od = prof.onboarding_data || {};
+      let changed = false;
+
+      if (Array.isArray(od.subscribed_programs) && od.subscribed_programs.includes(deletedId)) {
+        od.subscribed_programs = od.subscribed_programs.filter(id => id !== deletedId);
+        changed = true;
+      }
+      if (od.main_program_id === deletedId)    { od.main_program_id    = null; changed = true; }
+      if (od.pinned_program_id === deletedId)  { od.pinned_program_id  = null; changed = true; }
+
+      if (changed) {
+        await supabase.from('profiles').update({ onboarding_data: od }).eq('user_id', prof.user_id);
+      }
+    }
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao excluir programa' });
   }
 });
 

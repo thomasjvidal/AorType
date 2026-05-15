@@ -2368,7 +2368,7 @@
 
             <!-- Header -->
             <header class="flex items-center justify-between px-4 pb-3 pt-safe-3 border-b border-ios-separator/10 dark:border-gray-800 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md sticky top-0 z-10">
-                <button onclick="app.navigate('dashboard')" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center">
+                <button onclick="app.handleTreinoBack()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center">
                     <i data-lucide="arrow-left" class="w-5 h-5"></i>
                 </button>
                 <div class="text-center">
@@ -2382,6 +2382,9 @@
 
             <!-- Content -->
             <div class="flex-1 overflow-y-auto no-scrollbar pb-8">
+
+                <!-- ── Card "Treino de Hoje" (injetado por renderTreinoHojeCard) ── -->
+                <div id="treino-hoje-card-wrap" class="px-4 pt-4 pb-1 hidden"></div>
 
                 <!-- ── Carrossel de programas ── -->
                 <div id="workout-carousel-wrap" class="pt-4 pb-1">
@@ -2594,25 +2597,99 @@
                 </div>
             </div>
 
-            <!-- Modal: Adicionar Aluno -->
+            <!-- P4: Modal Relatório do Dia (academia) -->
+            <div id="modal-day-report" class="hidden fixed inset-0 bg-black/60 z-[210] flex items-end justify-center">
+                <div class="bg-white dark:bg-dark-card rounded-t-3xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
+                    <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800">
+                        <h3 id="day-report-title" class="font-black text-base">Relatório do Dia</h3>
+                        <button onclick="app.closeDayReportModal()" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-ios-gray text-sm">✕</button>
+                    </div>
+                    <div id="day-report-body" class="px-6 py-4"></div>
+                </div>
+            </div>
+
+            <!-- Modal: Adicionar / Configurar Aluno -->
             <div id="modal-add-student" class="hidden fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end">
-                <div class="w-full bg-white dark:bg-dark-card rounded-t-3xl p-6 space-y-4 animate-slide-up">
-                    <h3 class="text-lg font-black">Adicionar Aluno</h3>
-                    <div class="space-y-2">
-                        <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Email do Aluno</label>
-                        <input type="email" id="add-student-email" placeholder="aluno@email.com"
-                            class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:border-brand-neon">
+                <div class="w-full bg-white dark:bg-dark-card rounded-t-3xl animate-slide-up max-h-[92vh] flex flex-col">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+                        <div>
+                            <h3 class="text-lg font-black" id="add-student-title">Adicionar Aluno</h3>
+                            <p class="text-xs text-ios-gray mt-0.5" id="add-student-subtitle">Conecte um aluno e defina o treino dele</p>
+                        </div>
+                        <button onclick="app.closeAddStudentModal()" class="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-ios-gray font-bold">✕</button>
                     </div>
-                    <div class="space-y-2">
-                        <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Programa de Treino</label>
-                        <select id="add-student-program"
-                            class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:border-brand-neon">
-                            <option value="">Sem programa atribuído</option>
-                        </select>
+
+                    <div class="overflow-y-auto flex-1 px-6 py-4 space-y-5">
+                        <!-- Email ou Username -->
+                        <div class="space-y-2" id="add-student-email-section">
+                            <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Email ou @username do Aluno</label>
+                            <input type="text" id="add-student-email" placeholder="aluno@email.com ou @username"
+                                class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:border-brand-neon transition-colors">
+                        </div>
+
+                        <!-- Separador -->
+                        <div class="flex items-center gap-3">
+                            <div class="h-px flex-1 bg-gray-100 dark:bg-gray-800"></div>
+                            <span class="text-xs font-bold text-ios-gray uppercase tracking-widest">Treino do Aluno</span>
+                            <div class="h-px flex-1 bg-gray-100 dark:bg-gray-800"></div>
+                        </div>
+
+                        <!-- Preview treino atual (visível apenas no modo editar) -->
+                        <div id="student-plan-preview" class="hidden">
+                            <p class="text-xs text-ios-gray font-bold uppercase tracking-widest mb-2">Treino atual</p>
+                            <div id="student-plan-preview-list" class="space-y-1 max-h-48 overflow-y-auto"></div>
+                        </div>
+
+                        <!-- Toggle: Protocolo Geral vs Plano Personalizado (oculto — criação separada) -->
+                        <div class="hidden flex rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-dark-elevated p-1 gap-1">
+                            <button id="tab-general-btn" onclick="app.switchStudentWorkoutTab('general')"
+                                class="flex-1 py-2.5 rounded-xl text-xs font-black transition-all bg-white dark:bg-dark-card shadow-sm text-gray-900 dark:text-white">
+                                🗂️ Protocolo da Academia
+                            </button>
+                            <button id="tab-custom-btn" onclick="app.switchStudentWorkoutTab('custom')"
+                                class="flex-1 py-2.5 rounded-xl text-xs font-black transition-all text-ios-gray">
+                                ✨ Plano Personalizado
+                            </button>
+                        </div>
+
+                        <!-- Tab: Protocolo Geral -->
+                        <div id="tab-general-content" class="space-y-3">
+                            <p class="text-xs text-ios-gray">Selecione um dos protocolos criados pela academia. O aluno verá os exercícios no app dele.</p>
+                            <select id="add-student-program"
+                                class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:border-brand-neon">
+                                <option value="">— Sem protocolo atribuído —</option>
+                            </select>
+                        </div>
+
+                        <!-- Tab: Plano Personalizado (AI) -->
+                        <div id="tab-custom-content" class="space-y-3 hidden">
+                            <p class="text-xs text-ios-gray">Cole o treino do personal trainer ou escreva os exercícios. A IA vai montar o plano automaticamente.</p>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Nome do Plano</label>
+                                <input type="text" id="student-plan-name" placeholder="Ex: Protocolo Hipertrofia — Renato"
+                                    class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 font-semibold text-sm outline-none focus:border-brand-neon transition-colors">
+                            </div>
+                            <textarea id="student-ai-input" rows="6"
+                                placeholder="Ex: Treino A&#10;Supino Reto 4x10-12 (descanso 60s)&#10;Crucifixo 3x15&#10;Tríceps Corda 4x12"
+                                class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm resize-none outline-none focus:border-brand-neon font-mono leading-relaxed"></textarea>
+                            <button onclick="app.parseStudentWorkoutAI()" id="student-ai-btn"
+                                class="w-full flex items-center justify-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-black font-black text-sm py-3 rounded-2xl transition-all active:scale-[0.98]">
+                                <span id="student-ai-btn-icon">🤖</span>
+                                <span id="student-ai-btn-text">Analisar com IA</span>
+                            </button>
+                            <!-- Preview exercícios -->
+                            <div id="student-ai-result" class="hidden space-y-2">
+                                <p class="text-xs font-bold text-green-600 dark:text-green-400">✅ Exercícios detectados:</p>
+                                <div id="student-ai-exercises" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex gap-3">
+
+                    <!-- Footer -->
+                    <div class="px-6 pb-6 pt-3 flex gap-3 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
                         <button onclick="app.closeAddStudentModal()" class="flex-1 border border-gray-200 dark:border-gray-700 py-3 rounded-2xl font-bold text-sm">Cancelar</button>
-                        <button onclick="app.addStudent()" class="flex-1 bg-brand-neon text-black py-3 rounded-2xl font-black text-sm">Adicionar</button>
+                        <button onclick="app.addStudent()" id="add-student-save-btn" class="flex-1 bg-brand-neon text-black py-3 rounded-2xl font-black text-sm">Adicionar</button>
                     </div>
                 </div>
             </div>
@@ -2659,12 +2736,35 @@
                         <button onclick="app.closeCreateProgramModal()" class="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-ios-gray">✕</button>
                     </div>
 
+                    <!-- Tipo de Programa -->
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Tipo</label>
+                        <div class="flex rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-dark-elevated p-1 gap-1">
+                            <button id="prog-type-geral" onclick="app.selectProgramType('geral')"
+                                class="flex-1 py-2.5 rounded-xl text-xs font-black transition-all bg-white dark:bg-dark-card shadow-sm text-gray-900 dark:text-white">
+                                🏫 Programa da Academia
+                            </button>
+                            <button id="prog-type-personal" onclick="app.selectProgramType('personalizado')"
+                                class="flex-1 py-2.5 rounded-xl text-xs font-black transition-all text-ios-gray">
+                                👤 Plano Personalizado
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Campo aluno (visível só quando tipo = personalizado) -->
+                    <div id="prog-student-field" class="hidden space-y-2">
+                        <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Aluno</label>
+                        <input type="text" id="prog-student-email" placeholder="Email ou @username do aluno"
+                            class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:border-brand-neon transition-colors">
+                    </div>
+
                     <!-- Nome -->
                     <div class="space-y-2">
                         <label class="text-xs font-bold text-ios-gray uppercase tracking-wider">Nome do Protocolo</label>
                         <input type="text" id="prog-name" placeholder="Ex: Protocolo Hipertrofia A/B"
                             class="w-full bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:border-brand-neon transition-colors">
                     </div>
+
+                    <!-- Observações e cardio extraídos automaticamente pela IA — exibidos no editor -->
 
                     <!-- IA Import -->
                     <div class="space-y-2">
@@ -4310,6 +4410,82 @@
             }
         };
 
+        // ── EXERCISE REGISTRY — Fonte da Verdade de Exercícios ──────────────────
+        const EXERCISE_REGISTRY = {
+            // Peito
+            "Supino Reto":          { aliases: ["Supino Plano","Bench Press","Supino","Supino Reto com Halteres","Supino com Halteres","Supino Reto Haltere"], muscles:["peito","tríceps"] },
+            "Supino Inclinado":     { aliases: ["Supino Inclinado Barra","Incline Bench Press","Supino Inclinado com Barra","Supino Inclinado com Halteres","Supino Inclinado Haltere","Supino Inclinado na Barra"], muscles:["peito","ombros"] },
+            "Supino Declinado":     { aliases: ["Supino Declinado Barra","Decline Bench","Supino Declinado com Halteres"], muscles:["peito","tríceps"] },
+            "Supino na Máquina":    { aliases: ["Supino Articulado","Chest Press Machine","Supino Máquina","Supino na Máquina Articulada","Chest Press","Supino Cross"], muscles:["peito","tríceps"] },
+            "Crucifixo":            { aliases: ["Fly","Crossover","Peck Deck","Voador Peito","Peck-Deck","Crucifixo Inclinado","Crucifixo Reto","Voador na Máquina","Voador","Crucifixo com Halteres","Fly com Halteres","Crucifixo Inclinado com Halteres","Crucifixo Reto com Halteres"], muscles:["peito"] },
+            "Flexão":               { aliases: ["Flexão de Braço","Push Up","Apoio","Flexão no Solo","Flexão de Braços"], muscles:["peito","tríceps"] },
+            // Costas
+            "Puxada Frontal":       { aliases: ["Lat Pulldown","Puxada Alta","Pull Down","Puxada Frontal Aberta","Puxada Alta Frontal","Puxada Barra Aberta","Puxada na Barra","Pull Down na Barra","Pull Down na Polia"], muscles:["costas","bíceps"] },
+            "Remada Curvada":       { aliases: ["Remada Curvada Barra","Bent Row","Remada Pronada","Remada Inclinada"], muscles:["costas"] },
+            "Remada Sentada":       { aliases: ["Remada Articulada","Remada Sentada na Polia","Remada Sentada Articulada","Seated Cable Row","Remada Baixa","Remada Polia Baixa","Remada na Polia Baixa"], muscles:["costas"] },
+            "Remada Unilateral":    { aliases: ["Remada 1 Braço","Dumbbell Row","Remada Haltere","Remada Apoiada"], muscles:["costas"] },
+            "Puxada Supinada":      { aliases: ["Chin Up","Puxada Neutra","Puxada Fechada","Puxada Supinada Fechada"], muscles:["costas","bíceps"] },
+            "Levantamento Terra":   { aliases: ["Deadlift","Terra","Stiff Terra","DL","Dead Lift"], muscles:["costas","pernas","glúteos"] },
+            "Pullover":             { aliases: ["Pull Over","Pullover Haltere","Pullover Polia"], muscles:["costas","peito"] },
+            "Extensão Lombar":      { aliases: ["Lombar","Back Extension","Lombar no Banco","Hiperextensão","Hiperextensão Lombar","Extensão de Coluna"], muscles:["lombar","costas"] },
+            // Ombros
+            "Desenvolvimento":      { aliases: ["Desenvolvimento Militar","Shoulder Press","OHP","Press Militar","Dev Militar","Desenvolvimento com Barra","Desenvolvimento com Halteres","Desenvolvimento Haltere","Desenvolvimento Sentado"], muscles:["ombros"] },
+            "Elevação Lateral":     { aliases: ["Lateral Raise","Voador Lateral","Elevação Lateral Haltere","Lateral com Haltere","Abdução de Ombros","Abdução de Ombros com Halteres","Elevação Lateral com Halteres"], muscles:["ombros"] },
+            "Elevação Frontal":     { aliases: ["Front Raise","Elevação Frontal Haltere","Frontal com Haltere","Flexão de Ombros","Flexão de Ombros no Cross","Elevação Frontal no Cross"], muscles:["ombros"] },
+            "Posterior de Ombro":   { aliases: ["Pássaro","Rear Delt","Crucifixo Inverso","Voador Posterior","Posterior Shoulder","Posterior de Ombros","Elevação Posterior","Pássaro com Halteres","Rear Delt Fly","Posterior de Ombro com Halteres","Posterior de Ombro ou Máquina"], muscles:["ombros"] },
+            "Remada Alta":          { aliases: ["Upright Row","Remada para o Queixo","High Row","Remada Alta Barra","Remada em Pé no Cross Over","Remada Cross Over","Remada em Pé Polia","Remada em Pé no Cross"], muscles:["ombros","trapézio"] },
+            // Bíceps
+            "Rosca Direta":         { aliases: ["Curl Barra","Rosca Barra","Barbell Curl","Rosca com Barra","Rosca no Cross","Rosca Direta no Cross","Rosca Direta na Polia","Rosca Direta Barra W","Rosca Direta Cross"], muscles:["bíceps"] },
+            "Rosca Alternada":      { aliases: ["Rosca Haltere","Dumbbell Curl","Curl Alternado","Rosca com Haltere","Rosca Direta com Halteres"], muscles:["bíceps"] },
+            "Rosca Martelo":        { aliases: ["Hammer Curl","Rosca Neutra","Martelo","Rosca Martelo Alternada","Rosca Direta Martelo Alternada","Martelo Alternado","Rosca Martelo com Halteres"], muscles:["bíceps"] },
+            "Rosca Concentrada":    { aliases: ["Concentration Curl","Rosca Scott","Scott"], muscles:["bíceps"] },
+            "Rosca Inversa":        { aliases: ["Reverse Curl","Rosca Reversa","Rosca Inversa Barra","Rosca Inversa no Cross","Rosca Inversa Barra W"], muscles:["bíceps","antebraço"] },
+            // Tríceps
+            "Tríceps Pulley":       { aliases: ["Pulldown Tríceps","Pushdown","Tríceps Corda","Tríceps Barra","Tríceps Pulley Corda","Extensão Pulley","Tríceps Corda à Frente","Tríceps Corda à Frente na Polia","Tríceps Pulley Barra W","Tríceps Pulley Barra Reta"], muscles:["tríceps"] },
+            "Tríceps Testa":        { aliases: ["Skull Crusher","French Press","Tríceps Francês","Testa"], muscles:["tríceps"] },
+            "Tríceps Inverso":      { aliases: ["Reverse Grip Pushdown","Tríceps Reverso","Tríceps Inverso Barra","Tríceps Inverso Barra W","Tríceps Inverso Barra Reta","Pushdown Inverso"], muscles:["tríceps"] },
+            "Mergulho":             { aliases: ["Dip","Paralela","Fundos","Dips"], muscles:["tríceps","peito"] },
+            "Extensão Tríceps":     { aliases: ["Tríceps Haltere","Overhead Extension","Extensão Overhead","Tríceps Testa Haltere"], muscles:["tríceps"] },
+            "Kickback":             { aliases: ["Coice Tríceps","Tríceps Coice","Coice de Tríceps"], muscles:["tríceps"] },
+            // Pernas
+            "Agachamento":          { aliases: ["Squat","Agachamento Livre","Back Squat","Agachamento Barra","Agachamento Livre com Barra","Agachamento Funcional","Agachamento Smith","Agachamento Funcional com Kettlebell","Agachamento com Kettlebell","Agachamento Livre ou Smith"], muscles:["pernas","glúteos"] },
+            "Hack Squat":           { aliases: ["Hack Machine","Agachamento Hack","Hack Press","Hack Squat Machine","Agachamento na Hack"], muscles:["pernas","glúteos"] },
+            "Leg Press":            { aliases: ["Leg Press 45","Prensa","Prensa 45","Leg Press Horizontal","Leg Press 45°","Leg Press Inclinado"], muscles:["pernas","glúteos"] },
+            "Cadeira Extensora":    { aliases: ["Extensora","Leg Extension","Cadeira Extensora 45","Extensão de Pernas","Cadeira Extensora Unilateral","Extensora Unilateral"], muscles:["quadríceps"] },
+            "Mesa Flexora":         { aliases: ["Flexora","Leg Curl","Cadeira Flexora","Flexão de Pernas","Curl de Pernas","Mesa Flexora Unilateral","Cadeira Flexora Unilateral","Mesa ou Cadeira Flexora Unilateral"], muscles:["posterior"] },
+            "Avanço":               { aliases: ["Lunge","Afundo","Passada","Avanço com Haltere","Afundo Funcional","Afundo Funcional Alternado","Afundo Alternado","Avanço Alternado"], muscles:["pernas","glúteos"] },
+            "Stiff":                { aliases: ["Romanian Deadlift","RDL","Terra Stiff","Stiff Leg","Stiff Leg Deadlift"], muscles:["posterior","glúteos"] },
+            "Panturrilha":          { aliases: ["Gêmeos","Calf Raise","Elevação de Panturrilha","Leg Press Panturrilha","Calf","Panturrilha em Pé","Panturrilha no Leg","Panturrilha em Pé ou no Leg"], muscles:["panturrilha"] },
+            "Panturrilha Sentado":  { aliases: ["Solear","Seated Calf Raise","Calf Sentado","Panturrilha Solear","Gêmeos Sentado","Solear Sentado","Panturrilha Sentada"], muscles:["panturrilha"] },
+            "Hip Thrust":           { aliases: ["Elevação Quadril","Glute Bridge","Ponte Glúteo","Thrust","Elevação Pélvica","Elevação Pélvica Solo","Elevação de Quadril Solo","Elevação de Quadril Barra"], muscles:["glúteos"] },
+            "Agachamento Sumô":     { aliases: ["Sumô Squat","Agachamento Largo","Sumo Squat","Sumô"], muscles:["pernas","glúteos","abdutores"] },
+            "Cadeira Abdutora":     { aliases: ["Abdução de Pernas","Hip Abductor","Abdutora","Abdução de Quadril","Abdução de Quadril na Máquina"], muscles:["glúteos","abdutores"] },
+            "Cadeira Adutora":      { aliases: ["Adução de Pernas","Hip Adductor","Adutora","Adução de Quadril","Adução de Quadril na Máquina","Máquina Adutora"], muscles:["glúteos","adutores"] },
+            // Abdômen / Core
+            "Abdominal":            { aliases: ["Crunch","Sit Up","Abdominal Reto","Supra","Crunch Abdominal","Abdominal Supra","Supra Solo","Abdominal Supra Solo"], muscles:["abdômen"] },
+            "Prancha":              { aliases: ["Plank","Isometria Abdominal","Front Plank","Isometria","Prancha Frontal Isométrica","Prancha Isométrica Frontal","Prancha no Banco","Isometria Frontal"], muscles:["abdômen","core"] },
+            "Elevação de Pernas":   { aliases: ["Leg Raise","Abdominal Infra","Elevação Quadril Deitado","Infra","Abdominal Infra Solo","Abdominal Infra Solo ou Máquina"], muscles:["abdômen"] },
+            "Oblíquo":              { aliases: ["Abdominal Lateral","Side Crunch","Crunch Oblíquo","Rotação de Tronco"], muscles:["abdômen"] },
+            "Alpinista":            { aliases: ["Mountain Climber","Prancha Alpinista","Corrida no Lugar","Mountain Climbers","Alpinista Solo","Prancha Alpinista Solo"], muscles:["abdômen","core"] },
+            // Cardio / Funcionais
+            "Esteira":              { aliases: ["Caminhada","Corrida","Treadmill","Running","Corrida na Esteira","Cardio Esteira"], muscles:[] },
+            "Bicicleta":            { aliases: ["Bike","Spinning","Ciclismo","Bike Estacionária","Bicicleta Ergométrica"], muscles:[] },
+            "Elíptico":             { aliases: ["Cross Trainer","Elliptical","Transição","Elíptica"], muscles:[] },
+            "Corda Naval":          { aliases: ["Battle Rope","Corda","Battle Ropes","Cordas Ondulantes"], muscles:[] },
+            "Step Up":              { aliases: ["Sobe Desce no Step","Subida no Step","Step","Step Up Alternado","Sobe e Desce no Step","Sobe/Desce no Step"], muscles:["pernas","glúteos"] },
+        };
+
+        function normalizeExerciseName(rawName) {
+            if (!rawName) return rawName;
+            const lower = rawName.toLowerCase().trim();
+            for (const [canonical, data] of Object.entries(EXERCISE_REGISTRY)) {
+                if (canonical.toLowerCase() === lower) return canonical;
+                if ((data.aliases || []).some(a => a.toLowerCase() === lower)) return canonical;
+            }
+            return rawName; // fallback: mantém como veio
+        }
+        // ── FIM EXERCISE REGISTRY ────────────────────────────────────────────────
+
         // App Logic
         const app = {
             config: {
@@ -5152,6 +5328,11 @@
 
             init() {
                 window.app = this;
+                // G4/G10: Inicializar render token anti-race
+                this._renderSeq = 0;
+                this._autoStartToday = false;
+                this._autoSelectedDayIndex = null;
+                this._finishingWorkout = false;
                 this.checkBackendStatus();
 
                 // --- SPLASH & ROUTING ---
@@ -5784,6 +5965,11 @@
             // ══════════════════════════════════════════════════════
 
             async loadTreinoScreen() {
+                // H3: limpeza de cache antigo (uma vez por sessão)
+                if (!this._didCleanupWorkoutCache) {
+                    this._didCleanupWorkoutCache = true;
+                    try { this._cleanupOldWorkoutCache(); } catch {}
+                }
                 const listEl = document.getElementById('treino-program-list');
                 if (!listEl) return;
                 listEl.innerHTML = '<div class="text-center py-12 text-ios-gray"><p class="text-sm">Carregando treinos...</p></div>';
@@ -5801,165 +5987,686 @@
                 const listEl = document.getElementById('treino-program-list');
                 if (!listEl) return;
 
-                const assigned = programs.find(p => p.is_assigned);
-                const others   = programs.filter(p => !p.is_assigned);
-                const catIcons = { 'chest-triceps':'💪','back-biceps':'🦾','legs':'🦵','shoulders':'🏋️','abs':'🔥','cardio':'🏃','full-body':'⚡','default':'🏅' };
+                const assigned   = programs.find(p => p.is_assigned);
+                const subscribed = programs.filter(p => p.is_subscribed && !p.is_assigned);
+                const shop       = programs.filter(p => p.is_shop);
 
-                // ── Carrossel ──────────────────────────────────────────
+                // P1a: Renderizar card "Treino de Hoje" antes do carrossel
+                this.renderTreinoHojeCard(programs);
+
+                // ── Carrossel fixo: card academia + card shop ──────────
+                // Inscritos NÃO entram no carrossel — ficam na lista abaixo
                 const carousel = document.getElementById('workout-carousel');
-                const dots     = document.getElementById('workout-carousel-dots');
+                const carouselWrap = document.getElementById('workout-carousel-wrap');
+                const dots = document.getElementById('workout-carousel-dots');
                 if (carousel) {
-                    const all = assigned ? [assigned, ...others] : others;
-                    carousel.innerHTML = all.map((p, i) => {
-                        let exCount = 0;
-                        if (p.custom_exercises && typeof p.custom_exercises === 'object') {
-                            Object.values(p.custom_exercises).forEach(arr => { exCount += (arr||[]).length; });
-                        } else if (Array.isArray(p.exercises)) { exCount = p.exercises.length; }
+                    let carouselHtml = '';
 
-                        const isAssigned = !!p.is_assigned;
-                        const icon = isAssigned ? '💪' : (catIcons[p.category] || catIcons.default);
-                        const bg   = isAssigned
-                            ? 'background: linear-gradient(135deg,#c8f542 0%,#a0d020 100%)'
-                            : 'background: linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%)';
-                        const textColor = isAssigned ? 'text-black' : 'text-white';
-
-                        return `<div class="workout-card flex-shrink-0 w-[72vw] max-w-[280px] snap-center rounded-3xl p-5 cursor-pointer active:scale-[.97] transition-transform"
-                                    style="${bg}" data-workout-id="${p.id}"
-                                    onclick="app.selectTreinoProgram('${p.id}')">
-                            <div class="text-3xl mb-3">${icon}</div>
-                            <p class="${textColor} font-black text-base leading-tight">${p.name}</p>
-                            ${isAssigned ? `<span class="text-[9px] font-black bg-black/20 text-black px-2 py-0.5 rounded-full uppercase mt-1 inline-block">Seu treino</span>` : ''}
-                            <p class="${isAssigned ? 'text-black/60' : 'text-white/50'} text-xs mt-2">${exCount} exercício${exCount!==1?'s':''}</p>
+                    // Fix 3: Card 1 — só mostrar card verde se NÃO há "Treino de Hoje" acima
+                    // Quando assigned existe e é válido, o card "Treino de Hoje" acima já é o entry point.
+                    // O carrossel mostra o card verde apenas como fallback quando não há card contextual.
+                    if (assigned) {
+                        const isGhost = !assigned.name || assigned.name === 'undefined' || !assigned.name.trim();
+                        if (isGhost) {
+                            carouselHtml += `<div class="workout-card flex-shrink-0 w-[72vw] max-w-[280px] snap-center rounded-3xl p-5"
+                                    style="background: linear-gradient(135deg,#2a2a2a 0%,#1a1a1a 100%)">
+                                <div class="text-3xl mb-3">⚠️</div>
+                                <p class="text-white font-black text-base leading-tight">Programa não disponível</p>
+                                <p class="text-gray-400 text-xs mt-2">Aguardando novo protocolo da academia</p>
+                            </div>`;
+                        }
+                        // Programa válido → card "Treino de Hoje" acima já é o entry point. Não duplicar aqui.
+                    } else {
+                        carouselHtml += `<div class="workout-card flex-shrink-0 w-[72vw] max-w-[280px] snap-center rounded-3xl p-5"
+                                style="background: linear-gradient(135deg,#2a2a2a 0%,#1a1a1a 100%)">
+                            <div class="text-3xl mb-3">🏋️</div>
+                            <p class="text-white font-black text-base leading-tight">Sem treino atribuído</p>
+                            <p class="text-gray-400 text-xs mt-2">Aguardando protocolo da academia</p>
                         </div>`;
-                    }).join('');
-
-                    if (dots) {
-                        dots.innerHTML = all.map((_, i) =>
-                            `<div class="w-1.5 h-1.5 rounded-full bg-brand-neon transition-opacity ${i===0?'opacity-100':'opacity-30'}"></div>`
-                        ).join('');
-                        // Atualiza dots ao scrollar
-                        carousel.onscroll = () => {
-                            const idx = Math.round(carousel.scrollLeft / (carousel.offsetWidth * 0.72));
-                            Array.from(dots.children).forEach((d,i) => {
-                                d.classList.toggle('opacity-100', i===idx);
-                                d.classList.toggle('opacity-30', i!==idx);
-                            });
-                        };
                     }
-                }
 
-                // Check-in status for today
-                const todayStr = new Date().toISOString().split('T')[0];
-                const todayCI  = (this.state.dailyCheckins || {})[todayStr];
-                const ciDone   = !!(todayCI?.mood);
-                const ciEmoji  = ciDone ? (['😔','😐','😊','😁','🤩'][parseInt(todayCI.mood)-1] || '✅') : '📋';
-
-                let html = '';
-
-                // ── Check-in widget ───────────────────────────────────
-                html += `<div class="bg-white dark:bg-dark-card rounded-3xl p-4 border border-ios-separator/30 dark:border-gray-800 shadow-sm mb-5 flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-2xl ${ciDone ? 'bg-brand-neon/10' : 'bg-orange-50 dark:bg-orange-900/20'} flex items-center justify-center text-xl flex-shrink-0">${ciEmoji}</div>
-                    <div class="flex-1 min-w-0">
-                        <p class="font-bold text-sm">Check-in Diário</p>
-                        <p class="text-xs text-ios-gray">${ciDone ? 'Registado hoje ✓' : 'Como você está hoje?'}</p>
-                    </div>
-                    ${!ciDone
-                        ? `<button onclick="app.openCheckinModal()" class="bg-brand-neon text-white text-xs font-black px-4 py-2 rounded-full flex-shrink-0">Check-in</button>`
-                        : `<span class="text-brand-neon font-black text-xl flex-shrink-0">✓</span>`}
-                </div>`;
-
-                // ── Assigned program (seu treino) ────────────────────
-                if (assigned) {
-                    let exCount = 0;
-                    if (assigned.custom_exercises && typeof assigned.custom_exercises === 'object') {
-                        Object.values(assigned.custom_exercises).forEach(arr => { exCount += (arr || []).length; });
-                    } else if (Array.isArray(assigned.exercises)) {
-                        exCount = assigned.exercises.length;
-                    }
-                    html += `<p class="text-xs text-ios-gray font-bold uppercase tracking-widest px-1 mb-3">Seu Programa</p>
-                    <button onclick="app.selectTreinoProgram('${assigned.id}')"
-                        class="w-full bg-gradient-to-br from-brand-neon/15 to-transparent rounded-3xl p-5 border-2 border-brand-neon/50 shadow-sm text-left flex items-center gap-4 mb-6 active:scale-[.98] transition-transform">
-                        <div class="w-14 h-14 bg-brand-neon rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">💪</div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2 flex-wrap mb-0.5">
-                                <h3 class="font-black text-base">${assigned.name}</h3>
-                                <span class="text-[9px] font-black text-white bg-brand-neon px-2 py-0.5 rounded-full uppercase tracking-wide">Atribuído</span>
-                            </div>
-                            <p class="text-xs text-ios-gray">${exCount} exercício${exCount !== 1 ? 's' : ''} personalizados</p>
-                        </div>
-                        <i data-lucide="chevron-right" class="w-5 h-5 text-brand-neon flex-shrink-0"></i>
-                    </button>`;
-                }
-
-                // ── Other programs (vertical list) ───────────────────
-                if (others.length > 0) {
-                    html += `<p class="text-xs text-ios-gray font-bold uppercase tracking-widest px-1 mb-3">${assigned ? 'Outros Programas' : 'Programas Disponíveis'}</p>
-                    <div class="space-y-3">
-                        ${others.map(p => {
-                            const cats = Array.isArray(p.categories) && p.categories.length
-                                ? p.categories.slice(0,2).join(' · ')
-                                : (p.category ? p.category.split(',').map(s => s.trim()).slice(0,2).join(' · ') : '');
-                            const icon = catIcons[p.category] || catIcons.default;
-                            const isFree = p.is_free !== false;
-                            return `<button onclick="app.selectTreinoProgram('${p.id}')"
-                                class="w-full bg-white dark:bg-dark-card rounded-3xl p-5 border border-ios-separator/30 dark:border-gray-800 shadow-sm text-left flex items-center gap-4 hover:border-brand-neon/50 transition-all active:scale-[.98]">
-                                <div class="w-14 h-14 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">${icon}</div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 mb-0.5">
-                                        <h3 class="font-black text-base">${p.name}</h3>
-                                        <span class="text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${isFree ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}">${isFree ? 'GRÁTIS' : 'PRO'}</span>
-                                    </div>
-                                    <p class="text-xs text-ios-gray truncate">${cats || 'Protocolo geral'}</p>
-                                    ${p.description ? `<p class="text-xs text-ios-gray truncate mt-0.5">${p.description}</p>` : ''}
-                                </div>
-                                <i data-lucide="chevron-right" class="w-5 h-5 text-ios-gray flex-shrink-0"></i>
-                            </button>`;
-                        }).join('')}
+                    // Card 2 fixo: Personal Shop
+                    carouselHtml += `<div class="workout-card flex-shrink-0 w-[72vw] max-w-[280px] snap-center rounded-3xl p-5 cursor-pointer active:scale-[.97] transition-transform bg-gray-900 dark:bg-white"
+                            onclick="app.openPersonalShop()">
+                        <div class="text-3xl mb-3">🏪</div>
+                        <p class="text-white dark:text-black font-black text-base leading-tight">Personal Shop</p>
+                        <p class="text-gray-400 dark:text-gray-600 text-xs mt-1">${shop.length} programa${shop.length !== 1 ? 's' : ''} disponíveis</p>
+                        <span class="text-[9px] font-black bg-white/20 dark:bg-black/20 text-white dark:text-black px-2 py-0.5 rounded-full uppercase mt-2 inline-block">Explorar →</span>
                     </div>`;
+
+                    carousel.innerHTML = carouselHtml;
+                    if (dots) dots.innerHTML = '';
+                    carouselWrap?.classList.remove('hidden');
                 }
 
-                if (!assigned && others.length === 0) {
-                    html += `<div class="text-center py-16 text-ios-gray">
-                        <i data-lucide="dumbbell" class="w-14 h-14 mx-auto mb-3 opacity-20"></i>
-                        <p class="text-sm font-semibold">Nenhum treino disponível</p>
-                        <p class="text-xs mt-1">Aguarde seu treinador atribuir um programa</p>
-                    </div>`;
+                // ── Lista abaixo do carrossel: programas inscritos ────
+                if (subscribed.length > 0) {
+                    listEl.innerHTML = `
+                        <p class="text-xs text-ios-gray font-bold uppercase tracking-widest px-1 mb-3">Meus Programas</p>
+                        <div class="space-y-2">
+                          ${subscribed.map(p => {
+                              const exCount = this._countExercises(p);
+                              return `<button onclick="app.selectTreinoProgram('${p.id}')"
+                                  class="w-full bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800 text-left flex items-center gap-3 active:scale-[.98] transition-all">
+                                  <div class="w-10 h-10 bg-brand-neon/10 rounded-xl flex items-center justify-center text-lg flex-shrink-0">🏅</div>
+                                  <div class="flex-1 min-w-0">
+                                      <h3 class="font-bold text-sm">${p.name}</h3>
+                                      <p class="text-xs text-ios-gray mt-0.5">${exCount} exercício${exCount !== 1 ? 's' : ''}</p>
+                                  </div>
+                                  <i data-lucide="chevron-right" class="w-4 h-4 text-ios-gray flex-shrink-0"></i>
+                              </button>`;
+                          }).join('')}
+                        </div>`;
+                    if (window.lucide) lucide.createIcons();
+                } else {
+                    listEl.innerHTML = '';
                 }
-
-                listEl.innerHTML = html;
-                if (window.lucide) lucide.createIcons();
             },
 
-            selectTreinoProgram(programId) {
+            _countExercises(p) {
+                const ce = p.custom_exercises;
+                if (Array.isArray(ce)) return ce.length;
+                if (ce && typeof ce === 'object') {
+                    if (Array.isArray(ce.exercises)) return ce.exercises.length;
+                    return Object.values(ce).reduce((s, a) => s + (Array.isArray(a) ? a.length : 0), 0);
+                }
+                if (Array.isArray(p.exercises)) return p.exercises.length;
+                // Programa estruturado com days
+                if (p.exercises && p.exercises._structured && Array.isArray(p.exercises.flat)) return p.exercises.flat.length;
+                return 0;
+            },
+
+            // ── FASE 2: WORKOUT EXECUTION LAYER ──────────────────────────────
+
+            // P1a: Card "Treino de Hoje" — aparece na aba treino quando aluno tem programa atribuído
+            renderTreinoHojeCard(programs) {
+                const wrap = document.getElementById('treino-hoje-card-wrap');
+                if (!wrap) return;
+                const assigned = programs.find(p => p.is_assigned);
+                if (!assigned || !assigned.name || !assigned.name.trim() || assigned.name === 'undefined') {
+                    wrap.classList.add('hidden');
+                    wrap.innerHTML = '';
+                    return;
+                }
+                const d = new Date();
+                const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+                const dias = this._getProgramDays(assigned);
+                const hasDays = dias.length > 0;
+                wrap.classList.remove('hidden');
+                wrap.innerHTML = `
+                    <div class="bg-dark-card rounded-3xl p-5 border border-brand-neon/20">
+                        <p class="text-[10px] text-brand-neon font-black uppercase tracking-widest mb-1">Treino de Hoje</p>
+                        <p class="text-base font-black">${diasSemana[d.getDay()]} · ${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</p>
+                        <p class="text-xs text-ios-gray mt-0.5">${assigned.name}</p>
+                        <button onclick="app.startTreinoHoje('${assigned.id}')"
+                            class="mt-3 w-full bg-brand-neon text-black font-black py-3 rounded-2xl text-sm">
+                            Começar Treino ▶
+                        </button>
+                    </div>`;
+            },
+
+            // P1a: Iniciar treino direto do card "Treino de Hoje" (pula seletor)
+            startTreinoHoje(programId) {
+                this._autoStartToday = true; // G9: flag modo "Hoje"
+                this._autoSelectedDayIndex = null;
+                this.selectTreinoProgram(programId);
+            },
+
+            // Extrator centralizado de dias — NUNCA usar program.exercises?.days fora daqui
+            _getProgramDays(program) {
+                if (Array.isArray(program.days) && program.days.length > 0) return program.days;
+                const ex = program.exercises;
+                if (ex && !Array.isArray(ex) && ex._structured && Array.isArray(ex.days) && ex.days.length > 0)
+                    return ex.days;
+                return [];
+            },
+
+            // D2-F: Renderiza seletor de treinos (Treino A / B / C) com badge "Hoje ✓"
+            renderTreinoDaySelector(program, suggestedIdx = -1) {
+                const days = this._getProgramDays(program);
+                const listEl = document.getElementById('treino-exercise-list');
+                if (listEl) listEl.innerHTML = '';
+                let sel = document.getElementById('treino-day-selector');
+                if (!sel) {
+                    sel = document.createElement('div');
+                    sel.id = 'treino-day-selector';
+                    if (listEl && listEl.parentNode) listEl.parentNode.insertBefore(sel, listEl);
+                }
+                sel.className = 'px-5 pb-4';
+                sel.classList.remove('hidden');
+                const dayIcons = ['💪','🏋️','🦵','⚡','🔥','🎯'];
+                // D3-B: box de observações/cardio do programa
+                const progEx = program.exercises;
+                const observations = progEx?._structured ? (progEx.observations || '') : '';
+                const cardio = progEx?._structured ? (progEx.cardio || '') : '';
+                const obsBanner = (observations || cardio) ? `
+                    <div class="bg-brand-neon/5 border border-brand-neon/20 rounded-2xl p-3 mb-3">
+                        ${observations ? `<p class="text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">📋 ${observations}</p>` : ''}
+                        ${cardio ? `<p class="text-[11px] font-semibold text-brand-neon">🏃 Cardio: ${cardio}</p>` : ''}
+                    </div>` : '';
+                sel.innerHTML = `
+                    ${obsBanner}
+                    <p class="text-[10px] font-black text-ios-gray uppercase tracking-widest mb-3">Treino de hoje</p>
+                    <div class="flex flex-col gap-2">
+                      ${days.map((d, i) => `
+                        <button onclick="app.selectTreinoDay(${i})"
+                            class="w-full bg-white dark:bg-dark-card rounded-3xl p-4 border ${i === suggestedIdx ? 'border-brand-neon/40' : 'border-ios-separator/30 dark:border-gray-800'}
+                                   text-left flex items-center gap-4 active:scale-[.98] transition-all">
+                            <div class="w-11 h-11 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0">${dayIcons[i] || '💪'}</div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-black text-sm">${d.name}</p>
+                                <p class="text-xs text-ios-gray mt-0.5 truncate">${d.focus || ''}${d.rest_label ? ' · ⏱ ' + d.rest_label : ''}</p>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                ${i === suggestedIdx ? '<span class="text-[9px] bg-brand-neon text-black px-2 py-0.5 rounded-full font-black">Hoje ✓</span>' : ''}
+                                <span class="text-[10px] text-ios-gray font-bold">${(d.exercises || []).length} ex</span>
+                            </div>
+                        </button>`).join('')}
+                    </div>`;
+            },
+
+            // Seleciona um dia específico e renderiza seus exercícios
+            // G4/G10: render token anti-race + G1: microfunções
+            async selectTreinoDay(dayIdx) {
+                const token = ++this._renderSeq;
+                const program = this.state.activeTreinoProgram;
+                if (!program) return;
+                const days = this._getProgramDays(program);
+                const day = days[dayIdx];
+                if (!day) return;
+                this.state.activeTreinoDay = dayIdx;
+                this.state.activeTreinoDayName = day.name;
+                // P0-D: Limpar sets apenas ao TROCAR de dia (correto)
+                // Se for auto-start (mesmo dia), loadTodayProgress vai restaurar
+                if (!this._autoStartToday) {
+                    this.state.treinoSetsCompleted = {};
+                    this.state.treinoWeights = {};
+                }
+                // Esconde seletor, mostra lista
+                const sel = document.getElementById('treino-day-selector');
+                if (sel) sel.classList.add('hidden');
+                const listEl = document.getElementById('treino-exercise-list');
+                if (listEl) listEl.classList.remove('hidden');
+                // Atualiza cabeçalho
+                const subtitle = document.getElementById('treino-subtitle');
+                if (subtitle) subtitle.textContent = `${day.name}${day.focus ? ' · ' + day.focus : ''}`;
+                const desc = document.getElementById('treino-active-desc');
+                if (desc) desc.textContent = `${(day.exercises || []).length} exercício${(day.exercises || []).length !== 1 ? 's' : ''}${day.rest_label ? ' · ⏱ ' + day.rest_label : ''}`;
+                this.state.activeTreinoExercises = day.exercises || [];
+
+                // G10: Checkpoint 1 — garantir cache histórico
+                await this._loadExerciseHistory();
+                if (this._renderSeq !== token) return;
+
+                // G10: Checkpoint 2 — renderizar exercícios
+                this.renderTreinoExercises(day.exercises || []);
+                if (this._renderSeq !== token) return;
+
+                // P1c: Header contextual se veio do card "Treino de Hoje"
+                this._renderWorkoutHeader(day, dayIdx);
+                // P2a: Strip de datas
+                this.renderTreinoDateStrip(program.id);
+
+                // G10: Checkpoint 3 — restaurar progresso
+                await this.loadTodayProgress(program.id);
+                if (this._renderSeq !== token) return;
+
+                this.updateTreinoProgress();
+            },
+
+            // P2a: Strip de 7 datas (hoje ± 3 dias) no painel do aluno
+            renderTreinoDateStrip(programId) {
+                const listEl = document.getElementById('treino-exercise-list');
+                if (!listEl) return;
+                const old = document.getElementById('treino-date-strip');
+                if (old) old.remove();
+                const history = this._exerciseHistoryCache || {};
+                const today = new Date();
+                const dias = [];
+                for (let i = -3; i <= 3; i++) {
+                    const d = new Date(today);
+                    d.setDate(today.getDate() + i);
+                    const dateStr = d.toISOString().split('T')[0];
+                    const session = history[dateStr]?.[programId];
+                    const hasSession = !!session;
+                    const isToday = i === 0;
+                    const label = isToday ? 'Hoje' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                    // Fix 6: Mostrar "A", "B", "C" etc. do treino feito naquele dia
+                    const dayName = session?._day ? session._day.replace('Treino ', '').charAt(0) : null;
+                    dias.push({ dateStr, hasSession, isToday, label, dayName });
+                }
+                const strip = document.createElement('div');
+                strip.id = 'treino-date-strip';
+                strip.className = 'flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-3';
+                strip.innerHTML = dias.map(d => `
+                    <div class="flex-shrink-0 flex flex-col items-center gap-1 ${d.hasSession ? 'cursor-pointer' : ''}"
+                         ${d.hasSession ? `onclick="app._calDayClick('${d.dateStr}')"` : ''}>
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black
+                            ${d.isToday ? 'ring-2 ring-brand-neon' : ''}
+                            ${d.hasSession ? 'bg-brand-neon text-black' : 'bg-gray-100 dark:bg-gray-800 text-ios-gray'}">
+                            ${d.hasSession && d.dayName ? d.dayName : d.label.split('/')[0]}
+                        </div>
+                        <span class="text-[8px] text-ios-gray">${d.isToday ? 'Hoje' : d.label.split('/')[1] || ''}</span>
+                    </div>`).join('');
+                // Inserir após o header contextual ou no início da lista
+                const header = document.getElementById('treino-hoje-header');
+                if (header) header.insertAdjacentElement('afterend', strip);
+                else listEl.insertBefore(strip, listEl.firstChild);
+            },
+
+            // G1: Microfunção — header contextual (P1c)
+            _renderWorkoutHeader(day, dayIdx) {
+                if (!this._autoStartToday) return;
+                const listEl = document.getElementById('treino-exercise-list');
+                if (!listEl) return;
+                // Remover header anterior se existir
+                const old = document.getElementById('treino-hoje-header');
+                if (old) old.remove();
+                const d = new Date();
+                const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                const header = document.createElement('div');
+                header.id = 'treino-hoje-header';
+                header.className = 'bg-dark-card/60 border border-ios-separator/20 dark:border-gray-800 rounded-2xl p-4 mb-3';
+                header.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-[10px] text-ios-gray font-black uppercase tracking-widest">Treino de Hoje</p>
+                            <p class="text-sm font-black">${diasSemana[d.getDay()]} · ${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</p>
+                            ${day ? `<p class="text-xs text-brand-neon font-bold mt-0.5">${day.name}${day.focus ? ' — ' + day.focus : ''}</p>` : ''}
+                        </div>
+                        <button onclick="app._showDaySelector()" class="text-[10px] text-ios-gray border border-ios-separator dark:border-gray-700 px-3 py-1.5 rounded-full font-bold">Trocar dia</button>
+                    </div>`;
+                listEl.insertBefore(header, listEl.firstChild);
+            },
+
+            // G9: Mostrar seletor de dias manual — limpa flags do modo "Hoje"
+            _showDaySelector() {
+                this._autoStartToday = false;
+                this._autoSelectedDayIndex = null;
+                // Remove header contextual
+                const old = document.getElementById('treino-hoje-header');
+                if (old) old.remove();
+                // Esconde lista, mostra seletor
+                const listEl = document.getElementById('treino-exercise-list');
+                if (listEl) listEl.classList.add('hidden');
+                const program = this.state.activeTreinoProgram;
+                if (program) {
+                    this._loadExerciseHistory().then(async () => {
+                        const days = this._getProgramDays(program);
+                        const suggestedIdx = await this._computeNextTrainingDay(program.id, days);
+                        this.renderTreinoDaySelector(program, suggestedIdx);
+                    });
+                }
+            },
+
+            // P0-B: Carrega progresso — localStorage primeiro, servidor como fallback, merge strategy G11
+            async loadTodayProgress(programId) {
+                try {
+                    const today = new Date().toISOString().split('T')[0];
+                    const MAX_AGE_MS = 48 * 60 * 60 * 1000;
+
+                    // 1) PRIMEIRO: cache local (instantâneo)
+                    let localSaved = null;
+                    try {
+                        const cached = localStorage.getItem(`tp_${today}_${programId}`);
+                        if (cached) {
+                            const parsed = JSON.parse(cached);
+                            // G2: invalidar se muito antigo
+                            if (parsed._updated_at && Date.now() - parsed._updated_at <= MAX_AGE_MS) {
+                                localSaved = this._migrateWorkoutState(parsed);
+                            } else {
+                                localStorage.removeItem(`tp_${today}_${programId}`);
+                            }
+                        }
+                    } catch {}
+
+                    // 2) SERVIDOR: buscar em paralelo (não bloqueia se local existe)
+                    let serverSaved = null;
+                    try {
+                        const res = await fetch('/api/workouts/progress', { headers: AUTH.headers() });
+                        if (res.ok) {
+                            const data = await res.json();
+                            serverSaved = this._migrateWorkoutState(data[today]?.[programId] || null);
+                        }
+                    } catch {}
+
+                    // G11: Merge strategy explícita
+                    let saved = null;
+                    if (localSaved && serverSaved) {
+                        const localNewer = (localSaved._updated_at || 0) > (serverSaved._updated_at || 0);
+                        const serverConcluido = serverSaved._status === 'concluido';
+                        if (serverConcluido || !localNewer) {
+                            saved = serverSaved;
+                            try { localStorage.setItem(`tp_${today}_${programId}`, JSON.stringify(serverSaved)); } catch {}
+                        } else {
+                            saved = localSaved;
+                            // Push local → servidor (fire-and-forget)
+                            fetch('/api/workouts/progress', { method: 'POST', headers: AUTH.headers(),
+                                body: JSON.stringify({ [today]: { [programId]: localSaved } }) }).catch(() => {});
+                        }
+                    } else {
+                        saved = localSaved || serverSaved;
+                        if (saved && !localSaved) {
+                            try { localStorage.setItem(`tp_${today}_${programId}`, JSON.stringify(saved)); } catch {}
+                        }
+                    }
+
+                    if (!saved || typeof saved !== 'object') return;
+
+                    // Extrair dia salvo para verificar compatibilidade
+                    const savedDay = saved._day || null;
+                    // Só restaura se for o mesmo dia de treino (ou programa sem dias)
+                    if (this.state.activeTreinoDayName && savedDay && savedDay !== this.state.activeTreinoDayName) return;
+
+                    // G13: Restaurar state via função centralizada
+                    this._restoreWorkoutState(saved);
+                    const sets = this.state.treinoSetsCompleted;
+                    const weights = this.state.treinoWeights;
+
+                    // Restaura UI com pequeno delay (garante que DOM está pronto)
+                    setTimeout(() => {
+                        // Restaura botões de série
+                        Object.entries(sets).forEach(([key, done]) => {
+                            if (!done) return;
+                            const parts = key.split('-');
+                            const exIdx = parseInt(parts[0]);
+                            const setIdx = parseInt(parts[1]);
+                            if (isNaN(exIdx) || isNaN(setIdx)) return;
+                            const btn = document.querySelector(`[data-ex="${exIdx}"][data-set="${setIdx}"]`);
+                            if (btn) {
+                                btn.disabled = false;
+                                btn.classList.remove('opacity-40', 'cursor-not-allowed', 'border-gray-200', 'dark:border-gray-700');
+                                btn.classList.add('border-brand-neon', 'bg-brand-neon/10');
+                                const last = btn.querySelector('span:last-child');
+                                if (last) { last.textContent = '✓'; last.classList.add('text-brand-neon'); }
+                            }
+                            // Desbloqueia próxima série
+                            const nextBtn = document.querySelector(`[data-ex="${exIdx}"][data-set="${setIdx + 1}"]`);
+                            if (nextBtn) { nextBtn.disabled = false; nextBtn.classList.remove('opacity-40', 'cursor-not-allowed'); }
+                        });
+
+                        // D1-E: Restaura cargas por nome canonical, índice como fallback
+                        Object.entries(weights).forEach(([key, weight]) => {
+                            if (!weight) return;
+                            const nameIdx = (this.state.activeTreinoExercises || [])
+                                .findIndex(e => normalizeExerciseName(e.name) === normalizeExerciseName(key));
+                            const finalIdx = nameIdx >= 0 ? nameIdx : (isNaN(parseInt(key)) ? -1 : parseInt(key));
+                            if (finalIdx < 0) return;
+                            const inp = document.getElementById(`weight-${finalIdx}`);
+                            if (inp) inp.value = weight;
+                        });
+
+                        // P0-E: Auto-preencher inputs vazios com último peso histórico
+                        (this.state.activeTreinoExercises || []).forEach((ex, i) => {
+                            const inp = document.getElementById(`weight-${i}`);
+                            if (inp && !inp.value) {
+                                const prog2 = this._getExerciseProgression(ex.name);
+                                if (prog2.lastWeight > 0) inp.value = prog2.lastWeight;
+                            }
+                        });
+
+                        // Restaura visual de conclusão por exercício (borda verde)
+                        (this.state.activeTreinoExercises || []).forEach((ex, exIdx) => {
+                            const allDone = ex.sets > 0 && Array.from({ length: ex.sets }, (_, si) =>
+                                !!this.state.treinoSetsCompleted[`${exIdx}-${si}`]).every(Boolean);
+                            if (allDone) {
+                                const card = document.getElementById(`ex-card-${exIdx}`);
+                                if (card) { card.style.borderColor = '#c8f542'; }
+                            }
+                        });
+                        this.updateTreinoProgress();
+                    }, 80);
+                } catch { /* silencioso */ }
+            },
+
+            // Salva carga do exercício e dispara save unificado
+            saveWeight(exIdx, value) {
+                if (!this.state.treinoWeights) this.state.treinoWeights = {};
+                // D1-C: usar nome canonical como chave (não índice)
+                const ex = (this.state.activeTreinoExercises || [])[exIdx];
+                const key = ex?.name ? normalizeExerciseName(ex.name) : String(exIdx);
+                this.state.treinoWeights[key] = parseFloat(value) || 0;
+                this._saveTreinoProgress();
+            },
+
+            // P3b: Botões +/- para ajuste de carga
+            adjustWeight(exIdx, delta) {
+                const inp = document.getElementById(`weight-${exIdx}`);
+                if (!inp) return;
+                const current = parseFloat(inp.value) || parseFloat(inp.placeholder) || 0;
+                const next = Math.max(0, Math.round((current + delta) * 10) / 10);
+                inp.value = next || '';
+                if (next > 0) this.saveWeight(exIdx, next);
+            },
+
+            // ── P0 + P0.5: PERSISTENCE LAYER ────────────────────────────────
+
+            // G13: Serialização transacional centralizada — SSOT do payload
+            _serializeWorkoutState() {
+                return {
+                    ...this.state.treinoSetsCompleted,
+                    _weights: { ...(this.state.treinoWeights || {}) },
+                    _day: this.state.activeTreinoDayName || null,
+                    _rotation_pos: this.state.activeTreinoDay ?? null,
+                    _status: 'em_andamento',
+                    _updated_at: Date.now(),
+                    _version: 1
+                };
+            },
+
+            // G13: Restauração transacional centralizada (só state, sem UI)
+            _restoreWorkoutState(saved) {
+                if (!saved) return;
+                const sets = {};
+                const weights = {};
+                Object.entries(saved).forEach(([k, v]) => {
+                    if (k === '_weights') Object.assign(weights, (typeof v === 'object' && v) ? v : {});
+                    else if (!k.startsWith('_')) sets[k] = v;
+                });
+                this.state.treinoSetsCompleted = sets;
+                this.state.treinoWeights = weights;
+            },
+
+            // H4: Migração de versão (future-proof)
+            _migrateWorkoutState(saved) {
+                if (!saved) return null;
+                // v1 é a versão atual — pass through; versões futuras desconhecidas: aceitar
+                return saved;
+            },
+
+            // H3: Limpeza de cache antigo (> 7 dias)
+            _cleanupOldWorkoutCache() {
+                const MAX_AGE = 7 * 86400000;
+                Object.keys(localStorage).forEach(key => {
+                    if (!key.startsWith('tp_')) return;
+                    try {
+                        const item = JSON.parse(localStorage.getItem(key));
+                        if (!item?._updated_at || Date.now() - item._updated_at > MAX_AGE) {
+                            localStorage.removeItem(key);
+                        }
+                    } catch { localStorage.removeItem(key); }
+                });
+            },
+
+            // H1: Flush central — localStorage + sendBeacon (usado por voltarListaTreino + eventos)
+            _flushWorkoutSave() {
+                clearTimeout(this._saveDebounce);
+                const prog = this.state.activeTreinoProgram;
+                if (!prog) return;
+                if (Object.keys(this.state.treinoSetsCompleted || {}).length === 0) return;
+                const today = new Date().toISOString().split('T')[0];
+                const s = this._serializeWorkoutState();
+                try { localStorage.setItem(`tp_${today}_${prog.id}`, JSON.stringify(s)); } catch {}
+                if (AUTH.getToken()) {
+                    const body = JSON.stringify({ [today]: { [prog.id]: s } });
+                    if (navigator.sendBeacon) {
+                        navigator.sendBeacon('/api/workouts/progress', new Blob([body], { type: 'application/json' }));
+                    } else {
+                        fetch('/api/workouts/progress', { method: 'POST', headers: AUTH.headers(), body }).catch(() => {});
+                    }
+                }
+            },
+
+            // P0-A: Save com localStorage imediato + debounce servidor
+            _saveTreinoProgress() {
+                clearTimeout(this._saveDebounce);
+                const prog = this.state.activeTreinoProgram;
+                if (!prog) return;
+                const today = new Date().toISOString().split('T')[0];
+                const s = this._serializeWorkoutState();
+                // IMEDIATO: cache local (offline-safe)
+                try { localStorage.setItem(`tp_${today}_${prog.id}`, JSON.stringify(s)); } catch {}
+                // DEBOUNCE: sincronizar com servidor
+                this._saveDebounce = setTimeout(async () => {
+                    if (!AUTH.getToken()) return;
+                    try {
+                        await fetch('/api/workouts/progress', {
+                            method: 'POST', headers: AUTH.headers(),
+                            body: JSON.stringify({ [today]: { [prog.id]: s } })
+                        });
+                        this._showSaveIndicator();
+                    } catch {}
+                }, 400);
+            },
+
+            // G8: Indicador visual "✓ Salvo" com throttle 2s
+            _showSaveIndicator() {
+                if (Date.now() - (this._lastSaveToast || 0) < 2000) return;
+                this._lastSaveToast = Date.now();
+                let el = document.getElementById('treino-save-indicator');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'treino-save-indicator';
+                    el.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-brand-neon text-black text-[11px] font-black px-4 py-2 rounded-full shadow-lg z-50 pointer-events-none';
+                    el.style.transition = 'opacity 0.5s';
+                    document.body.appendChild(el);
+                }
+                el.textContent = '✓ Salvo';
+                el.style.opacity = '1';
+                clearTimeout(this._saveIndicatorTimer);
+                this._saveIndicatorTimer = setTimeout(() => { el.style.opacity = '0'; }, 1800);
+            },
+
+            // ── DEPLOY 2 — WORKOUT ENGINE ────────────────────────────────────
+
+            // D2-A: Cache do histórico de progresso (reutilizado por progression + rotation)
+            async _loadExerciseHistory() {
+                if (this._exerciseHistoryCache) return;
+                try {
+                    const res = await fetch('/api/workouts/progress', { headers: AUTH.headers() });
+                    if (res.ok) this._exerciseHistoryCache = await res.json();
+                } catch {}
+            },
+
+            // D2-B: Retorna last, best e carga sugerida para um exercício
+            _getExerciseProgression(exerciseName) {
+                const canon = normalizeExerciseName(exerciseName);
+                const history = this._exerciseHistoryCache || {};
+                let lastWeight = 0, bestWeight = 0;
+                for (const date of Object.keys(history).sort()) {
+                    for (const progId of Object.keys(history[date])) {
+                        const session = history[date][progId];
+                        const weights = session?._weights || {};
+                        // Buscar pelo nome canonical ou qualquer alias
+                        const w = weights[canon]
+                            ?? Object.entries(weights).find(([k]) => normalizeExerciseName(k) === canon)?.[1]
+                            ?? 0;
+                        if (w > 0) { lastWeight = w; if (w > bestWeight) bestWeight = w; }
+                    }
+                }
+                return { lastWeight, bestWeight, suggested: lastWeight > 0 ? lastWeight + 2.5 : 0 };
+            },
+
+            // D2-D: Motor de rotação temporal — computa próximo dia A/B/C
+            async _computeNextTrainingDay(programId, days) {
+                if (!days || days.length <= 1) return 0;
+                await this._loadExerciseHistory();
+                const history = this._exerciseHistoryCache || {};
+                let lastDayName = null, lastRotPos = null;
+                for (const date of Object.keys(history).sort().reverse()) {
+                    const session = history[date]?.[programId];
+                    if (!session) continue;
+                    lastDayName = session._day || null;
+                    lastRotPos = session._rotation_pos ?? null;
+                    break;
+                }
+                if (!lastDayName) return 0; // nunca treinou → começa do início
+                // TODO(skip-day): se aluno faltou N dias, a rotação não deve avançar N vezes.
+                // Usar _last_completed_day (não _last_started_day) para calcular next.
+                // Por ora: avança 1 independente de dias perdidos.
+                if (lastRotPos !== null) return (lastRotPos + 1) % days.length;
+                const lastIdx = days.findIndex(d => d.name === lastDayName);
+                return lastIdx >= 0 ? (lastIdx + 1) % days.length : 0;
+            },
+
+            // ── FIM DEPLOY 2 (funções auxiliares) ───────────────────────────
+
+            async selectTreinoProgram(programId) {
                 const programs = this.state.workoutPrograms || [];
                 const program = programs.find(p => p.id === programId);
                 if (!program) return;
                 this.state.activeTreinoProgram = program;
-                this.state.treinoSetsCompleted = {};
+                // P0-D: NÃO limpar treinoSetsCompleted aqui — loadTodayProgress fará o restore correto
 
                 document.getElementById('treino-program-list').classList.add('hidden');
                 document.getElementById('workout-carousel-wrap')?.classList.add('hidden');
                 document.getElementById('treino-quick-actions')?.classList.add('hidden');
+                document.getElementById('treino-hoje-card-wrap')?.classList.add('hidden');
                 const exView = document.getElementById('treino-exercises-view');
                 exView.classList.remove('hidden');
 
                 document.getElementById('treino-active-name').textContent = program.name;
                 document.getElementById('treino-subtitle').textContent = program.name;
 
-                // Prefer custom_exercises (personalized) over generic exercises array
+                // D2-E: Se programa tem dias → mostrar seletor com sugestão de rotação
+                const treinoDays = this._getProgramDays(program);
+                if (treinoDays.length > 0) {
+                    this.state.activeTreinoExercises = [];
+                    this.state.activeTreinoDayName = null;
+                    document.getElementById('treino-active-desc').textContent =
+                        `${treinoDays.length} treino${treinoDays.length !== 1 ? 's' : ''} (A/B/C)`;
+                    await this._loadExerciseHistory();
+                    const suggestedIdx = await this._computeNextTrainingDay(program.id, treinoDays);
+                    // P1b: Se veio do card "Treino de Hoje", pular seletor e ir direto
+                    if (this._autoStartToday) {
+                        this._autoSelectedDayIndex = suggestedIdx;
+                        setTimeout(() => this.selectTreinoDay(suggestedIdx), 50);
+                        const todayLocal2 = new Date().toLocaleDateString('pt-BR');
+                        const checkinNow2 = this.state.dailyCheckins[todayLocal2] || {};
+                        const energyEl3 = document.getElementById('treino-energy-val');
+                        if (energyEl3) energyEl3.textContent = checkinNow2.caloriesBurned || 0;
+                        return;
+                    }
+                    this.renderTreinoDaySelector(program, suggestedIdx);
+                    const todayLocal = new Date().toLocaleDateString('pt-BR');
+                    const checkinNow = this.state.dailyCheckins[todayLocal] || {};
+                    const energyEl2 = document.getElementById('treino-energy-val');
+                    if (energyEl2) energyEl2.textContent = checkinNow.caloriesBurned || 0;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+                // Programas flat: pré-carregar histórico para progression hints
+                await this._loadExerciseHistory();
+
+                // Resolve exercises: array flat > {name,exercises} > categorias > exercises padrão
                 let exercises = [];
-                if (program.custom_exercises && typeof program.custom_exercises === 'object' && !Array.isArray(program.custom_exercises)) {
-                    Object.entries(program.custom_exercises).forEach(([cat, exs]) => {
-                        (exs || []).forEach(ex => exercises.push({
-                            name:          ex.name,
-                            sets:          ex.sets  || 3,
-                            reps:          ex.reps  || '12',
-                            rest:          ex.rest  || '60s',
-                            target_weight: ex.weight || 0,
-                            video_url:     ex.video_url || '',
-                            category:      cat
-                        }));
-                    });
+                const ce = program.custom_exercises;
+                if (Array.isArray(ce) && ce.length > 0) {
+                    exercises = ce;
+                } else if (ce && typeof ce === 'object') {
+                    if (Array.isArray(ce.exercises)) {
+                        exercises = ce.exercises;
+                    } else {
+                        Object.entries(ce).forEach(([cat, exs]) => {
+                            if (!Array.isArray(exs)) return;
+                            exs.forEach(ex => exercises.push({
+                                name: ex.name, sets: ex.sets || 3, reps: ex.reps || '12',
+                                rest_seconds: ex.rest_seconds || ex.rest || 60,
+                                target_weight: ex.weight || ex.target_weight || 0,
+                                video_url: ex.video_url || '', category: cat
+                            }));
+                        });
+                    }
                 } else if (Array.isArray(program.exercises)) {
                     exercises = program.exercises;
                 }
@@ -5970,6 +6677,7 @@
                 document.getElementById('treino-active-desc').textContent = `${exercises.length} exercício${exercises.length !== 1 ? 's' : ''}`;
 
                 this.renderTreinoExercises(exercises);
+                this.loadTodayProgress(program.id);
                 this.updateTreinoProgress();
 
                 // Update energia ativa card
@@ -5981,15 +6689,109 @@
                 lucide.createIcons();
             },
 
+            async openPersonalShop() {
+                const listEl = document.getElementById('treino-program-list');
+                if (!listEl) return;
+                // Mostra loading imediato
+                listEl.innerHTML = '<div class="text-center py-8 text-ios-gray text-sm">Carregando shop...</div>';
+                listEl.classList.remove('hidden');
+                document.getElementById('workout-carousel-wrap')?.classList.add('hidden');
+                try {
+                    // Busca fresh do servidor — NÃO sobrescreve this.state.workoutPrograms
+                    const res = await fetch('/api/workouts', { headers: AUTH.headers() });
+                    const freshPrograms = await res.json();
+                    const shopPrograms = freshPrograms.filter(p => p.is_shop);
+                    if (!shopPrograms.length) {
+                        listEl.innerHTML = `<p class="text-center text-ios-gray text-sm py-8">Nenhum programa disponível</p>`;
+                        return;
+                    }
+                    listEl.innerHTML = `
+                        <div class="flex items-center gap-2 mb-4">
+                            <button onclick="app.voltarListaTreino()" class="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-ios-gray">‹</button>
+                            <p class="text-xs text-ios-gray font-bold uppercase tracking-widest">🏪 Personal Shop</p>
+                        </div>
+                        <div class="space-y-3">
+                          ${shopPrograms.map(p => {
+                            const exCount = this._countExercises(p);
+                            return `<button onclick="app.selectShopProgram('${p.id}')"
+                              class="w-full bg-white dark:bg-dark-card rounded-3xl p-4 border border-ios-separator/30 dark:border-gray-800 text-left flex items-center gap-4 active:scale-[.98] transition-all">
+                              <div class="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center text-xl flex-shrink-0">🏅</div>
+                              <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-sm">${p.name}</h3>
+                                <p class="text-xs text-ios-gray mt-0.5">${exCount} exercício${exCount!==1?'s':''}</p>
+                              </div>
+                              <i data-lucide="chevron-right" class="w-4 h-4 text-ios-gray flex-shrink-0"></i>
+                            </button>`;
+                          }).join('')}
+                        </div>`;
+                    if (window.lucide) lucide.createIcons();
+                } catch {
+                    listEl.innerHTML = `<p class="text-center text-ios-gray text-sm py-8">Erro ao carregar shop</p>`;
+                }
+            },
+
+            selectShopProgram(programId) {
+                const programs = this.state.workoutPrograms || [];
+                const program = programs.find(p => p.id === programId);
+                if (!program) return;
+                this.selectTreinoProgram(programId);
+                // Injecta botão de inscrição na tela de exercícios
+                document.getElementById('shop-subscribe-btn')?.remove();
+                const exView = document.getElementById('treino-exercises-view');
+                if (!exView) return;
+                const subscribeBtn = document.createElement('button');
+                subscribeBtn.id = 'shop-subscribe-btn';
+                subscribeBtn.className = 'mx-4 mb-4 w-[calc(100%-2rem)] py-3 rounded-2xl bg-brand-neon text-black font-black text-sm';
+                subscribeBtn.textContent = '⭐ Usar como plano principal';
+                subscribeBtn.onclick = () => app.subscribeToProgram(programId);
+                const finishBtn = exView.querySelector('#treino-finish-btn') || exView.querySelector('[onclick*="finalizarTreino"]');
+                if (finishBtn) exView.insertBefore(subscribeBtn, finishBtn);
+                else exView.appendChild(subscribeBtn);
+            },
+
+            async subscribeToProgram(programId) {
+                const btn = document.getElementById('shop-subscribe-btn');
+                if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+                try {
+                    const res = await fetch('/api/workouts/subscribe', {
+                        method: 'POST', headers: AUTH.headers(),
+                        body: JSON.stringify({ program_id: programId, set_as_main: true })
+                    });
+                    if (res.ok) {
+                        this.showToast('✅ Plano definido como principal!');
+                        document.getElementById('shop-subscribe-btn')?.remove();
+                        await this.loadTreinoScreen();
+                    } else {
+                        this.showToast('Erro ao salvar plano');
+                        if (btn) { btn.disabled = false; btn.textContent = '⭐ Usar como plano principal'; }
+                    }
+                } catch {
+                    this.showToast('Erro de conexão');
+                    if (btn) { btn.disabled = false; btn.textContent = '⭐ Usar como plano principal'; }
+                }
+            },
+
             renderTreinoExercises(exercises) {
                 const listEl = document.getElementById('treino-exercise-list');
                 if (!listEl || !exercises) return;
 
-                listEl.innerHTML = exercises.map((ex, idx) => {
+                // D3-B: exibir observations/cardio para programas flat (dias usam banner no seletor)
+                const prog = this.state.activeTreinoProgram;
+                const progEx = prog?.exercises;
+                const noDays = !progEx?._structured || !progEx?.days?.length;
+                const observations = progEx?._structured ? (progEx.observations || '') : '';
+                const cardio = progEx?._structured ? (progEx.cardio || '') : '';
+                const obsBanner = noDays && (observations || cardio) ? `
+                    <div class="bg-brand-neon/5 border border-brand-neon/20 rounded-2xl p-3 mb-3 mx-0">
+                        ${observations ? `<p class="text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">📋 ${observations}</p>` : ''}
+                        ${cardio ? `<p class="text-[11px] font-semibold text-brand-neon">🏃 Cardio: ${cardio}</p>` : ''}
+                    </div>` : '';
+
+                listEl.innerHTML = obsBanner + exercises.map((ex, idx) => {
                     const hasVideo = !!ex.video_url;
                     const sets = Array.from({ length: ex.sets || 3 }, (_, si) => si);
                     return `
-                        <div class="bg-white dark:bg-dark-card rounded-3xl p-5 border border-ios-separator/30 dark:border-gray-800 shadow-sm">
+                        <div id="ex-card-${idx}" class="bg-white dark:bg-dark-card rounded-3xl p-5 border-2 border-ios-separator/30 dark:border-gray-800 shadow-sm transition-colors">
                             <div class="flex items-start justify-between mb-4">
                                 <div class="flex-1">
                                     ${ex.category ? `<p class="text-[9px] font-black text-brand-neon uppercase tracking-widest mb-0.5">${ex.category}</p>` : ''}
@@ -6009,11 +6811,29 @@
                                 ${sets.map(si => `
                                     <button onclick="app.toggleTreinoSet(${idx}, ${si}, this)"
                                         data-ex="${idx}" data-set="${si}"
-                                        class="treino-set-btn flex flex-col items-center justify-center py-3 rounded-2xl border-2 border-gray-200 dark:border-gray-700 text-xs font-black transition-all">
+                                        ${si > 0 ? 'disabled' : ''}
+                                        class="treino-set-btn flex flex-col items-center justify-center py-3 rounded-2xl border-2 border-gray-200 dark:border-gray-700 text-xs font-black transition-all${si > 0 ? ' opacity-40 cursor-not-allowed' : ''}">
                                         <span class="text-[10px] font-bold text-ios-gray">Série ${si + 1}</span>
                                         <span class="text-base mt-0.5 text-ios-gray">○</span>
                                     </button>
                                 `).join('')}
+                            </div>
+                            <div class="flex items-center gap-3 mt-3 pt-3 border-t border-ios-separator/20 dark:border-gray-700">
+                                <span class="text-[10px] text-ios-gray font-black uppercase tracking-wider flex-shrink-0">Carga</span>
+                                <div class="flex flex-col gap-0.5 flex-1">
+                                    ${(() => { const p = this._getExerciseProgression(ex.name); return `
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="app.adjustWeight(${idx}, -2.5)" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-sm font-black flex-shrink-0 flex items-center justify-center">−</button>
+                                        <input type="number" inputmode="decimal" id="weight-${idx}"
+                                            placeholder="${p.suggested > 0 ? p.suggested : ex.target_weight > 0 ? ex.target_weight : ''}"
+                                            onchange="app.saveWeight(${idx}, this.value)"
+                                            class="w-16 bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-xs font-bold text-center outline-none focus:border-brand-neon transition-colors">
+                                        <button onclick="app.adjustWeight(${idx}, +2.5)" class="w-9 h-9 rounded-full bg-brand-neon/10 text-brand-neon text-sm font-black flex-shrink-0 flex items-center justify-center">+</button>
+                                    </div>
+                                    ${p.lastWeight > 0 ? `<span class="text-[9px] text-ios-gray">↑ ${p.lastWeight}kg · melhor: ${p.bestWeight}kg</span>` : ''}
+                                    `; })()}
+                                </div>
+                                ${ex.notes ? `<span class="text-[10px] text-ios-gray italic flex-shrink-0 max-w-[80px] text-right leading-tight">${ex.notes}</span>` : ''}
                             </div>
                         </div>
                     `;
@@ -6041,16 +6861,84 @@
                 }
                 this.updateTreinoProgress();
 
-                // Auto-save progress to server on every set toggle
-                const prog = this.state.activeTreinoProgram;
-                if (prog && AUTH.getToken()) {
-                    const today = new Date().toISOString().split('T')[0];
-                    fetch('/api/workouts/progress', {
-                        method: 'POST', headers: AUTH.headers(),
-                        body: JSON.stringify({ [today]: { [prog.id]: this.state.treinoSetsCompleted } })
-                    }).catch(() => {});
+                // Desbloqueia próxima série se marcou como feita
+                if (done) {
+                    const nextBtn = document.querySelector(`[data-ex="${exIdx}"][data-set="${setIdx + 1}"]`);
+                    if (nextBtn) {
+                        nextBtn.disabled = false;
+                        nextBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+                    }
                 }
+
+                // Verifica se exercício 100% concluído → borda verde
+                const activeEx = (this.state.activeTreinoExercises || [])[exIdx];
+                if (activeEx) {
+                    const allDone = Array.from({ length: activeEx.sets || 3 }, (_, si) =>
+                        !!this.state.treinoSetsCompleted[`${exIdx}-${si}`]).every(Boolean);
+                    const card = document.getElementById(`ex-card-${exIdx}`);
+                    if (card) {
+                        if (allDone) {
+                            card.style.borderColor = '#c8f542';
+                        } else {
+                            card.style.borderColor = '';
+                        }
+                    }
+                }
+
+                // D3-D: Timer de descanso — inicia quando série é marcada como feita
+                if (done && activeEx?.rest_seconds > 0) {
+                    this._startRestTimer(activeEx.rest_seconds);
+                } else if (!done) {
+                    this._hideRestBanner();
+                }
+
+                // Auto-save progress (save unificado: sets + weights + dia)
+                this._saveTreinoProgress();
             },
+
+            // ── D3-D: Timer de Descanso ───────────────────────────
+            // H5: timestamp absoluto — drift-resistant (iOS background)
+            _startRestTimer(seconds) {
+                clearInterval(this._restTimerInterval);
+                this._restEndAt = Date.now() + seconds * 1000;
+                const tick = () => {
+                    const remaining = Math.max(0, Math.ceil((this._restEndAt - Date.now()) / 1000));
+                    this._showRestBanner(remaining);
+                    if (remaining <= 0) { clearInterval(this._restTimerInterval); this._hideRestBanner(); }
+                };
+                tick();
+                this._restTimerInterval = setInterval(tick, 500);
+            },
+
+            // P3a: Timer no centro da tela, número grande — G5: reusa DOM, nunca recria
+            _showRestBanner(remaining) {
+                let el = document.getElementById('rest-timer-banner');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'rest-timer-banner';
+                    el.className = 'fixed inset-x-6 top-1/2 -translate-y-1/2 bg-dark-card border border-brand-neon/30 rounded-3xl shadow-2xl z-50 p-6';
+                    el.innerHTML = `
+                        <div class="text-center">
+                            <p class="text-6xl font-black text-brand-neon leading-none" id="rest-timer-val">0s</p>
+                            <p class="text-xs text-ios-gray mt-2 font-semibold">⏱ Descanso restante</p>
+                            <button onclick="app._hideRestBanner()" class="mt-4 text-xs text-ios-gray border border-ios-separator dark:border-gray-700 px-6 py-2 rounded-full">
+                                Pular
+                            </button>
+                        </div>`;
+                    document.body.appendChild(el);
+                }
+                // G7: patch granular — só atualiza o valor, não recria o container
+                const valEl = document.getElementById('rest-timer-val');
+                if (valEl) valEl.textContent = remaining + 's';
+                el.style.display = 'block';
+            },
+
+            _hideRestBanner() {
+                clearInterval(this._restTimerInterval);
+                const el = document.getElementById('rest-timer-banner');
+                if (el) el.style.display = 'none';
+            },
+            // ── FIM D3-D ─────────────────────────────────────────
 
             updateTreinoProgress() {
                 // Use flattened exercises (covers custom_exercises protocols too)
@@ -6066,12 +6954,16 @@
             },
 
             async finalizarTreino() {
+                // H2: Anti double-finalize lock
+                if (this._finishingWorkout) return;
+                this._finishingWorkout = true;
+                try {
                 const program = this.state.activeTreinoProgram;
-                if (!program) return;
+                if (!program) { this._finishingWorkout = false; return; }
                 const today = new Date().toISOString().split('T')[0];
                 const completedSets = this.state.treinoSetsCompleted || {};
                 const doneCount = Object.values(completedSets).filter(Boolean).length;
-                if (doneCount === 0) { this.showToast('Complete ao menos uma série antes de finalizar!'); return; }
+                if (doneCount === 0) { this.showToast('Complete ao menos uma série antes de finalizar!'); this._finishingWorkout = false; return; }
 
                 try {
                     // Estimar calorias com base nas séries completadas (aprox. 5 kcal/série)
@@ -6079,8 +6971,24 @@
                     const workoutType = program.category || 'strength';
                     const workoutName = program.name || '';
 
-                    // Save workout_sessions with rich data (name + duration as backup)
-                    const body = { [today]: { [program.id]: { completed_sets: completedSets, notes: workoutName, duration_minutes: 60 } } };
+                    // Fase 2: calcular % e incluir pesos + dia no payload
+                    const totalSets = (this.state.activeTreinoExercises || []).reduce((t, ex) => t + (ex.sets || 3), 0);
+                    const pct = totalSets > 0 ? Math.round((doneCount / totalSets) * 100) : 0;
+                    const trainingDay = this.state.activeTreinoDayName || null;
+
+                    // P0-F: Save com _status: 'concluido' (servidor ganha na merge strategy)
+                    const body = { [today]: { [program.id]: { completed_sets: {
+                        ...completedSets,
+                        _weights: this.state.treinoWeights || {},
+                        _day: trainingDay,
+                        _pct: pct,
+                        _rotation_pos: this.state.activeTreinoDay ?? null,
+                        _status: 'concluido',
+                        _updated_at: Date.now(),
+                        _version: 1
+                    }, notes: trainingDay || workoutName, duration_minutes: 60 } } };
+                    // Atualizar localStorage também como concluido
+                    try { localStorage.setItem(`tp_${today}_${program.id}`, JSON.stringify(body[today][program.id].completed_sets)); } catch {}
                     await fetch('/api/workouts/progress', { method: 'POST', headers: AUTH.headers(), body: JSON.stringify(body) });
                     await fetch('/api/checkins', { method: 'POST', headers: AUTH.headers(), body: JSON.stringify([{
                         date: today,
@@ -6110,20 +7018,51 @@
                     const dashEnergy = document.getElementById('energy-burned-val');
                     if (dashEnergy) dashEnergy.textContent = estCalories;
 
+                    this._exerciseHistoryCache = null; // D2-E: invalidar cache para próxima sessão
                     this.showToast(`Treino finalizado! 🔥 ~${estCalories} kcal`);
                     setTimeout(() => this.navigate('dashboard'), 1200);
                 } catch {
                     this.showToast('Erro ao salvar treino');
                 }
+                } finally {
+                    this._finishingWorkout = false; // H2: liberar lock
+                }
             },
 
             voltarListaTreino() {
+                // P0-C: Flush save ANTES de qualquer mutação de state
+                this._flushWorkoutSave();
+
                 document.getElementById('treino-exercises-view').classList.add('hidden');
                 document.getElementById('treino-program-list').classList.remove('hidden');
                 document.getElementById('workout-carousel-wrap')?.classList.remove('hidden');
                 document.getElementById('treino-quick-actions')?.classList.remove('hidden');
+                // Mostrar card "Treino de Hoje" de volta se existia
+                const hojeWrap = document.getElementById('treino-hoje-card-wrap');
+                if (hojeWrap && hojeWrap.innerHTML) hojeWrap.classList.remove('hidden');
                 document.getElementById('treino-subtitle').textContent = 'Selecione um programa';
                 this.state.activeTreinoProgram = null;
+                // P1b: limpar flags de modo "Treino de Hoje"
+                this._autoStartToday = false;
+                this._autoSelectedDayIndex = null;
+            },
+
+            handleTreinoBack() {
+                // 1. View de exercícios aberta (treino selecionado) — mais profundo
+                const exView = document.getElementById('treino-exercises-view');
+                if (exView && !exView.classList.contains('hidden')) {
+                    this.voltarListaTreino();
+                    return;
+                }
+                // 2. Shop aberto (carousel oculto + lista visível)
+                const carouselWrap = document.getElementById('workout-carousel-wrap');
+                const listEl = document.getElementById('treino-program-list');
+                if (carouselWrap?.classList.contains('hidden') && listEl && !listEl.classList.contains('hidden')) {
+                    this.voltarListaTreino();
+                    return;
+                }
+                // 3. Padrão: lista de treinos visível → vai para dashboard
+                this.navigate('dashboard');
             },
 
             openTreinoVideo(videoUrl, title, desc) {
@@ -6223,15 +7162,18 @@
             // ══════════════════════════════════════════════════════
 
             async showAcademiaPanel() {
-                document.querySelectorAll('#screen-auth, #screen-onboarding-flow').forEach(s => s.classList.add('hidden'));
+                document.querySelectorAll('#screen-auth, #screen-onboarding-flow, #screen-welcome').forEach(s => {
+                    s.classList.add('hidden');
+                    s.style.display = 'none';
+                });
                 const panel = document.getElementById('screen-academia');
                 if (panel) panel.classList.remove('hidden');
 
                 const nameEl = document.getElementById('academia-name-display');
                 if (nameEl) nameEl.textContent = this.state.userProfile.name || 'Academia';
 
-                await this.loadAcademiaStudents();
                 await this.loadAcademiaPrograms();
+                await this.loadAcademiaStudents();
             },
 
             switchAcademiaTab(tab) {
@@ -6283,49 +7225,35 @@
                 listEl.innerHTML = students.map((link, idx) => {
                     const s = link.student || {};
                     const prog = link.program || {};
+                    const hasCustom = link.custom_exercises && (Array.isArray(link.custom_exercises) ? link.custom_exercises.length > 0 : true);
+                    const programLabel = hasCustom
+                        ? `<p class="text-xs text-purple-500 dark:text-purple-400 mt-0.5 font-semibold">✨ Plano Personalizado</p>`
+                        : prog.name
+                            ? `<p class="text-xs text-brand-neon mt-0.5 font-semibold">📋 ${prog.name}</p>`
+                            : `<p class="text-xs text-ios-gray mt-0.5">Sem treino definido</p>`;
+                    const nameSafe = (s.name||'Aluno').replace(/'/g,"\\'").replace(/"/g,'&quot;');
                     return `
-                        <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800 flex items-center gap-3">
-                            <button onclick="app.openStudentHistoryModal('${link.id}', '${(s.name||'Aluno').replace(/'/g,"\\'").replace(/"/g,'&quot;')}', '${s.id || ''}')" class="flex items-center gap-3 flex-1 min-w-0 text-left">
-                            <div class="w-12 h-12 rounded-2xl bg-brand-neon/10 flex items-center justify-center font-black text-brand-neon text-lg flex-shrink-0">
-                                ${(s.name || 'A').charAt(0).toUpperCase()}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="font-bold text-sm">${s.name || 'Sem nome'}</p>
-                                <p class="text-xs text-ios-gray truncate">${s.email || ''}</p>
-                                ${prog.name ? `<p class="text-xs text-brand-neon mt-0.5">📋 ${prog.name}</p>` : '<p class="text-xs text-ios-gray mt-0.5">Sem programa</p>'}
-                            </div>
-                            </button>
-                            <div class="flex flex-col gap-1 items-end shrink-0">
-                                <button onclick="app.openStudentWorkoutModal('${link.id}', '${(s.name||'Aluno').replace(/'/g,"\\'").replace(/"/g,'&quot;')}', '${link.assigned_program_id || ''}')" class="text-white text-[10px] font-black bg-brand-neon px-2.5 py-1.5 rounded-full">💪 Treino</button>
-                                <button onclick="app.editStudentProgram(${idx})" class="text-brand-neon text-[10px] font-bold border border-brand-neon/30 px-2 py-1 rounded-full">Editar</button>
-                                <button onclick="app.removeStudent('${link.id || link.student_id}')" class="text-red-400 text-[10px] font-bold border border-red-400/30 px-2 py-1 rounded-full">Remover</button>
+                        <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800">
+                            <div class="flex items-center gap-3">
+                                <button onclick="app.openStudentHistoryModal('${link.id}', '${nameSafe}', '${s.id || ''}')" class="flex items-center gap-3 flex-1 min-w-0 text-left">
+                                    <div class="w-11 h-11 rounded-2xl bg-brand-neon/10 flex items-center justify-center font-black text-brand-neon text-lg flex-shrink-0">
+                                        ${(s.name || 'A').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold text-sm">${s.name || 'Sem nome'}</p>
+                                        <p class="text-xs text-ios-gray truncate">${s.email || ''}</p>
+                                        ${programLabel}
+                                    </div>
+                                </button>
+                                <div class="flex gap-1.5 items-center shrink-0">
+                                    <button onclick="app.editStudentProgram(${idx})" class="bg-brand-neon text-black text-[11px] font-black px-3 py-1.5 rounded-full">⚙️ Treino</button>
+                                    <button onclick="app.removeStudent('${link.id || link.student_id}')" class="text-red-400 text-[11px] font-bold border border-red-400/30 px-2.5 py-1.5 rounded-full">✕</button>
+                                </div>
                             </div>
                         </div>
                     `;
                 }).join('');
                 if (window.lucide) lucide.createIcons();
-            },
-
-            editStudentProgram(idx) {
-                const link = this.state.academiaStudents && this.state.academiaStudents[idx];
-                if (!link) return;
-                const student = link.student || {};
-                // Pre-fill the add-student modal for editing
-                const modal = document.getElementById('modal-add-student');
-                if (!modal) return;
-                const emailEl = document.getElementById('add-student-email');
-                const progEl = document.getElementById('add-student-program');
-                if (emailEl) { emailEl.value = student.email || ''; emailEl.readOnly = true; emailEl.style.opacity = '0.6'; }
-                if (progEl) progEl.value = link.assigned_program_id || '';
-                // Change modal title and button
-                const titleEl = modal.querySelector('h3');
-                if (titleEl) titleEl.textContent = `Editar — ${student.name || student.email}`;
-                const saveBtn = modal.querySelector('button[onclick*="addStudent"]');
-                if (saveBtn) saveBtn.textContent = 'Salvar';
-                // Track which link is being edited
-                this._editingStudentLinkId = link.id;
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
             },
 
             // ── STUDENT HISTORY MODAL ─────────────────────────────
@@ -6346,7 +7274,133 @@
                 const modal = document.getElementById('modal-student-history');
                 if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
                 this._studentHistoryTarget = null;
+                this._calYear = null;
+                this._calMonth = null;
             },
+
+            // ── D3-C: Calendário Heatmap ──────────────────────────
+            renderWorkoutCalendar(sessions, year, month) {
+                const sessionDates = new Set((sessions || []).map(s => s.date));
+                const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+                const dayNames = ['D','S','T','Q','Q','S','S'];
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const today = new Date().toISOString().split('T')[0];
+
+                let cells = '';
+                // Cells vazias antes do dia 1
+                for (let i = 0; i < firstDay; i++) {
+                    cells += `<div></div>`;
+                }
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${year}-${String(month + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                    const hasSession = sessionDates.has(dateStr);
+                    const isToday = dateStr === today;
+                    // P2b: células compactas + clicáveis se houver sessão
+                    cells += `<div class="w-6 h-6 flex items-center justify-center rounded-full text-[9px] font-bold mx-auto
+                        ${hasSession ? 'bg-brand-neon text-black cursor-pointer' : 'bg-gray-100 dark:bg-dark-elevated text-ios-gray'}
+                        ${isToday ? 'ring-2 ring-brand-neon ring-offset-1' : ''}"
+                        ${hasSession ? `onclick="app._calDayClick('${dateStr}')"` : ''}>${d}</div>`;
+                }
+                return `<div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <button onclick="app._calShift(-1)" class="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-ios-gray text-sm font-black">‹</button>
+                        <p class="text-xs font-black text-ios-gray uppercase tracking-wider">${monthNames[month]} ${year}</p>
+                        <button onclick="app._calShift(1)" class="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-ios-gray text-sm font-black">›</button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 mb-1">
+                        ${dayNames.map(n => `<div class="text-center text-[9px] font-black text-ios-gray">${n}</div>`).join('')}
+                    </div>
+                    <div class="grid grid-cols-7 gap-1">
+                        ${cells}
+                    </div>
+                    <div class="flex items-center gap-2 mt-2 justify-end">
+                        <div class="w-3 h-3 rounded bg-brand-neon"></div>
+                        <span class="text-[10px] text-ios-gray">Treino realizado</span>
+                    </div>
+                </div>`;
+            },
+
+            _calShift(delta) {
+                if (!this._calSessions) return;
+                let m = (this._calMonth ?? new Date().getMonth()) + delta;
+                let y = this._calYear ?? new Date().getFullYear();
+                if (m < 0) { m = 11; y--; }
+                if (m > 11) { m = 0; y++; }
+                this._calYear = y;
+                this._calMonth = m;
+                const body = document.getElementById('student-history-body');
+                if (body) {
+                    const calEl = body.querySelector('.mb-4');
+                    if (calEl) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.renderWorkoutCalendar(this._calSessions, y, m);
+                        calEl.replaceWith(tempDiv.firstElementChild);
+                    }
+                }
+            },
+            // P2b: Clicar num dia do calendário com sessão → abrir modal relatório
+            _calDayClick(dateStr) {
+                // Tentar encontrar em _calSessions (academia) ou montar do _exerciseHistoryCache (aluno)
+                let session = (this._calSessions || []).find(s => s.date === dateStr);
+                if (!session && this._exerciseHistoryCache) {
+                    const dayData = this._exerciseHistoryCache[dateStr];
+                    if (dayData) {
+                        const progId = Object.keys(dayData)[0];
+                        if (progId) {
+                            session = { date: dateStr, completed_sets: dayData[progId] };
+                        }
+                    }
+                }
+                if (session) this.openDayReportModal(dateStr, session);
+            },
+
+            // P4: Modal relatório por dia — exercícios, sets, cargas, %
+            openDayReportModal(dateStr, session) {
+                const modal = document.getElementById('modal-day-report');
+                const title = document.getElementById('day-report-title');
+                const body = document.getElementById('day-report-body');
+                if (!modal || !body) return;
+
+                const [year, month, day] = dateStr.split('-').map(Number);
+                const d = new Date(year, month - 1, day);
+                const diasSemana = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+                const dateLabel = `${diasSemana[d.getDay()]} · ${String(day).padStart(2,'0')}/${String(month).padStart(2,'0')}/${year}`;
+                if (title) title.textContent = dateLabel;
+
+                const pct = session?.completed_sets?._pct ?? null;
+                const dayName = session?.completed_sets?._day || session?.notes || '';
+                const duration = session?.duration_minutes || null;
+                const details = session?.exercises_detail || [];
+
+                body.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            ${session?.program_name ? `<span class="text-xs bg-brand-neon/10 text-brand-neon font-bold px-3 py-1 rounded-full">${session.program_name}</span>` : ''}
+                            ${dayName ? `<span class="text-xs bg-gray-100 dark:bg-gray-800 text-ios-gray font-bold px-3 py-1 rounded-full">${dayName}</span>` : ''}
+                            ${pct !== null ? `<span class="text-xs font-black text-brand-neon">${pct}% concluído</span>` : ''}
+                            ${duration ? `<span class="text-xs text-ios-gray">⏱ ${duration} min</span>` : ''}
+                        </div>
+                        ${details.length ? `
+                            <div class="space-y-2">
+                                <p class="text-[10px] font-black text-ios-gray uppercase tracking-wider">Exercícios</p>
+                                ${details.map(e => `
+                                    <div class="flex items-center gap-2 bg-gray-50 dark:bg-dark-elevated rounded-2xl px-4 py-3">
+                                        <span class="font-semibold text-sm flex-1">${e.name}</span>
+                                        <span class="text-xs text-ios-gray">${e.sets_done}/${e.sets_total} séries</span>
+                                        ${e.weight > 0 ? `<span class="text-xs font-black text-brand-neon">${e.weight}kg</span>` : ''}
+                                        <span class="text-xs text-ios-gray">${e.reps}</span>
+                                    </div>`).join('')}
+                            </div>` : '<p class="text-sm text-ios-gray text-center py-4">Sem detalhes de exercícios disponíveis</p>'}
+                    </div>`;
+
+                modal.classList.remove('hidden');
+            },
+
+            closeDayReportModal() {
+                document.getElementById('modal-day-report')?.classList.add('hidden');
+            },
+            // ── FIM D3-C / P2b / P4 ──────────────────────────────
 
             async loadStudentHistory(days) {
                 const target = this._studentHistoryTarget;
@@ -6373,6 +7427,13 @@
                     }
 
                     let html = '';
+                    // D3-C: Calendário heatmap
+                    const now = new Date();
+                    this._calYear = this._calYear || now.getFullYear();
+                    this._calMonth = this._calMonth || now.getMonth();
+                    this._calSessions = data.sessions || [];
+                    html += this.renderWorkoutCalendar(data.sessions || [], this._calYear, this._calMonth);
+
                     // View unificada por data: merge checkins + treinos
                     const allDates = new Set([
                         ...(data.checkins || []).map(c => c.date),
@@ -6390,23 +7451,64 @@
                             const dateLabel = new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', weekday: 'short' });
                             const moodMap = {'1':'😔','2':'😐','3':'😊','4':'😁','5':'🤩','great':'😄','good':'🙂','ok':'😐','bad':'😕','terrible':'😞'};
                             const moodEmoji = moodMap[ci?.mood] || '';
+
+                            // Horário do treino
+                            let timeLabel = '';
+                            if (s?.created_at) {
+                                timeLabel = new Date(s.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                            }
+
                             const details = [];
                             if (ci?.workout_specific) details.push('🏋️ ' + ci.workout_specific);
                             else if (ci?.workout_type) details.push('🏋️ ' + ci.workout_type);
+
+                            // Detalhes do treino: séries e % concluído
                             if (s?.completed_sets) {
-                                const done = Object.values(s.completed_sets).filter(Boolean).length;
-                                details.push(done + ' séries concluídas');
+                                const cs = s.completed_sets;
+                                // Fase 2: usar _pct se disponível; caso contrário calcular dos sets puros
+                                if (cs._pct !== undefined) {
+                                    details.push(`📊 ${cs._pct}% concluído`);
+                                } else {
+                                    // Filtrar chaves _ para contar apenas sets puros
+                                    const setEntries = Object.entries(cs).filter(([k]) => !k.startsWith('_'));
+                                    const done = setEntries.filter(([, v]) => v).length;
+                                    const total = setEntries.length;
+                                    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                                    details.push(`💪 ${done}/${total} séries · ${pct}% concluído`);
+                                }
+                                if (cs._day) details.push(`🏋️ ${cs._day}`);
                             }
+                            if (s?.duration_minutes) details.push(`⏱ ${s.duration_minutes} min`);
                             if (ci?.calories_burned) details.push('🔥 ' + ci.calories_burned + ' kcal');
                             if (ci?.water_ml) details.push('💧 ' + ci.water_ml + 'ml');
+                            if (ci?.mood) {
+                                const moodLabels = {
+                                    '1':'😔 Humor baixo','2':'😐 Médio','3':'😊 Bom','4':'😁 Ótimo','5':'🤩 Excelente',
+                                    'great':'😄 Ótimo','good':'🙂 Bom','ok':'😐 Ok','bad':'😕 Ruim','terrible':'😞 Péssimo'
+                                };
+                                details.push(moodLabels[String(ci.mood)] || `😊 Humor ${ci.mood}`);
+                            }
+                            if (ci?.sleep_hours) details.push(`😴 ${ci.sleep_hours}h sono`);
                             if (ci?.note) details.push('"' + ci.note.substring(0, 40) + '"');
+                            // Fix 4B: Badge diferenciado para sessões em andamento vs concluídas
+                            const sessionStatus = s?.completed_sets?._status;
+                            const sessionBadge = s ? (sessionStatus === 'em_andamento'
+                                ? '<span class="text-[10px] bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded-full font-bold">🔄 Em andamento</span>'
+                                : '<span class="text-[10px] bg-brand-neon/10 text-brand-neon px-2 py-0.5 rounded-full font-bold">Treino ✓</span>') : '';
                             html += `<div class="bg-gray-50 dark:bg-dark-elevated rounded-2xl p-3 mb-2">
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="text-base">${moodEmoji || '📋'}</span>
-                                    <p class="text-xs font-black flex-1">${dateLabel}</p>
-                                    ${s ? '<span class="text-[10px] bg-brand-neon/10 text-brand-neon px-2 py-0.5 rounded-full font-bold">Treino ✓</span>' : ''}
+                                    <p class="text-xs font-black flex-1">${dateLabel}${timeLabel ? ' · ' + timeLabel : ''}</p>
+                                    ${sessionBadge}
                                 </div>
                                 ${details.length ? '<p class="text-[11px] text-ios-gray leading-relaxed">' + details.join(' · ') + '</p>' : ''}
+                                ${s?.exercises_detail?.length ? `<div class="mt-2 pt-2 border-t border-gray-200/60 dark:border-gray-700 space-y-1">
+                                  ${s.exercises_detail.map(e => `<div class="flex items-center gap-2 text-[10px]">
+                                    <span class="font-semibold text-gray-700 dark:text-gray-300 flex-1 truncate">${e.name}</span>
+                                    <span class="text-ios-gray">${e.sets_done}/${e.sets_total} séries</span>
+                                    ${e.weight > 0 ? `<span class="text-brand-neon font-bold">${e.weight}kg</span>` : ''}
+                                  </div>`).join('')}
+                                </div>` : ''}
                             </div>`;
                         });
                     }
@@ -6418,15 +7520,47 @@
 
             async removeStudent(linkId) {
                 if (!linkId) { this.showToast('ID do aluno não encontrado'); return; }
+                if (!confirm('Remover este aluno da academia?')) return;
                 try {
                     const res = await fetch(`/api/academia/students/${linkId}`, {
-                        method: 'DELETE',
-                        headers: AUTH.headers()
+                        method: 'DELETE', headers: AUTH.headers()
                     });
                     if (!res.ok) throw new Error('Erro ao remover');
                     this.showToast('Aluno removido');
                     await this.loadAcademiaStudents();
                 } catch { this.showToast('Erro ao remover aluno'); }
+            },
+
+            async toggleProgramShop(programId, currentlyPublic) {
+                const newVal = !currentlyPublic;
+                try {
+                    const res = await fetch(`/api/academia/programs/${programId}/shop`, {
+                        method: 'PATCH', headers: AUTH.headers(),
+                        body: JSON.stringify({ is_public: newVal })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        this.showToast('Erro: ' + (data.error || 'Falha ao atualizar'));
+                        return;
+                    }
+                    // Usa o valor confirmado pelo servidor (não assume que salvou)
+                    const saved = data.is_public;
+                    this.showToast(saved ? '✅ Programa visível no Shop!' : 'Programa removido do Shop');
+                    await this.loadAcademiaPrograms();
+                } catch { this.showToast('Erro de conexão'); }
+            },
+
+            async deleteProgram(programId, programName) {
+                if (!programId) return;
+                if (!confirm(`Excluir o protocolo "${programName}"? Alunos com esse protocolo ficarão sem treino atribuído.`)) return;
+                try {
+                    const res = await fetch(`/api/academia/programs/${programId}`, {
+                        method: 'DELETE', headers: AUTH.headers()
+                    });
+                    if (!res.ok) { const d = await res.json(); this.showToast(d.error || 'Erro ao excluir'); return; }
+                    this.showToast('Protocolo excluído');
+                    await this.loadAcademiaPrograms();
+                } catch { this.showToast('Erro ao excluir protocolo'); }
             },
 
             async loadAcademiaPrograms() {
@@ -6462,16 +7596,26 @@
                         ? p.categories
                         : (p.category ? p.category.split(',').map(s => s.trim()) : []);
                     const catLabel = cats.length ? cats.slice(0,3).join(' · ') : 'Protocolo geral';
-                    const studentCount = (this.state.academiaStudents || []).filter(s => s.assigned_program_id == p.id).length;
+                    const usingStudents = (this.state.academiaStudents || []).filter(s => s.assigned_program_id == p.id);
+                    const studentCount = usingStudents.length;
+                    const studentNames = usingStudents.map(s => s.student?.name || 'Aluno').join(', ');
+                    const exCount = Array.isArray(p.exercises) ? p.exercises.length : 0;
                     return `
                     <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800 flex items-center gap-3">
-                        <div class="w-12 h-12 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">🏋️</div>
+                        <div class="w-11 h-11 bg-brand-neon/10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0">🏋️</div>
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-sm">${p.name}</p>
-                            <p class="text-xs text-ios-gray truncate">${catLabel}</p>
-                            ${studentCount > 0 ? `<p class="text-[10px] text-brand-neon font-bold mt-0.5">${studentCount} aluno${studentCount !== 1 ? 's' : ''}</p>` : ''}
+                            <p class="text-xs text-ios-gray truncate">${catLabel}${exCount > 0 ? ` · ${exCount} exercícios` : ''}</p>
+                            ${studentCount > 0 ? `<p class="text-[10px] text-brand-neon font-bold mt-0.5">👥 ${studentNames}</p>` : ''}
                         </div>
-                        <button onclick="app.editProgram('${p.id}')" class="text-brand-neon text-xs font-bold border border-brand-neon/30 px-3 py-1.5 rounded-full">Editar</button>
+                        <div class="flex gap-1.5 items-center shrink-0">
+                            <button onclick="app.toggleProgramShop('${p.id}', ${!!p.is_public})"
+                                class="text-[11px] font-bold px-2.5 py-1.5 rounded-full border transition-colors ${p.is_public ? 'border-brand-neon text-brand-neon' : 'border-gray-300 dark:border-gray-700 text-ios-gray'}">
+                                ${p.is_public ? '🟢 Shop' : '⬜ Shop'}
+                            </button>
+                            <button onclick="app.editProgram('${p.id}')" class="text-brand-neon text-[11px] font-bold border border-brand-neon/30 px-2.5 py-1.5 rounded-full">Editar</button>
+                            <button onclick="app.deleteProgram('${p.id}', '${(p.name||'').replace(/'/g,"\\'")}')" class="text-red-400 text-[11px] font-bold border border-red-400/30 px-2.5 py-1.5 rounded-full">✕</button>
+                        </div>
                     </div>`;
                 }).join('');
             },
@@ -6483,54 +7627,229 @@
                     (programs || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
             },
 
+            _studentWorkoutTab: 'general', // 'general' | 'custom'
+            _studentParsedExercises: [],
+
+            switchStudentWorkoutTab(tab) {
+                this._studentWorkoutTab = tab;
+                const genBtn = document.getElementById('tab-general-btn');
+                const custBtn = document.getElementById('tab-custom-btn');
+                const genContent = document.getElementById('tab-general-content');
+                const custContent = document.getElementById('tab-custom-content');
+                if (tab === 'general') {
+                    genBtn?.classList.add('bg-white','dark:bg-dark-card','shadow-sm','text-gray-900','dark:text-white');
+                    genBtn?.classList.remove('text-ios-gray');
+                    custBtn?.classList.remove('bg-white','dark:bg-dark-card','shadow-sm','text-gray-900','dark:text-white');
+                    custBtn?.classList.add('text-ios-gray');
+                    genContent?.classList.remove('hidden');
+                    custContent?.classList.add('hidden');
+                } else {
+                    custBtn?.classList.add('bg-white','dark:bg-dark-card','shadow-sm','text-gray-900','dark:text-white');
+                    custBtn?.classList.remove('text-ios-gray');
+                    genBtn?.classList.remove('bg-white','dark:bg-dark-card','shadow-sm','text-gray-900','dark:text-white');
+                    genBtn?.classList.add('text-ios-gray');
+                    custContent?.classList.remove('hidden');
+                    genContent?.classList.add('hidden');
+                }
+            },
+
+            async parseStudentWorkoutAI() {
+                const text = (document.getElementById('student-ai-input')?.value || '').trim();
+                if (text.length < 15) { this.showToast('Cole um treino antes de analisar'); return; }
+                const btn = document.getElementById('student-ai-btn');
+                const btnText = document.getElementById('student-ai-btn-text');
+                const btnIcon = document.getElementById('student-ai-btn-icon');
+                if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+                if (btnText) btnText.textContent = 'Analisando...';
+                if (btnIcon) btnIcon.textContent = '⏳';
+                try {
+                    const res = await fetch('/api/academia/programs/parse-ai', {
+                        method: 'POST', headers: AUTH.headers(),
+                        body: JSON.stringify({ text })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) { this.showToast(data.error || 'Erro ao analisar'); return; }
+                    this._studentParsedExercises = data.exercises || [];
+                    const resultEl = document.getElementById('student-ai-result');
+                    const exEl = document.getElementById('student-ai-exercises');
+                    if (resultEl && exEl) {
+                        exEl.innerHTML = this._studentParsedExercises.map((ex, i) => `
+                            <div class="flex items-center gap-2 text-xs bg-white dark:bg-dark-card rounded-xl px-3 py-2 border border-green-200 dark:border-green-800">
+                                <span class="w-5 h-5 rounded-full bg-green-500 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">${i+1}</span>
+                                <span class="font-semibold flex-1">${ex.name}</span>
+                                <span class="text-ios-gray font-mono flex-shrink-0">${ex.sets}x${ex.reps}</span>
+                            </div>`).join('');
+                        resultEl.classList.remove('hidden');
+                    }
+                    this.showToast(`🤖 ${this._studentParsedExercises.length} exercícios detectados!`);
+                } catch (err) {
+                    console.error('parseStudentWorkoutAI error:', err);
+                    this.showToast('Erro ao analisar com IA');
+                } finally {
+                    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+                    if (btnText) btnText.textContent = 'Analisar com IA';
+                    if (btnIcon) btnIcon.textContent = '🤖';
+                }
+            },
+
             openAddStudentModal() {
-                document.getElementById('modal-add-student').classList.remove('hidden');
-                document.getElementById('modal-add-student').classList.add('flex');
+                this._studentWorkoutTab = 'general';
+                this._studentParsedExercises = [];
+                this._editingStudentLinkId = null;
+                // Reset form
+                const emailEl = document.getElementById('add-student-email');
+                const emailSection = document.getElementById('add-student-email-section');
+                if (emailEl) { emailEl.value = ''; emailEl.readOnly = false; emailEl.style.opacity = ''; }
+                if (emailSection) emailSection.classList.remove('hidden');
+                document.getElementById('add-student-title').textContent = 'Adicionar Aluno';
+                document.getElementById('add-student-subtitle').textContent = 'Conecte um aluno e defina o treino dele';
+                document.getElementById('add-student-save-btn').textContent = 'Adicionar';
+                document.getElementById('add-student-program').value = '';
+                document.getElementById('student-ai-input').value = '';
+                const planNameEl = document.getElementById('student-plan-name');
+                if (planNameEl) planNameEl.value = '';
+                document.getElementById('student-ai-result')?.classList.add('hidden');
+                document.getElementById('student-plan-preview')?.classList.add('hidden');
+                this.switchStudentWorkoutTab('general');
+                const modal = document.getElementById('modal-add-student');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
             },
 
             closeAddStudentModal() {
                 const modal = document.getElementById('modal-add-student');
                 if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
-                const emailEl = document.getElementById('add-student-email');
-                if (emailEl) { emailEl.value = ''; emailEl.readOnly = false; emailEl.style.opacity = ''; }
-                // Reset modal title and button
-                const titleEl = modal && modal.querySelector('h3');
-                if (titleEl) titleEl.textContent = 'Adicionar Aluno';
-                const saveBtn = modal && modal.querySelector('button[onclick*="addStudent"]');
-                if (saveBtn) saveBtn.textContent = 'Adicionar';
-                // Clear edit state
                 this._editingStudentLinkId = null;
+                this._studentParsedExercises = [];
+            },
+
+            editStudentProgram(idx) {
+                const link = this.state.academiaStudents && this.state.academiaStudents[idx];
+                if (!link) return;
+                const student = link.student || {};
+                this._editingStudentLinkId = link.id;
+                this._studentParsedExercises = [];
+                // Preenche email (readonly)
+                const emailEl = document.getElementById('add-student-email');
+                const emailSection = document.getElementById('add-student-email-section');
+                if (emailEl) { emailEl.value = student.email || ''; emailEl.readOnly = true; emailEl.style.opacity = '0.5'; }
+                // Header
+                document.getElementById('add-student-title').textContent = `Treino de ${student.name || student.email || 'Aluno'}`;
+                document.getElementById('add-student-subtitle').textContent = 'Altere o protocolo ou crie um plano personalizado';
+                document.getElementById('add-student-save-btn').textContent = 'Salvar';
+                // Pré-seleciona programa atual
+                const progEl = document.getElementById('add-student-program');
+                if (progEl) progEl.value = link.assigned_program_id || '';
+                // Sempre abre na aba geral (criação de plano personalizado foi movida para modal de programa)
+                this.switchStudentWorkoutTab('general');
+                // Limpa AI input; pré-preenche nome do plano se existir
+                const aiInput = document.getElementById('student-ai-input');
+                if (aiInput) aiInput.value = '';
+                const planNameEl = document.getElementById('student-plan-name');
+                if (planNameEl) {
+                    const ce = link.custom_exercises;
+                    planNameEl.value = (!Array.isArray(ce) && ce?.name) ? ce.name : '';
+                }
+                document.getElementById('student-ai-result')?.classList.add('hidden');
+
+                // Renderiza preview do treino atual
+                const previewEl = document.getElementById('student-plan-preview');
+                const previewList = document.getElementById('student-plan-preview-list');
+                if (previewEl && previewList) {
+                    const ce = link.custom_exercises;
+                    let previewExs = [];
+                    if (Array.isArray(ce)) previewExs = ce;
+                    else if (ce && typeof ce === 'object') {
+                        if (Array.isArray(ce.exercises)) previewExs = ce.exercises;
+                        else Object.entries(ce).forEach(([, v]) => { if (Array.isArray(v)) previewExs.push(...v); });
+                    } else if (link.assigned_program_id) {
+                        const prog = (this.state.academiaPrograms || []).find(p => p.id === link.assigned_program_id);
+                        if (prog && Array.isArray(prog.exercises)) previewExs = prog.exercises;
+                    }
+                    if (previewExs.length > 0) {
+                        previewList.innerHTML = previewExs.map((ex, i) =>
+                            `<div class="flex items-center gap-2 text-xs bg-gray-50 dark:bg-dark-elevated rounded-xl px-3 py-2 border border-ios-separator/30">
+                                <span class="w-5 h-5 rounded-full bg-brand-neon text-black font-black flex items-center justify-center flex-shrink-0">${i+1}</span>
+                                <span class="font-semibold flex-1">${ex.name || ''}</span>
+                                <span class="text-ios-gray font-mono flex-shrink-0">${ex.sets||3}x${ex.reps||'12'}</span>
+                            </div>`
+                        ).join('');
+                        previewEl.classList.remove('hidden');
+                    } else {
+                        previewList.innerHTML = '<p class="text-xs text-ios-gray">Sem exercícios definidos</p>';
+                        previewEl.classList.remove('hidden');
+                    }
+                }
+
+                const modal = document.getElementById('modal-add-student');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
             },
 
             async addStudent() {
-                const email = document.getElementById('add-student-email').value.trim();
-                const programId = document.getElementById('add-student-program').value;
                 const isEditing = !!this._editingStudentLinkId;
+                const email = (document.getElementById('add-student-email')?.value || '').trim();
+                const tab = this._studentWorkoutTab || 'general';
+                const saveBtn = document.getElementById('add-student-save-btn');
+                if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Salvando...'; }
 
                 try {
-                    if (isEditing) {
-                        // Update existing student's program via PATCH
-                        const res = await fetch(`/api/academia/students/${this._editingStudentLinkId}`, {
-                            method: 'PATCH', headers: AUTH.headers(),
-                            body: JSON.stringify({ assigned_program_id: programId || null })
-                        });
-                        const data = await res.json();
-                        if (!res.ok) { this.showToast(data.error || 'Erro ao atualizar aluno'); return; }
-                        this.showToast('Programa atualizado!');
+                    if (tab === 'custom') {
+                        // Plano personalizado — salva custom_exercises no link do aluno
+                        const exercises = this._studentParsedExercises || [];
+                        if (exercises.length === 0) { this.showToast('Analise um treino com IA primeiro'); return; }
+                        if (!isEditing && !email) { this.showToast('Digite o email ou @username do aluno'); return; }
+                        const planName = (document.getElementById('student-plan-name')?.value || '').trim();
+                        const customPayload = planName ? { name: planName, exercises } : exercises;
+
+                        if (isEditing) {
+                            const res = await fetch(`/api/academia/students/${this._editingStudentLinkId}`, {
+                                method: 'PATCH', headers: AUTH.headers(),
+                                body: JSON.stringify({ custom_exercises: customPayload, assigned_program_id: null })
+                            });
+                            const data = await res.json();
+                            if (!res.ok) { this.showToast(data.error || 'Erro ao salvar'); return; }
+                            this.showToast('✨ Plano personalizado salvo!');
+                        } else {
+                            // Envia custom_exercises diretamente no POST (sem dois passos)
+                            const r1 = await fetch('/api/academia/students', {
+                                method: 'POST', headers: AUTH.headers(),
+                                body: JSON.stringify({ student_email: email, assigned_program_id: null, custom_exercises: customPayload })
+                            });
+                            const d1 = await r1.json();
+                            if (!r1.ok) { this.showToast(d1.error || 'Erro ao adicionar aluno'); return; }
+                            this.showToast('✨ Aluno adicionado com plano personalizado!');
+                        }
                     } else {
-                        // Add new student via POST
-                        if (!email) { this.showToast('Digite o email do aluno'); return; }
-                        const res = await fetch('/api/academia/students', {
-                            method: 'POST', headers: AUTH.headers(),
-                            body: JSON.stringify({ student_email: email, assigned_program_id: programId || null })
-                        });
-                        const data = await res.json();
-                        if (!res.ok) { this.showToast(data.error || 'Erro ao adicionar aluno'); return; }
-                        this.showToast('Aluno adicionado!');
+                        // Protocolo geral
+                        const programId = document.getElementById('add-student-program')?.value || null;
+                        if (isEditing) {
+                            const res = await fetch(`/api/academia/students/${this._editingStudentLinkId}`, {
+                                method: 'PATCH', headers: AUTH.headers(),
+                                body: JSON.stringify({ assigned_program_id: programId || null, custom_exercises: null })
+                            });
+                            const data = await res.json();
+                            if (!res.ok) { this.showToast(data.error || 'Erro ao atualizar'); return; }
+                            this.showToast('✅ Protocolo atualizado!');
+                        } else {
+                            if (!email) { this.showToast('Digite o email do aluno'); return; }
+                            const res = await fetch('/api/academia/students', {
+                                method: 'POST', headers: AUTH.headers(),
+                                body: JSON.stringify({ student_email: email, assigned_program_id: programId || null })
+                            });
+                            const data = await res.json();
+                            if (!res.ok) { this.showToast(data.error || 'Erro ao adicionar aluno'); return; }
+                            this.showToast('✅ Aluno adicionado!');
+                        }
                     }
                     this.closeAddStudentModal();
                     await this.loadAcademiaStudents();
-                } catch { this.showToast('Erro de conexão'); }
+                } catch (err) {
+                    console.error('addStudent error:', err);
+                    this.showToast('Erro de conexão');
+                } finally {
+                    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = isEditing ? 'Salvar' : 'Adicionar'; }
+                }
             },
 
             // ── EXERCISE LIBRARY (completa) ───────────────────────────
@@ -6595,38 +7914,63 @@
                     const data = await res.json();
                     if (!res.ok) { this.showToast(data.error || 'Erro ao analisar'); return; }
 
-                    this._parsedExercises = data.exercises || [];
+                    // D1-B: Normalizar nomes pelo EXERCISE_REGISTRY antes de guardar
+                    this._parsedExercises = (data.exercises || []).map(ex => ({
+                        ...ex, name: normalizeExerciseName(ex.name)
+                    }));
+                    this._parsedDays = (data.days || []).map(d => ({
+                        ...d,
+                        exercises: (d.exercises || []).map(ex => ({ ...ex, name: normalizeExerciseName(ex.name) }))
+                    }));
+                    // Fix 1C: Armazenar observations e cardio extraídos pela IA
+                    this._parsedObservations = data.observations || '';
+                    this._parsedCardio = data.cardio || '';
 
                     // Auto-fill name if empty
                     const nameEl = document.getElementById('prog-name');
                     if (nameEl && !nameEl.value.trim() && data.name) nameEl.value = data.name;
 
-                    // Auto-check detected categories
-                    if (data.categories?.length) {
+                    // Auto-check detected categories (normaliza acentos para comparar)
+                    const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+                    let detectedCats = Array.isArray(data.categories) ? [...data.categories] : [];
+
+                    // Fallback: auto-detect categories from exercise names against EXERCISE_LIBRARY
+                    if (this._parsedExercises?.length) {
+                        Object.entries(this.EXERCISE_LIBRARY).forEach(([cat, exList]) => {
+                            const alreadyIn = detectedCats.some(c => norm(c) === norm(cat));
+                            if (!alreadyIn) {
+                                const found = this._parsedExercises.some(ex =>
+                                    exList.some(libEx => norm(libEx) === norm(ex.name) ||
+                                        norm(ex.name).includes(norm(cat)) ||
+                                        norm(cat).includes(norm(ex.name).split(' ')[0]))
+                                );
+                                if (found) detectedCats.push(cat);
+                            }
+                        });
+                    }
+
+                    if (detectedCats.length) {
                         document.querySelectorAll('.prog-cat-check').forEach(chk => {
                             const lbl = chk.closest('label');
-                            const match = data.categories.includes(chk.value);
+                            const match = detectedCats.some(c => norm(c) === norm(chk.value));
                             chk.checked = match;
                             lbl?.classList.toggle('cat-label-active', match);
                         });
                         const hint = document.getElementById('prog-cat-hint');
-                        if (hint) hint.textContent = `✓ Grupos detectados automaticamente pela IA: ${data.categories.join(', ')}`;
+                        if (hint) hint.textContent = `✓ Grupos detectados automaticamente pela IA: ${detectedCats.join(', ')}`;
                     }
 
-                    // Show parsed exercises preview
+                    // D3-A: Show editable AI exercise editor
+                    this._editorTab = 0;
                     const resultEl = document.getElementById('prog-ai-result');
-                    const exEl = document.getElementById('prog-ai-exercises');
-                    if (resultEl && exEl) {
-                        exEl.innerHTML = this._parsedExercises.map((ex, i) => `
-                            <div class="flex items-center gap-2 text-xs bg-white dark:bg-dark-card rounded-xl px-3 py-2 border border-green-200 dark:border-green-800">
-                                <span class="w-5 h-5 rounded-full bg-green-500 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">${i+1}</span>
-                                <span class="font-semibold flex-1 text-gray-800 dark:text-gray-200">${ex.name}</span>
-                                <span class="text-ios-gray font-mono flex-shrink-0">${ex.sets}x${ex.reps}</span>
-                            </div>`).join('');
-                        resultEl.classList.remove('hidden');
-                    }
-                    this.showToast(`🤖 ${this._parsedExercises.length} exercícios detectados!`);
-                } catch { this.showToast('Erro de conexão com a IA'); }
+                    if (resultEl) resultEl.classList.remove('hidden');
+                    this.renderAIExerciseEditor();
+                    const dayInfo = this._parsedDays?.length > 0 ? ` · ${this._parsedDays.length} treinos (A/B/C)` : '';
+                    this.showToast(`🤖 ${this._parsedExercises.length} exercícios detectados!${dayInfo}`);
+                } catch (err) {
+                    console.error('parseWorkoutWithAI error:', err);
+                    this.showToast('Erro de conexão com a IA: ' + (err?.message || err));
+                }
                 finally {
                     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
                     if (btnText) btnText.textContent = 'Analisar com IA';
@@ -6636,12 +7980,153 @@
 
             clearAIParse() {
                 this._parsedExercises = [];
+                this._parsedDays = [];
+                this._parsedObservations = '';
+                this._parsedCardio = '';
+                this._editorTab = 0;
                 const resultEl = document.getElementById('prog-ai-result');
                 if (resultEl) resultEl.classList.add('hidden');
+                const exEl = document.getElementById('prog-ai-exercises');
+                if (exEl) exEl.innerHTML = '';
                 const inputEl = document.getElementById('prog-ai-input');
                 if (inputEl) inputEl.value = '';
                 const hint = document.getElementById('prog-cat-hint');
                 if (hint) hint.textContent = 'Selecione manualmente ou deixe a IA detectar automaticamente.';
+            },
+
+            // ── D3-A: Editor Pós-IA ───────────────────────────────
+            renderAIExerciseEditor() {
+                const exEl = document.getElementById('prog-ai-exercises');
+                if (!exEl) return;
+                const days = this._parsedDays || [];
+                const hasDays = days.length > 0;
+                // Fix 1D: Banner de observations/cardio extraídos pela IA
+                const obsBanner = (this._parsedObservations || this._parsedCardio) ? `
+                    <div class="bg-brand-neon/5 border border-brand-neon/20 rounded-2xl p-3 mb-3 space-y-1">
+                      ${this._parsedObservations ? `<p class="text-[9px] text-ios-gray font-bold uppercase tracking-wider">Observações</p>
+                        <p class="text-xs text-gray-700 dark:text-gray-300">${this._parsedObservations}</p>` : ''}
+                      ${this._parsedCardio ? `<p class="text-[9px] text-ios-gray font-bold uppercase tracking-wider mt-1">Cardio prescrito</p>
+                        <p class="text-xs text-brand-neon font-semibold">🏃 ${this._parsedCardio}</p>` : ''}
+                    </div>` : '';
+                if (hasDays) {
+                    this._editorTab = this._editorTab ?? 0;
+                    exEl.innerHTML = obsBanner + `
+                        <div class="flex gap-1 mb-3 overflow-x-auto pb-1">
+                          ${days.map((d, i) => `
+                            <button onclick="app._editorTab=${i};app.renderAIExerciseEditor()"
+                                class="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-black transition-all
+                                ${i === this._editorTab ? 'bg-brand-neon text-black' : 'bg-gray-100 dark:bg-gray-800 text-ios-gray'}">
+                                ${d.name}
+                            </button>`).join('')}
+                          <button onclick="app._addEditorDay()"
+                              class="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-black bg-gray-100 dark:bg-gray-800 text-ios-gray">＋ Dia</button>
+                        </div>
+                        ${this._renderEditorExList(days[this._editorTab]?.exercises || [], true)}`;
+                } else {
+                    exEl.innerHTML = obsBanner + this._renderEditorExList(this._parsedExercises || [], false);
+                }
+            },
+
+            _renderEditorExList(exercises, isDayMode) {
+                return `<div class="space-y-2">
+                  ${exercises.map((ex, i) => `
+                    <div class="bg-white dark:bg-dark-card rounded-2xl p-3 border border-gray-100 dark:border-gray-800">
+                      <div class="flex items-center gap-2 mb-2">
+                        <input value="${(ex.name||'').replace(/"/g,'&quot;')}" placeholder="Nome do exercício"
+                            onchange="app._updateEditorEx(${i},'name',this.value,${isDayMode})"
+                            class="flex-1 text-xs font-semibold bg-transparent border-b border-gray-200 dark:border-gray-700 pb-1 outline-none focus:border-brand-neon">
+                        <button onclick="app._removeEditorEx(${i},${isDayMode})"
+                            class="text-red-400 text-xs font-black px-2 flex-shrink-0">✕</button>
+                      </div>
+                      <div class="grid grid-cols-2 gap-1.5">
+                        <div class="flex flex-col">
+                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">Séries</span>
+                          <input type="number" value="${ex.sets||3}" onchange="app._updateEditorEx(${i},'sets',parseInt(this.value)||3,${isDayMode})"
+                              class="text-xs font-bold text-center bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 outline-none focus:border-brand-neon">
+                        </div>
+                        <div class="flex flex-col">
+                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">Reps</span>
+                          <input value="${ex.reps||'10-12'}" onchange="app._updateEditorEx(${i},'reps',this.value,${isDayMode})"
+                              class="text-xs font-bold text-center bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 outline-none focus:border-brand-neon">
+                        </div>
+                        <div class="flex flex-col">
+                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">Descanso (s)</span>
+                          <input type="number" value="${ex.rest_seconds||60}" onchange="app._updateEditorEx(${i},'rest_seconds',parseInt(this.value)||60,${isDayMode})"
+                              class="text-xs font-bold text-center bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 outline-none focus:border-brand-neon">
+                        </div>
+                        <div class="flex flex-col">
+                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">Carga (kg)</span>
+                          <input type="number" value="${ex.target_weight||0}" onchange="app._updateEditorEx(${i},'target_weight',parseFloat(this.value)||0,${isDayMode})"
+                              class="text-xs font-bold text-center bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 outline-none focus:border-brand-neon">
+                        </div>
+                      </div>
+                      <input value="${(ex.notes||'').replace(/"/g,'&quot;')}" placeholder="Obs (opcional)"
+                          onchange="app._updateEditorEx(${i},'notes',this.value,${isDayMode})"
+                          class="mt-2 w-full text-[10px] text-ios-gray bg-transparent border-b border-gray-100 dark:border-gray-800 pb-0.5 outline-none focus:border-brand-neon">
+                    </div>`).join('')}
+                  <button onclick="app._addEditorEx(${isDayMode})"
+                      class="w-full py-2.5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-xs text-ios-gray font-black">
+                      ＋ Exercício
+                  </button>
+                </div>`;
+            },
+
+            // G12: SSOT = _parsedDays para multi-dia, _parsedExercises para flat
+            // _parsedExercises gerado SOMENTE no save (flatMap), nunca durante edição
+            _updateEditorEx(idx, field, value, isDayMode) {
+                if (isDayMode) {
+                    const day = this._parsedDays?.[this._editorTab ?? 0];
+                    if (day?.exercises?.[idx]) day.exercises[idx][field] = value;
+                    // G12: NÃO sincronizar _parsedExercises aqui
+                } else {
+                    if (this._parsedExercises?.[idx]) this._parsedExercises[idx][field] = value;
+                }
+            },
+
+            _removeEditorEx(idx, isDayMode) {
+                if (isDayMode) {
+                    const day = this._parsedDays?.[this._editorTab ?? 0];
+                    if (day?.exercises) day.exercises.splice(idx, 1);
+                    // G12: NÃO sincronizar _parsedExercises aqui
+                } else {
+                    this._parsedExercises?.splice(idx, 1);
+                }
+                this.renderAIExerciseEditor();
+            },
+
+            _addEditorEx(isDayMode) {
+                const blank = { name:'', sets:3, reps:'10-12', rest_seconds:60, target_weight:0, notes:'', video_url:'' };
+                if (isDayMode) {
+                    const day = this._parsedDays?.[this._editorTab ?? 0];
+                    if (day) { if (!day.exercises) day.exercises=[]; day.exercises.push({...blank}); }
+                    // G12: NÃO sincronizar _parsedExercises aqui
+                } else {
+                    if (!this._parsedExercises) this._parsedExercises=[];
+                    this._parsedExercises.push({...blank});
+                }
+                this.renderAIExerciseEditor();
+            },
+
+            _addEditorDay() {
+                if (!this._parsedDays) this._parsedDays=[];
+                const letter = String.fromCharCode(65 + this._parsedDays.length);
+                this._parsedDays.push({ name:`Treino ${letter}`, focus:'', rest_label:'', exercises:[] });
+                this._editorTab = this._parsedDays.length - 1;
+                // G12: NÃO sincronizar _parsedExercises aqui
+                this.renderAIExerciseEditor();
+            },
+            // ── FIM D3-A ──────────────────────────────────────────
+
+            selectProgramType(type) {
+                this._programType = type;
+                const isPersonal = type === 'personalizado';
+                const activeClass = 'flex-1 py-2.5 rounded-xl text-xs font-black transition-all bg-white dark:bg-dark-card shadow-sm text-gray-900 dark:text-white';
+                const inactiveClass = 'flex-1 py-2.5 rounded-xl text-xs font-black transition-all text-ios-gray';
+                const geralBtn = document.getElementById('prog-type-geral');
+                const persBtn = document.getElementById('prog-type-personal');
+                if (geralBtn) geralBtn.className = isPersonal ? inactiveClass : activeClass;
+                if (persBtn) persBtn.className = isPersonal ? activeClass : inactiveClass;
+                document.getElementById('prog-student-field')?.classList.toggle('hidden', !isPersonal);
             },
 
             openCreateProgramModal() {
@@ -6652,6 +8137,17 @@
                 const nameEl = document.getElementById('prog-name');
                 if (nameEl) nameEl.value = '';
                 this.clearAIParse();
+                // Reset editor
+                this._editorTab = 0;
+                // Fix 1C: Reset observations/cardio state (campos removidos do DOM)
+                this._parsedObservations = '';
+                this._parsedCardio = '';
+                // Reset tipo
+                const studField = document.getElementById('prog-student-field');
+                if (studField) studField.classList.add('hidden');
+                const studEmail = document.getElementById('prog-student-email');
+                if (studEmail) studEmail.value = '';
+                this.selectProgramType('geral');
                 // Render category chips
                 const grid = document.getElementById('prog-category-grid');
                 if (grid) {
@@ -6684,14 +8180,46 @@
                 const saveBtn = document.getElementById('prog-save-btn');
                 if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Salvando...'; }
                 try {
+                    const days = this._parsedDays || [];
+                    // G12: _parsedExercises gerado no save (SSOT = _parsedDays para multi-dia)
+                    const exercisesForSave = days.length > 0
+                        ? days.flatMap(d => d.exercises || [])
+                        : (this._parsedExercises || []);
+                    // Fix 1E: IA extrai observations/cardio automaticamente (não mais campos manuais)
+                    const observations = this._parsedObservations || '';
+                    const cardio = this._parsedCardio || '';
                     const res = await fetch('/api/academia/programs', {
                         method: 'POST', headers: AUTH.headers(),
-                        body: JSON.stringify({ name, category: categories.join(','), categories, exercises })
+                        body: JSON.stringify({ name, category: categories.join(','), categories, exercises: exercisesForSave, days, observations, cardio })
                     });
                     const data = await res.json();
                     if (!res.ok) { this.showToast(data.error || 'Erro ao salvar'); return; }
-                    this.showToast(`✅ Protocolo "${name}" criado!`);
                     this.closeCreateProgramModal();
+
+                    // Se plano personalizado e aluno informado → atribuir diretamente
+                    if (this._programType === 'personalizado' && data?.program?.id) {
+                        const studentEmail = (document.getElementById('prog-student-email')?.value || '').trim();
+                        if (studentEmail) {
+                            const assignRes = await fetch('/api/academia/students', {
+                                method: 'POST', headers: AUTH.headers(),
+                                body: JSON.stringify({ student_email: studentEmail, assigned_program_id: data.program.id })
+                            });
+                            const assignData = await assignRes.json();
+                            if (!assignRes.ok) {
+                                this.showToast(`Protocolo salvo! Erro ao atribuir: ${assignData.error || 'Aluno não encontrado'}`);
+                            } else {
+                                this.showToast(`✅ Protocolo criado e atribuído a ${studentEmail}!`);
+                            }
+                        } else {
+                            this.showToast(`✅ Protocolo "${name}" criado!`);
+                        }
+                    } else {
+                        this.showToast(`✅ Protocolo "${name}" criado!`);
+                    }
+                    // Sempre recarrega painel de alunos após salvar (independente do resultado da atribuição)
+                    if (this._programType === 'personalizado') {
+                        await this.loadAcademiaStudents().catch(() => {});
+                    }
                     await this.loadAcademiaPrograms();
                 } catch { this.showToast('Erro de conexão'); }
                 finally { if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Salvar Protocolo'; } }
@@ -6877,20 +8405,49 @@
                     }).join('');
                 }
 
-                // Populate exercises
+                // Fix 5: Populate exercises with all fields (name, sets, reps, rest, weight, notes)
                 const listEl = document.getElementById('edit-prog-exercises-list');
                 if (listEl) {
                     listEl.innerHTML = '';
-                    const exercises = Array.isArray(prog.exercises) ? prog.exercises : [];
+                    // Suporte a structured (days[]) ou flat
+                    let exercises = [];
+                    const raw = prog.exercises;
+                    if (Array.isArray(raw)) exercises = raw;
+                    else if (raw?._structured) {
+                        exercises = (raw.days || []).flatMap(d => d.exercises || []);
+                        if (!exercises.length) exercises = raw.flat || [];
+                    }
                     exercises.forEach((ex, idx) => {
+                        const exName = typeof ex === 'string' ? ex : (ex.name || '');
+                        const exSets = typeof ex === 'object' ? (ex.sets || '') : '';
+                        const exReps = typeof ex === 'object' ? (ex.reps || '') : '';
+                        const exRest = typeof ex === 'object' ? (ex.rest_seconds || '') : '';
+                        const exWeight = typeof ex === 'object' ? (ex.target_weight || '') : '';
+                        const exNotes = typeof ex === 'object' ? ((ex.notes || '').replace(/"/g, '&quot;')) : '';
                         const row = document.createElement('div');
-                        row.className = 'flex gap-2 items-center';
+                        row.className = 'space-y-1.5 bg-gray-50 dark:bg-dark-elevated rounded-2xl p-3 border border-gray-100 dark:border-gray-800';
                         row.innerHTML = `
-                            <input type="text" value="${ex.name || ex}" placeholder="Exercício"
-                                class="flex-1 bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-neon edit-ex-name">
-                            <input type="text" value="${ex.sets || ''}" placeholder="Séries" style="width:64px"
-                                class="bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-neon edit-ex-sets">
-                            <button onclick="this.closest('.flex').remove()" class="text-red-400 text-lg font-bold px-2">×</button>
+                            <div class="flex gap-2 items-center">
+                                <input type="text" value="${exName.replace(/"/g,'&quot;')}" placeholder="Nome do exercício"
+                                    class="flex-1 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-neon edit-ex-name">
+                                <button onclick="this.closest('.space-y-1\\.5').remove()" class="text-red-400 text-lg font-bold px-2 flex-shrink-0">×</button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <div><span class="text-[9px] text-ios-gray font-bold uppercase">Séries</span>
+                                    <input type="number" value="${exSets}" placeholder="3"
+                                        class="w-full mt-0.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-xs font-bold text-center outline-none focus:border-brand-neon edit-ex-sets"></div>
+                                <div><span class="text-[9px] text-ios-gray font-bold uppercase">Reps</span>
+                                    <input value="${exReps}" placeholder="10-12"
+                                        class="w-full mt-0.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-xs font-bold text-center outline-none focus:border-brand-neon edit-ex-reps"></div>
+                                <div><span class="text-[9px] text-ios-gray font-bold uppercase">Descanso (s)</span>
+                                    <input type="number" value="${exRest}" placeholder="60"
+                                        class="w-full mt-0.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-xs font-bold text-center outline-none focus:border-brand-neon edit-ex-rest"></div>
+                                <div><span class="text-[9px] text-ios-gray font-bold uppercase">Carga (kg)</span>
+                                    <input type="number" value="${exWeight}" placeholder="0"
+                                        class="w-full mt-0.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-xs font-bold text-center outline-none focus:border-brand-neon edit-ex-weight"></div>
+                            </div>
+                            <input value="${exNotes}" placeholder="Observações (opcional)"
+                                class="w-full bg-white dark:bg-dark-card border border-gray-100 dark:border-gray-800 rounded-xl px-3 py-1.5 text-xs text-ios-gray outline-none focus:border-brand-neon edit-ex-notes">
                         `;
                         listEl.appendChild(row);
                     });
@@ -6905,13 +8462,29 @@
                 const listEl = document.getElementById('edit-prog-exercises-list');
                 if (!listEl) return;
                 const row = document.createElement('div');
-                row.className = 'flex gap-2 items-center';
+                row.className = 'space-y-1.5 bg-gray-50 dark:bg-dark-elevated rounded-2xl p-3 border border-gray-100 dark:border-gray-800';
                 row.innerHTML = `
-                    <input type="text" placeholder="Exercício"
-                        class="flex-1 bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-neon edit-ex-name">
-                    <input type="text" placeholder="Séries" style="width:64px"
-                        class="bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-neon edit-ex-sets">
-                    <button onclick="this.closest('.flex').remove()" class="text-red-400 text-lg font-bold px-2">×</button>
+                    <div class="flex gap-2 items-center">
+                        <input type="text" placeholder="Nome do exercício"
+                            class="flex-1 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-brand-neon edit-ex-name">
+                        <button onclick="this.closest('.space-y-1\\.5').remove()" class="text-red-400 text-lg font-bold px-2 flex-shrink-0">×</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <div><span class="text-[9px] text-ios-gray font-bold uppercase">Séries</span>
+                            <input type="number" placeholder="3"
+                                class="w-full mt-0.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-xs font-bold text-center outline-none focus:border-brand-neon edit-ex-sets"></div>
+                        <div><span class="text-[9px] text-ios-gray font-bold uppercase">Reps</span>
+                            <input placeholder="10-12"
+                                class="w-full mt-0.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-xs font-bold text-center outline-none focus:border-brand-neon edit-ex-reps"></div>
+                        <div><span class="text-[9px] text-ios-gray font-bold uppercase">Descanso (s)</span>
+                            <input type="number" placeholder="60"
+                                class="w-full mt-0.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-xs font-bold text-center outline-none focus:border-brand-neon edit-ex-rest"></div>
+                        <div><span class="text-[9px] text-ios-gray font-bold uppercase">Carga (kg)</span>
+                            <input type="number" placeholder="0"
+                                class="w-full mt-0.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-xs font-bold text-center outline-none focus:border-brand-neon edit-ex-weight"></div>
+                    </div>
+                    <input placeholder="Observações (opcional)"
+                        class="w-full bg-white dark:bg-dark-card border border-gray-100 dark:border-gray-800 rounded-xl px-3 py-1.5 text-xs text-ios-gray outline-none focus:border-brand-neon edit-ex-notes">
                 `;
                 listEl.appendChild(row);
             },
@@ -6932,12 +8505,21 @@
                 if (categories.length === 0) { this.showToast('Selecione ao menos 1 grupo muscular'); return; }
                 const category = categories.join(',');
 
-                const rows = document.querySelectorAll('#edit-prog-exercises-list .flex');
+                // Fix 5: Ler todos os campos do exercício (nome, séries, reps, descanso, carga, notas)
+                const rows = document.querySelectorAll('#edit-prog-exercises-list .space-y-1\\.5');
                 const exercises = [];
                 rows.forEach(row => {
                     const exName = row.querySelector('.edit-ex-name')?.value?.trim();
-                    const sets = row.querySelector('.edit-ex-sets')?.value?.trim();
-                    if (exName) exercises.push({ name: exName, sets: sets || '' });
+                    if (!exName) return;
+                    exercises.push({
+                        name: exName,
+                        sets: parseInt(row.querySelector('.edit-ex-sets')?.value) || 3,
+                        reps: row.querySelector('.edit-ex-reps')?.value?.trim() || '10-12',
+                        rest_seconds: parseInt(row.querySelector('.edit-ex-rest')?.value) || 60,
+                        target_weight: parseFloat(row.querySelector('.edit-ex-weight')?.value) || 0,
+                        notes: row.querySelector('.edit-ex-notes')?.value?.trim() || '',
+                        video_url: ''
+                    });
                 });
 
                 try {
@@ -7245,7 +8827,9 @@
 
                 const hideAuthScreen = () => {
                     const s = document.getElementById('screen-auth');
-                    if (s) s.classList.add('hidden');
+                    if (s) { s.classList.add('hidden'); s.style.display = 'none'; }
+                    const w = document.getElementById('screen-welcome');
+                    if (w) { w.classList.add('hidden'); w.style.display = 'none'; }
                 };
 
                 try {
@@ -7680,14 +9264,14 @@
             },
 
             updateOnboardingProfile() {
-                // Save phone if provided
                 const phoneEl = document.getElementById('onb-phone');
-                if (phoneEl && phoneEl.value.trim()) {
-                    this.state.userProfile.phone = phoneEl.value.trim();
-                    // Sync phone to server
-                    fetch('/api/profile', { method: 'POST', headers: AUTH.headers(),
-                        body: JSON.stringify({ phone: phoneEl.value.trim() }) }).catch(() => {});
-                }
+                const phone = (phoneEl?.value || '').trim();
+                if (!phone) return this.showToast('Informe seu telefone');
+                this.state.userProfile.phone = phone;
+                this.state.onboarding.data.phone = phone;
+                // Sync phone to server if already logged in
+                fetch('/api/profile', { method: 'POST', headers: AUTH.headers(),
+                    body: JSON.stringify({ phone }) }).catch(() => {});
                 this.nextOnboardingStep();
             },
 
@@ -7762,8 +9346,8 @@
                                 </div>
                                 <!-- Telefone -->
                                 <div class="mt-6">
-                                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 text-center">Telefone (opcional)</label>
-                                    <input type="tel" id="onb-phone" placeholder="(11) 99999-9999"
+                                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 text-center">Telefone</label>
+                                    <input type="tel" id="onb-phone" placeholder="(11) 99999-9999" required
                                         value="${p.phone || ''}"
                                         class="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 focus:border-brand-neon rounded-2xl px-5 py-3.5 font-semibold text-black dark:text-white outline-none transition-all placeholder-gray-400 text-center text-lg tracking-wider">
                                 </div>
@@ -9190,7 +10774,8 @@
                     case 16: // Result
                         // Calculate macros here if not already done
                         const macros = this.calculateOnboardingMacros();
-                        const waterGoal = Math.round(data.weight * 35);
+                        const weightNum = parseFloat(data.weight) || 70;
+                        const waterGoal = Math.round(weightNum * 35);
 
                         content = `
                             <div class="flex-1 flex flex-col px-6 animate-slide-up relative pt-10 h-full overflow-y-auto no-scrollbar">
@@ -9445,10 +11030,16 @@
 
                 // Force navigation to dashboard
                 const screen = document.getElementById('screen-onboarding-flow');
+                // Also ensure auth and welcome are hidden
+                ['screen-auth', 'screen-welcome'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) { el.classList.add('hidden'); el.style.display = 'none'; }
+                });
                 if (screen) {
                     screen.classList.add('opacity-0');
                     setTimeout(() => {
                         screen.classList.add('hidden');
+                        screen.style.display = 'none';
                         screen.classList.remove('opacity-0');
                         this.navigate('dashboard');
                         this.loadUserProfile();
@@ -12877,7 +14468,7 @@ Rules:
                                 </div>
                                 <div class="flex-1 z-10 relative">
                                     <div class="text-sm font-bold truncate">${m.name}</div>
-                                    <div class="text-xs text-ios-gray">${m.macros.cal} kcal</div>
+                                    <div class="text-xs text-ios-gray">${m.macros?.cal ?? m.calories ?? 0} kcal</div>
                                 </div>
                                 <div class="z-10 relative text-brand-neon">
                                     <i data-lucide="chevron-right" class="w-5 h-5"></i>
@@ -12893,7 +14484,7 @@ Rules:
                                 </div>
                                 <div class="flex-1">
                                     <div class="text-sm font-bold truncate">${m.name}</div>
-                                    <div class="text-xs text-ios-gray">${m.macros.cal} kcal</div>
+                                    <div class="text-xs text-ios-gray">${m.macros?.cal ?? m.calories ?? 0} kcal</div>
                                 </div>
                                 <i data-lucide="chevron-right" class="w-5 h-5 text-ios-gray/50 group-hover:text-brand-neon transition-colors"></i>
                             </button>
@@ -13314,8 +14905,16 @@ Rules:
         // Global access
         window.app = app;
 
-        // Initialize 
+        // Initialize
         window.addEventListener('load', () => app.init());
+
+        // H1: Flush ao fechar app/tab (mobile kill + background)
+        window.addEventListener('beforeunload', () => {
+            try { app?._flushWorkoutSave(); } catch {}
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) { try { app?._flushWorkoutSave(); } catch {} }
+        });
 
         // Handle system theme changes 
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
