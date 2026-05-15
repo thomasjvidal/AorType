@@ -753,10 +753,14 @@ app.get('/api/workouts', async (req, res) => {
     console.log(`[workouts] assignedProgram=${assignedProgram?.name || 'none'} subscribed=${subscribedPrograms.length} shop=${freePrograms.length}`);
 
     // Ordem: atribuído → inscritos → shop (sem duplicatas)
+    // Programas inscritos que também são públicos recebem is_shop:true (continuam no shop)
     const result = [];
     if (assignedProgram) result.push(assignedProgram);
     subscribedPrograms.forEach(p => {
-      if (!result.some(r => r.id === p.id)) result.push(p);
+      if (!result.some(r => r.id === p.id)) {
+        const isPublic = freePrograms.some(f => f.id === p.id);
+        result.push({ ...p, is_shop: isPublic ? true : undefined });
+      }
     });
     freePrograms.forEach(p => {
       if (!result.some(r => r.id === p.id)) result.push({ ...p, is_shop: true });
@@ -787,6 +791,25 @@ app.post('/api/workouts/subscribe', async (req, res) => {
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao salvar inscrição' });
+  }
+});
+
+// Desinscrição do aluno de um programa do shop
+app.post('/api/workouts/unsubscribe', async (req, res) => {
+  try {
+    const { program_id } = req.body;
+    if (!program_id) return res.status(400).json({ error: 'program_id obrigatório' });
+
+    const { data: profile } = await supabase
+      .from('profiles').select('onboarding_data').eq('user_id', req.userId).single();
+    const od = profile?.onboarding_data || {};
+    const subs = Array.isArray(od.subscribed_programs) ? od.subscribed_programs : [];
+    od.subscribed_programs = subs.filter(id => id !== program_id);
+
+    await supabase.from('profiles').update({ onboarding_data: od }).eq('user_id', req.userId);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao remover inscrição' });
   }
 });
 

@@ -111,7 +111,36 @@
         }
 
         .pb-safe {
-            padding-bottom: env(safe-area-inset-bottom);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        /* Garante que o nav bar sempre sobe da barra home do iPhone/Android */
+        #nav-bar {
+            padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
+        }
+
+        /* Área de scroll das telas full-screen: folga para barra home */
+        #screen-treino  > .flex-1,
+        #screen-academia > .flex-1,
+        #screen-coach   > .flex-1,
+        #screen-scanner > .flex-1 {
+            padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
+        }
+
+        /* Main content: garante que nada fica escondido atrás do nav */
+        #main-content {
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+        }
+
+        /* Telas normais (dashboard, stats, profile…) não cortam no fundo */
+        #screen-dashboard,
+        #screen-stats,
+        #screen-profile,
+        #screen-streak,
+        #screen-health,
+        #screen-workout,
+        #screen-social {
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
         }
 
         /* Checkbox label active state (Safari fallback — has-[:checked] not supported) */
@@ -333,6 +362,22 @@
             height: 100dvh;
             overflow: hidden;
             position: relative
+        }
+
+        /* Telas e modais fora do #app: confinados a 420px pelo centro, sem mexer em transform */
+        #screen-splash,
+        #screen-welcome,
+        #scanner-menu-modal,
+        #meal-times-modal,
+        #checkin-modal,
+        #water-modal,
+        #food-bank-modal,
+        #supplement-modal,
+        #edit-profile-modal,
+        #recording-overlay,
+        #audio-search-results {
+            left: max(0px, calc(50% - 210px)) !important;
+            right: max(0px, calc(50% - 210px)) !important;
         }
 
         /* Carousel swipe allowed — page-level clipping handled by #app overflow-hidden */
@@ -565,7 +610,7 @@
 
     <!-- SPLASH SCREEN -->
     <div id="screen-splash"
-        class="fixed inset-0 z-[300] bg-black flex items-center justify-center transition-opacity duration-700">
+        class="absolute inset-0 z-[300] bg-black flex items-center justify-center transition-opacity duration-700">
         <div class="flex flex-col items-center relative">
             <div class="relative w-32 h-32 mb-6">
                 <div class="absolute inset-0 bg-brand-neon/20 rounded-full blur-2xl animate-pulse"></div>
@@ -578,7 +623,7 @@
 
     <!-- WELCOME SCREEN -->
     <div id="screen-welcome"
-        class="fixed inset-0 z-[250] bg-[#000000] flex flex-col hidden transition-opacity duration-500 overflow-hidden">
+        class="absolute inset-0 z-[250] bg-[#000000] flex flex-col hidden transition-opacity duration-500 overflow-hidden">
         <!-- Background Waves (SVG) -->
         <div class="absolute top-0 left-0 w-full z-0 opacity-60">
             <svg class="relative block w-full h-[320px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg"
@@ -632,7 +677,7 @@
 
         <!-- AUTH SCREEN (Redesigned: Asymmetric Curved Header) -->
         <div id="screen-auth"
-            class="fixed inset-0 z-[200] bg-white dark:bg-black flex flex-col transition-all duration-500 overflow-hidden">
+            class="absolute inset-0 z-[200] bg-white dark:bg-black flex flex-col transition-all duration-500 overflow-hidden">
 
             <!-- Curved Header -->
             <div id="auth-header"
@@ -647,7 +692,7 @@
 
                 <!-- LOGIN HEADER CONTENT -->
                 <div id="header-login-content"
-                    class="flex flex-col items-center justify-center transition-all duration-500 w-full px-10">
+                    class="flex flex-col items-center justify-center transition-all duration-500 w-full px-6">
                     <!-- Logo -->
                     <div
                         class="relative z-10 w-28 h-28 rounded-3xl flex items-center justify-center mb-6 transform hover:rotate-3 transition-transform duration-500">
@@ -914,7 +959,7 @@
 
         <!-- ONBOARDING FLOW SCREEN -->
         <div id="screen-onboarding-flow"
-            class="fixed inset-0 z-[300] bg-ios-bg dark:bg-dark-bg flex flex-col hidden transition-opacity duration-500">
+            class="absolute inset-0 z-[300] bg-ios-bg dark:bg-dark-bg flex flex-col hidden transition-opacity duration-500">
             <!-- Content injected by JS -->
         </div>
 
@@ -1695,7 +1740,7 @@
 
             <!-- MEAL DETAILS SCREEN -->
             <div id="screen-meal-details"
-                class="screen hidden bg-white dark:bg-dark-bg fixed inset-0 z-[60] flex flex-col">
+                class="screen hidden bg-white dark:bg-dark-bg absolute inset-0 z-[60] flex flex-col">
                 <!-- Scrollable Area -->
                 <div class="flex-1 overflow-y-auto px-5 pt-6 pb-6 space-y-6 no-scrollbar">
                     <!-- Header -->
@@ -1834,7 +1879,7 @@
             </div>
 
             <!-- SCANNER SCREEN -->
-            <div id="screen-scanner" class="screen hidden fixed inset-0 z-[60] bg-black">
+            <div id="screen-scanner" class="screen hidden absolute inset-0 z-[60] bg-black">
                 <img id="gallery-image" class="absolute inset-0 w-full h-full object-cover hidden"
                     crossorigin="anonymous">
                 <video id="camera-feed" class="absolute inset-0 w-full h-full object-cover" autoplay
@@ -1901,7 +1946,7 @@
 
                 <div class="absolute bottom-0 left-0 right-0 p-0 pointer-events-auto">
                     <div id="analysis-panel"
-                        class="fixed inset-0 z-[60] bg-black/95 backdrop-blur-xl p-6 overflow-y-auto hidden flex flex-col">
+                        class="absolute inset-0 z-[60] bg-black/95 backdrop-blur-xl p-6 overflow-y-auto hidden flex flex-col">
                         
                         <div class="w-full max-w-md mx-auto space-y-6">
                             <div class="flex justify-between items-center sticky top-0 bg-black/80 backdrop-blur-md -mx-6 -mt-6 p-6 border-b border-white/10 z-10">
@@ -2048,7 +2093,7 @@
             </div>
 
             <!-- SCREEN: WORKOUT -->
-            <div id="screen-workout" class="screen hidden pb-24 bg-ios-bg dark:bg-dark-bg min-h-screen">
+            <div id="screen-workout" class="screen hidden pb-24 bg-ios-bg dark:bg-dark-bg min-h-full">
                 <header
                     class="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-dark-base/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 pt-safe-3">
                     <div class="flex items-center justify-between px-4 h-14">
@@ -2207,7 +2252,7 @@
                         <div>
                             <span class="text-xs font-bold uppercase tracking-widest opacity-80"
                                 data-translate="health_score">Score de Saúde</span>
-                            <div id="health-page-score" class="text-7xl font-black mt-2">--</div>
+                            <div id="health-page-score" class="text-5xl font-black mt-2">--</div>
                             <div class="flex items-center gap-2 mt-4 bg-white/20 px-3 py-1 rounded-full w-fit">
                                 <i data-lucide="trending-up" class="w-4 h-4"></i>
                                 <span class="text-xs font-bold" data-translate="pts_vs_yesterday">Calculado em tempo real</span>
@@ -2364,7 +2409,7 @@
         <!-- ══════════════════════════════════════════════════════ -->
         <!-- TELA: TREINOS (Aluno) — com vídeos YouTube            -->
         <!-- ══════════════════════════════════════════════════════ -->
-        <div id="screen-treino" class="screen hidden fixed inset-0 z-50 bg-ios-bg dark:bg-dark-bg flex flex-col h-[100dvh]">
+        <div id="screen-treino" class="screen hidden absolute inset-0 z-50 bg-ios-bg dark:bg-dark-bg flex flex-col">
 
             <!-- Header -->
             <header class="flex items-center justify-between px-4 pb-3 pt-safe-3 border-b border-ios-separator/10 dark:border-gray-800 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md sticky top-0 z-10">
@@ -2440,7 +2485,7 @@
                     </div>
 
                     <!-- Energia Ativa -->
-                    <div class="bg-brand-neon/5 border border-brand-neon/20 rounded-2xl px-4 py-3 flex items-center justify-between">
+                    <div id="treino-energy-card" class="hidden bg-brand-neon/5 border border-brand-neon/20 rounded-2xl px-4 py-3 flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <div class="w-8 h-8 rounded-xl bg-brand-hot/10 flex items-center justify-center">
                                 <i data-lucide="flame" class="w-4 h-4 text-brand-hot"></i>
@@ -2462,7 +2507,7 @@
                     </div>
 
                     <!-- Botão finalizar -->
-                    <button onclick="app.finalizarTreino()" class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl text-base shadow-neon mt-4">
+                    <button id="treino-finish-btn" onclick="app.finalizarTreino()" class="hidden w-full bg-brand-neon text-black font-black py-4 rounded-2xl text-base shadow-neon mt-4">
                         Finalizar Treino ✓
                     </button>
 
@@ -2475,7 +2520,7 @@
             </div>
 
             <!-- Modal de vídeo (YouTube embed) -->
-            <div id="treino-video-modal" class="hidden fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+            <div id="treino-video-modal" class="hidden absolute inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
                 <div class="w-full max-w-lg bg-black rounded-3xl overflow-hidden shadow-2xl">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
                         <h3 id="treino-video-title" class="text-white font-bold text-sm"></h3>
@@ -2496,7 +2541,7 @@
         </div>
 
         <!-- MODAL: Histórico de Treinos -->
-        <div id="treino-history-modal" class="hidden fixed inset-0 z-[200]">
+        <div id="treino-history-modal" class="hidden absolute inset-0 z-[200]">
             <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="app.closeTreinoHistory()"></div>
             <div class="absolute bottom-0 left-0 right-0 bg-ios-bg dark:bg-dark-card rounded-t-[32px] p-6 max-h-[80vh] flex flex-col transform transition-transform duration-300 translate-y-full" id="treino-history-content">
                 <div class="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4"></div>
@@ -2515,7 +2560,7 @@
         <!-- ══════════════════════════════════════════════════════ -->
         <!-- PAINEL ACADEMIA                                        -->
         <!-- ══════════════════════════════════════════════════════ -->
-        <div id="screen-academia" class="hidden fixed inset-0 z-[100] bg-ios-bg dark:bg-dark-bg flex flex-col h-[100dvh]">
+        <div id="screen-academia" class="hidden absolute inset-0 z-[100] bg-ios-bg dark:bg-dark-bg flex flex-col">
 
             <!-- Header Academia -->
             <header class="px-5 pb-4 pt-safe-6 mt-6 bg-black text-white flex items-center justify-between">
@@ -2571,7 +2616,7 @@
             </div>
 
             <!-- Modal: Histórico do Aluno -->
-            <div id="modal-student-history" class="hidden fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end">
+            <div id="modal-student-history" class="hidden absolute inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end">
                 <div class="w-full bg-white dark:bg-dark-card rounded-t-3xl animate-slide-up max-h-[85vh] flex flex-col">
                     <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800">
                         <div>
@@ -2593,7 +2638,7 @@
             </div>
 
             <!-- P4: Modal Relatório do Dia (academia) -->
-            <div id="modal-day-report" class="hidden fixed inset-0 bg-black/60 z-[210] flex items-end justify-center">
+            <div id="modal-day-report" class="hidden absolute inset-0 bg-black/60 z-[210] flex items-end justify-center">
                 <div class="bg-white dark:bg-dark-card rounded-t-3xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
                     <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800">
                         <h3 id="day-report-title" class="font-black text-base">Relatório do Dia</h3>
@@ -2604,7 +2649,7 @@
             </div>
 
             <!-- Modal: Adicionar / Configurar Aluno -->
-            <div id="modal-add-student" class="hidden fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end">
+            <div id="modal-add-student" class="hidden absolute inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end">
                 <div class="w-full bg-white dark:bg-dark-card rounded-t-3xl animate-slide-up max-h-[92vh] flex flex-col">
                     <!-- Header -->
                     <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
@@ -2690,7 +2735,7 @@
             </div>
 
             <!-- Modal: Editar Programa -->
-            <div id="modal-edit-program" class="hidden fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end">
+            <div id="modal-edit-program" class="hidden absolute inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end">
                 <div class="w-full bg-white dark:bg-dark-card rounded-t-3xl p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto">
                     <h3 class="text-lg font-black">Editar Programa</h3>
                     <input type="hidden" id="edit-prog-id">
@@ -2720,7 +2765,7 @@
             </div>
 
             <!-- Modal: Criar Programa -->
-            <div id="modal-create-program" class="hidden fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end">
+            <div id="modal-create-program" class="hidden absolute inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end">
                 <div class="w-full bg-white dark:bg-dark-card rounded-t-3xl p-6 space-y-5 animate-slide-up max-h-[92vh] overflow-y-auto">
                     <!-- Header -->
                     <div class="flex items-center justify-between">
@@ -2804,7 +2849,7 @@
             </div>
 
             <!-- Modal: Configurar Treino do Aluno -->
-            <div id="modal-student-workout" class="hidden fixed inset-0 z-[210] bg-black/70 backdrop-blur-sm flex items-end">
+            <div id="modal-student-workout" class="hidden absolute inset-0 z-[210] bg-black/70 backdrop-blur-sm flex items-end">
                 <div class="w-full bg-white dark:bg-dark-card rounded-t-3xl animate-slide-up max-h-[92vh] flex flex-col">
                     <div class="px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
                         <div class="flex items-center justify-between">
@@ -2827,7 +2872,7 @@
 
         <!-- COACH SCREEN -->
         <div id="screen-coach"
-            class="screen hidden fixed inset-0 z-50 bg-ios-bg dark:bg-dark-bg flex flex-col h-[100dvh] animate-fade-in">
+            class="screen hidden absolute inset-0 z-50 bg-ios-bg dark:bg-dark-bg flex flex-col animate-fade-in">
             <!-- Top Bar -->
             <header
                 class="flex items-center justify-between px-4 pb-3 pt-safe-3 md:px-6 border-b border-ios-separator/10 bg-ios-card/80 dark:bg-dark-card/50 backdrop-blur-md sticky top-0 z-10">
@@ -2953,7 +2998,7 @@
 
 
         <!-- BOTTOM NAVIGATION -->
-        <nav id="nav-bar" class="fixed bottom-0 left-0 right-0 z-50 pb-safe">
+        <nav id="nav-bar" class="absolute bottom-0 left-0 right-0 z-50 pb-safe">
             <div class="max-w-md mx-auto px-4 md:px-6 pb-4 pt-2">
                 <div
                     class="glass-panel bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl rounded-full shadow-2xl border border-white/20 dark:border-gray-800 flex justify-between items-center h-14 md:h-16 relative px-1 md:px-2">
@@ -6050,15 +6095,22 @@
                         <div class="space-y-2">
                           ${subscribed.map(p => {
                               const exCount = this._countExercises(p);
-                              return `<button onclick="app.selectTreinoProgram('${p.id}')"
-                                  class="w-full bg-white dark:bg-dark-card rounded-2xl p-4 border border-ios-separator/30 dark:border-gray-800 text-left flex items-center gap-3 active:scale-[.98] transition-all">
-                                  <div class="w-10 h-10 bg-brand-neon/10 rounded-xl flex items-center justify-center text-lg flex-shrink-0">🏅</div>
-                                  <div class="flex-1 min-w-0">
-                                      <h3 class="font-bold text-sm">${p.name}</h3>
-                                      <p class="text-xs text-ios-gray mt-0.5">${exCount} exercício${exCount !== 1 ? 's' : ''}</p>
-                                  </div>
-                                  <i data-lucide="chevron-right" class="w-4 h-4 text-ios-gray flex-shrink-0"></i>
-                              </button>`;
+                              return `<div class="w-full bg-white dark:bg-dark-card rounded-2xl border border-ios-separator/30 dark:border-gray-800 flex items-center gap-3 overflow-hidden">
+                                  <button onclick="app.selectTreinoProgram('${p.id}')"
+                                      class="flex-1 p-4 text-left flex items-center gap-3 active:scale-[.98] transition-all min-w-0">
+                                      <div class="w-10 h-10 bg-brand-neon/10 rounded-xl flex items-center justify-center text-lg flex-shrink-0">🏅</div>
+                                      <div class="flex-1 min-w-0">
+                                          <h3 class="font-bold text-sm">${p.name}</h3>
+                                          <p class="text-xs text-ios-gray mt-0.5">${exCount} exercício${exCount !== 1 ? 's' : ''}</p>
+                                      </div>
+                                      <i data-lucide="chevron-right" class="w-4 h-4 text-ios-gray flex-shrink-0"></i>
+                                  </button>
+                                  <button onclick="app.unsubscribeProgram('${p.id}', event)"
+                                      class="flex-shrink-0 w-10 h-10 mr-3 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-400 active:scale-90 transition-all"
+                                      title="Remover da lista">
+                                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                  </button>
+                              </div>`;
                           }).join('')}
                         </div>`;
                     if (window.lucide) lucide.createIcons();
@@ -6220,7 +6272,7 @@
                 if (!overlay) {
                     overlay = document.createElement('div');
                     overlay.id = 'rest-day-overlay';
-                    overlay.className = 'fixed inset-x-6 top-1/3 bg-white dark:bg-dark-card rounded-3xl shadow-2xl z-50 p-8 text-center border border-ios-separator/20 dark:border-gray-800';
+                    overlay.className = 'fixed inset-x-4 top-1/3 bg-white dark:bg-dark-card rounded-3xl shadow-2xl z-50 p-6 text-center border border-ios-separator/20 dark:border-gray-800';
                     document.body.appendChild(overlay);
                 }
                 const d = new Date(dateStr + 'T12:00:00');
@@ -6292,6 +6344,9 @@
                 }
                 sel.className = 'px-5 pb-4';
                 sel.classList.remove('hidden');
+                // Ocultar "Energia Ativa" e "Finalizar Treino" no seletor de dias
+                document.getElementById('treino-energy-card')?.classList.add('hidden');
+                document.getElementById('treino-finish-btn')?.classList.add('hidden');
                 const dayIcons = ['💪','🏋️','🦵','⚡','🔥','🎯'];
                 // D3-B: box de observações/cardio do programa
                 const progEx = program.exercises;
@@ -6344,11 +6399,13 @@
                     this.state.treinoSetsCompleted = {};
                     this.state.treinoWeights = {};
                 }
-                // Esconde seletor, mostra lista
+                // Esconde seletor, mostra lista e cards de energia/finalizar
                 const sel = document.getElementById('treino-day-selector');
                 if (sel) sel.classList.add('hidden');
                 const listEl = document.getElementById('treino-exercise-list');
                 if (listEl) listEl.classList.remove('hidden');
+                document.getElementById('treino-energy-card')?.classList.remove('hidden');
+                document.getElementById('treino-finish-btn')?.classList.remove('hidden');
                 // Atualiza cabeçalho
                 const subtitle = document.getElementById('treino-subtitle');
                 if (subtitle) subtitle.textContent = `${day.name}${day.focus ? ' · ' + day.focus : ''}`;
@@ -6690,6 +6747,11 @@
 
                 // IMEDIATO: cache local (offline-safe)
                 try { localStorage.setItem(`tp_${performedAt}_${prog.id}`, JSON.stringify(s)); } catch {}
+                // Atualiza cache em memória para que o calendário reflita imediatamente
+                if (this._exerciseHistoryCache) {
+                    if (!this._exerciseHistoryCache[performedAt]) this._exerciseHistoryCache[performedAt] = {};
+                    this._exerciseHistoryCache[performedAt][prog.id] = s;
+                }
                 // DEBOUNCE: sincronizar com servidor
                 this._saveDebounce = setTimeout(async () => {
                     if (!AUTH.getToken()) return;
@@ -6730,7 +6792,33 @@
                 if (this._exerciseHistoryCache) return;
                 try {
                     const res = await fetch('/api/workouts/progress', { headers: AUTH.headers() });
-                    if (res.ok) this._exerciseHistoryCache = await res.json();
+                    const serverHistory = res.ok ? await res.json() : {};
+
+                    // Mesclar localStorage tp_* (saves parciais e finalizados localmente)
+                    const merged = { ...serverHistory };
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (!key || !key.startsWith('tp_')) continue;
+                        // key format: tp_YYYY-MM-DD_programId  (programId pode ser UUID com hífens)
+                        // Extrai: prefixo "tp_", depois "YYYY-MM-DD" (10 chars), depois "_", depois programId
+                        const withoutPrefix = key.slice(3); // remove "tp_"
+                        const dateStr = withoutPrefix.slice(0, 10); // YYYY-MM-DD
+                        const programId = withoutPrefix.slice(11);  // tudo após "YYYY-MM-DD_"
+                        if (!dateStr || !programId) continue;
+                        try {
+                            const session = JSON.parse(localStorage.getItem(key));
+                            if (!session) continue;
+                            // Servidor ganha se tiver _status:'concluido' e local não tiver
+                            const serverSession = merged[dateStr]?.[programId];
+                            if (serverSession?._status === 'concluido' && session._status !== 'concluido') continue;
+                            if (!merged[dateStr]) merged[dateStr] = {};
+                            // Local ganha se mais recente
+                            if (!serverSession || (session._updated_at || 0) >= (serverSession._updated_at || 0)) {
+                                merged[dateStr][programId] = session;
+                            }
+                        } catch {}
+                    }
+                    this._exerciseHistoryCache = merged;
                 } catch {}
             },
 
@@ -6855,6 +6943,10 @@
 
                 document.getElementById('treino-active-desc').textContent = `${exercises.length} exercício${exercises.length !== 1 ? 's' : ''}`;
 
+                // Programa flat (sem dias): mostrar energia e finalizar direto
+                document.getElementById('treino-energy-card')?.classList.remove('hidden');
+                document.getElementById('treino-finish-btn')?.classList.remove('hidden');
+
                 this.renderTreinoExercises(exercises);
                 this.loadTodayProgress(program.id);
                 this.updateTreinoProgress();
@@ -6906,6 +6998,27 @@
                     if (window.lucide) lucide.createIcons();
                 } catch {
                     listEl.innerHTML = `<p class="text-center text-ios-gray text-sm py-8">Erro ao carregar shop</p>`;
+                }
+            },
+
+            async unsubscribeProgram(programId, event) {
+                event?.stopPropagation();
+                if (!confirm('Remover este programa da sua lista?')) return;
+                try {
+                    const res = await fetch('/api/workouts/unsubscribe', {
+                        method: 'POST',
+                        headers: { ...AUTH.headers(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ program_id: programId })
+                    });
+                    if (!res.ok) throw new Error('Erro ao remover');
+                    // Atualiza state local
+                    this.state.workoutPrograms = (this.state.workoutPrograms || []).filter(p => p.id !== programId);
+                    this.showToast('Programa removido da sua lista');
+                    // Recarrega lista e abre shop
+                    this.renderTreinoProgramList(this.state.workoutPrograms);
+                    setTimeout(() => this.openPersonalShop(), 300);
+                } catch {
+                    this.showToast('Erro ao remover programa');
                 }
             },
 
@@ -7010,8 +7123,11 @@
                                     ${p.lastWeight > 0 ? `<span class="text-[9px] text-ios-gray">↑ ${p.lastWeight}kg · melhor: ${p.bestWeight}kg</span>` : ''}
                                     `; })()}
                                 </div>
-                                ${ex.notes ? `<span class="text-[10px] text-ios-gray italic flex-shrink-0 max-w-[80px] text-right leading-tight">${ex.notes}</span>` : ''}
                             </div>
+                            ${ex.notes ? `<div class="mt-2 px-1 flex items-start gap-1.5">
+                                <span class="text-brand-neon text-[11px] mt-0.5 flex-shrink-0">📋</span>
+                                <p class="text-[11px] text-ios-gray leading-relaxed">${ex.notes}</p>
+                            </div>` : ''}
                         </div>
                     `;
                 }).join('');
@@ -7093,10 +7209,10 @@
                 if (!el) {
                     el = document.createElement('div');
                     el.id = 'rest-timer-banner';
-                    el.className = 'fixed inset-x-6 top-1/2 -translate-y-1/2 bg-dark-card border border-brand-neon/30 rounded-3xl shadow-2xl z-50 p-6';
+                    el.className = 'fixed inset-x-4 top-1/2 -translate-y-1/2 bg-dark-card border border-brand-neon/30 rounded-3xl shadow-2xl z-50 p-6';
                     el.innerHTML = `
                         <div class="text-center">
-                            <p class="text-6xl font-black text-brand-neon leading-none" id="rest-timer-val">0s</p>
+                            <p class="text-5xl font-black text-brand-neon leading-none" id="rest-timer-val">0s</p>
                             <p class="text-xs text-ios-gray mt-2 font-semibold">⏱ Descanso restante</p>
                             <button onclick="app._hideRestBanner()" class="mt-4 text-xs text-ios-gray border border-ios-separator dark:border-gray-700 px-6 py-2 rounded-full">
                                 Pular
@@ -9697,7 +9813,7 @@
                                     <!-- Value Display -->
                                     <div class="mb-10 text-center">
                                         <div class="flex items-end justify-center gap-2">
-                                            <span id="height-display" class="text-7xl font-black text-brand-neon tracking-tighter">${(data.unitSystem === 'imperial') ? (() => { const totalIn = Math.round(data.height / 2.54); const ft = Math.floor(totalIn/12); const inch = totalIn%12; return `${ft}'${inch}"`; })() : data.height}</span>
+                                            <span id="height-display" class="text-5xl font-black text-brand-neon tracking-tighter">${(data.unitSystem === 'imperial') ? (() => { const totalIn = Math.round(data.height / 2.54); const ft = Math.floor(totalIn/12); const inch = totalIn%12; return `${ft}'${inch}"`; })() : data.height}</span>
                                             <span id="height-unit-label" class="text-xl font-bold text-gray-400 pb-4">${(data.unitSystem||'metric')==='imperial'?'ft':'cm'}</span>
                                         </div>
                                     </div>
@@ -9750,7 +9866,7 @@
                                     <!-- Value Display -->
                                     <div class="mb-10 text-center">
                                         <div class="flex items-end justify-center gap-2">
-                                            <span id="weight-display" class="text-7xl font-black text-brand-neon tracking-tighter">${(data.unitSystem === 'imperial') ? Math.round(data.weight * 2.20462) : data.weight}</span>
+                                            <span id="weight-display" class="text-5xl font-black text-brand-neon tracking-tighter">${(data.unitSystem === 'imperial') ? Math.round(data.weight * 2.20462) : data.weight}</span>
                                             <span id="weight-unit-label" class="text-xl font-bold text-gray-400 pb-4">${(data.unitSystem||'metric')==='imperial'?'lbs':'kg'}</span>
                                         </div>
                                     </div>
@@ -9822,7 +9938,7 @@
                     const opacity = isActive ? 'opacity-100 blur-0' : 'opacity-40 blur-[1px]';
 
                     html += `
-                        <div class="age-item snap-center shrink-0 w-32 h-32 flex items-center justify-center text-8xl transition-all duration-300 ease-out select-none cursor-pointer ${scale} ${opacity}" 
+                        <div class="age-item snap-center shrink-0 w-24 h-24 flex items-center justify-center text-5xl transition-all duration-300 ease-out select-none cursor-pointer ${scale} ${opacity}" 
                              data-val="${i}" onclick="app.scrollToAge(${i})">
                             ${i}
                         </div>
@@ -10897,7 +11013,7 @@
                             <div class="flex-1 flex flex-col items-center justify-center px-6 text-center animate-fade-in relative h-full bg-white dark:bg-black">
                                 <!-- Background Ambient Glow -->
                                 <div class="absolute inset-0 overflow-hidden pointer-events-none">
-                                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-neon/10 rounded-full blur-[120px] animate-pulse-ring"></div>
+                                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(600px,100vw)] h-[min(600px,100vw)] bg-brand-neon/10 rounded-full blur-[120px] animate-pulse-ring"></div>
                                     <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px]"></div>
                                     <div class="absolute bottom-0 left-0 w-64 h-64 bg-brand-neon/5 rounded-full blur-[80px]"></div>
                                 </div>
@@ -10991,7 +11107,7 @@
                                     <div class="relative text-center">
                                         <span class="text-sm font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Meta Diária</span>
                                         <div class="flex items-baseline justify-center gap-1 mt-2 mb-2">
-                                            <span class="text-7xl font-black tracking-tighter text-gray-900 dark:text-white filter drop-shadow-sm">${macros.calories}</span>
+                                            <span class="text-5xl font-black tracking-tighter text-gray-900 dark:text-white filter drop-shadow-sm">${macros.calories}</span>
                                             <span class="text-xl font-bold text-brand-neon">kcal</span>
                                         </div>
                                         <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-neon/10 border border-brand-neon/20 backdrop-blur-sm">
@@ -12718,7 +12834,7 @@ Rules:
                 // Header Visibility for special screens
                 const header = document.querySelector('header');
                 const nav = document.querySelector('nav');
-                if (['streak', 'health', 'coach', 'treino'].includes(screen)) {
+                if (['streak', 'health', 'coach', 'treino', 'scanner'].includes(screen)) {
                     if (header) header.classList.add('hidden');
                     if (nav) nav.classList.add('hidden');
                     document.getElementById('app').classList.remove('pb-24');
