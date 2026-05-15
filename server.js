@@ -1214,12 +1214,13 @@ REGRAS OBRIGATÓRIAS:
         model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.1,
-        max_tokens: 3000
+        max_tokens: 8000
       })
     });
 
     const aiData = await response.json();
     const raw = aiData.choices?.[0]?.message?.content || '';
+    console.log('[parse-ai] finish_reason:', aiData.choices?.[0]?.finish_reason, '| raw length:', raw.length);
 
     // Extract JSON block from response
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -1228,7 +1229,50 @@ REGRAS OBRIGATÓRIAS:
       return res.status(500).json({ error: 'IA não conseguiu interpretar o treino. Tente reformatar o texto.' });
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    // Tenta reparar JSON truncado por max_tokens
+    let rawJson = jsonMatch[0];
+    let parsed;
+    try {
+      parsed = JSON.parse(rawJson);
+    } catch (parseErr) {
+      console.warn('[parse-ai] JSON truncado, tentando reparar...', parseErr.message);
+      // Fecha arrays e objetos abertos no final do JSON truncado
+      let depth = 0;
+      let inString = false;
+      let escape = false;
+      for (const ch of rawJson) {
+        if (escape) { escape = false; continue; }
+        if (ch === '\\' && inString) { escape = true; continue; }
+        if (ch === '"') { inString = !inString; continue; }
+        if (!inString) {
+          if (ch === '{' || ch === '[') depth++;
+          else if (ch === '}' || ch === ']') depth--;
+        }
+      }
+      // Remove trailing comma/incomplete element before closing
+      let repaired = rawJson.replace(/,\s*$/, '').replace(/,\s*([}\]])/g, '$1');
+      // Fecha estruturas abertas
+      const stack = [];
+      inString = false; escape = false;
+      for (const ch of repaired) {
+        if (escape) { escape = false; continue; }
+        if (ch === '\\' && inString) { escape = true; continue; }
+        if (ch === '"') { inString = !inString; continue; }
+        if (!inString) {
+          if (ch === '{') stack.push('}');
+          else if (ch === '[') stack.push(']');
+          else if (ch === '}' || ch === ']') stack.pop();
+        }
+      }
+      repaired += stack.reverse().join('');
+      try {
+        parsed = JSON.parse(repaired);
+        console.log('[parse-ai] JSON reparado com sucesso');
+      } catch (e2) {
+        console.error('[parse-ai] Falha ao reparar JSON:', e2.message, '| raw snippet:', rawJson.slice(-200));
+        return res.status(500).json({ error: 'Erro ao analisar com IA: JSON inválido. Tente dividir o treino em partes menores.' });
+      }
+    }
     if (!Array.isArray(parsed.exercises) || parsed.exercises.length === 0) {
       return res.status(400).json({ error: 'Nenhum exercício encontrado no texto. Verifique o formato.' });
     }
