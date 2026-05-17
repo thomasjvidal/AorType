@@ -199,6 +199,10 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (!user) return res.status(401).json({ error: 'Credenciais inválidas' });
 
+    if (!user.password_hash) {
+      return res.status(401).json({ error: 'Conta sem senha definida. Use recuperação de senha.' });
+    }
+
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: 'Credenciais inválidas' });
 
@@ -211,8 +215,8 @@ app.post('/api/auth/login', async (req, res) => {
     // Never send avatar_url in login response — can be a huge base64 blob; use GET /api/profile
     res.json({ token, userId: user.id, email: user.email, name: user.name, username: user.username, userType: user.user_type });
   } catch (e) {
-    console.error('Login error:', e);
-    res.status(500).json({ error: 'Erro ao autenticar' });
+    console.error('[login] unexpected error:', e.message || e);
+    res.status(500).json({ error: 'Erro interno. Tente novamente.' });
   }
 });
 
@@ -513,10 +517,11 @@ app.post('/api/meals', async (req, res) => {
     const carbs    = body.carbs    ?? macros.c  ?? macros.carbs    ?? 0;
     const fat      = body.fat      ?? macros.f  ?? macros.fat      ?? 0;
 
-    // Truncate base64 image to avoid DB size limits (store URL or null for large images)
+    // Salva imagem base64 até 500KB — acima disso descarta para evitar estourar o DB
+    // (canvas captura em 640x640 JPEG 0.65 ≈ 80-130KB → bem abaixo do limite)
     let image_url = body.image_url || body.image || null;
-    if (image_url && image_url.startsWith('data:') && image_url.length > 200000) {
-      image_url = null; // Skip saving huge base64 blobs
+    if (image_url && image_url.startsWith('data:') && image_url.length > 500000) {
+      image_url = null;
     }
 
     if (id) {
