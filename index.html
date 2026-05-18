@@ -64,6 +64,39 @@
     </script>
 
     <style>
+        /* ── Skeleton loading ── */
+        @keyframes skeleton-shimmer {
+          0%   { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        .sk {
+          background: linear-gradient(90deg,
+            var(--sk-base, rgba(150,150,150,0.12)) 25%,
+            var(--sk-shine, rgba(150,150,150,0.22)) 50%,
+            var(--sk-base, rgba(150,150,150,0.12)) 75%);
+          background-size: 200% 100%;
+          animation: skeleton-shimmer 1.4s ease-in-out infinite;
+          border-radius: 10px;
+        }
+        .dark .sk {
+          --sk-base: rgba(255,255,255,0.07);
+          --sk-shine: rgba(255,255,255,0.13);
+        }
+        .skeleton-screen {
+          position: absolute;
+          inset: 0;
+          z-index: 10;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          background-color: #f2f2f7;
+          pointer-events: none;
+          transition: opacity 0.25s ease;
+        }
+        .dark .skeleton-screen { background-color: #1c1c1e; }
+        .skeleton-screen.hidden { display: none; }
+
         html {
             font-size: 75%;
             /* Scales down UI for mobile */
@@ -221,29 +254,6 @@
 
         .animate-fade-in {
             animation: fadeIn 0.3s ease;
-        }
-
-        /* ── Skeleton loaders ─────────────────────────────── */
-        @keyframes shimmer {
-            0%   { background-position: -400px 0; }
-            100% { background-position:  400px 0; }
-        }
-        .skeleton {
-            border-radius: 0.75rem;
-            background: linear-gradient(90deg,
-                rgba(0,0,0,0.06) 25%,
-                rgba(0,0,0,0.10) 37%,
-                rgba(0,0,0,0.06) 63%);
-            background-size: 400px 100%;
-            animation: shimmer 1.4s ease infinite;
-        }
-        .dark .skeleton {
-            background: linear-gradient(90deg,
-                rgba(255,255,255,0.04) 25%,
-                rgba(255,255,255,0.08) 37%,
-                rgba(255,255,255,0.04) 63%);
-            background-size: 400px 100%;
-            animation: shimmer 1.4s ease infinite;
         }
 
         .animate-pulse-ring {
@@ -1049,6 +1059,28 @@
 
             <!-- DASHBOARD SCREEN -->
             <div id="screen-dashboard" class="screen space-y-6 animate-fade-in">
+                <!-- skeleton-dashboard -->
+                <div class="skeleton-screen hidden" id="sk-dashboard">
+                  <!-- streak/score row -->
+                  <div class="flex gap-3">
+                    <div class="sk flex-1 h-20 rounded-2xl"></div>
+                    <div class="sk flex-1 h-20 rounded-2xl"></div>
+                    <div class="sk flex-1 h-20 rounded-2xl"></div>
+                  </div>
+                  <!-- today card -->
+                  <div class="sk h-36 rounded-2xl"></div>
+                  <!-- macros row -->
+                  <div class="flex gap-3">
+                    <div class="sk flex-1 h-16 rounded-2xl"></div>
+                    <div class="sk flex-1 h-16 rounded-2xl"></div>
+                    <div class="sk flex-1 h-16 rounded-2xl"></div>
+                  </div>
+                  <!-- recent meals -->
+                  <div class="sk h-5 w-32 rounded-full"></div>
+                  <div class="sk h-16 rounded-2xl"></div>
+                  <div class="sk h-16 rounded-2xl"></div>
+                  <div class="sk h-16 rounded-2xl"></div>
+                </div>
 
                 <!-- Top Stats: Streak & Health Score -->
                 <div
@@ -1492,6 +1524,16 @@
 
             <!-- STATS SCREEN -->
             <div id="screen-stats" class="screen hidden px-5 pt-6 space-y-6">
+                <div class="skeleton-screen hidden" id="sk-stats">
+                  <div class="sk h-7 w-28 rounded-full"></div>
+                  <div class="sk h-40 rounded-2xl"></div>
+                  <div class="flex gap-3">
+                    <div class="sk flex-1 h-24 rounded-2xl"></div>
+                    <div class="sk flex-1 h-24 rounded-2xl"></div>
+                  </div>
+                  <div class="sk h-32 rounded-2xl"></div>
+                  <div class="sk h-24 rounded-2xl"></div>
+                </div>
                 <h2 class="text-3xl font-black mb-4" data-translate="your_progress">Seu Progresso</h2>
 
                 <!-- Missão do Dia — dados reais via JS -->
@@ -1641,6 +1683,17 @@
 
             <!-- PROFILE SCREEN -->
             <div id="screen-profile" class="screen hidden px-5 pt-6 space-y-6">
+                <div class="skeleton-screen hidden" id="sk-profile">
+                  <div class="flex flex-col items-center gap-3 py-4">
+                    <div class="sk w-24 h-24 rounded-full"></div>
+                    <div class="sk h-5 w-32 rounded-full"></div>
+                    <div class="sk h-4 w-20 rounded-full"></div>
+                  </div>
+                  <div class="sk h-14 rounded-2xl"></div>
+                  <div class="sk h-14 rounded-2xl"></div>
+                  <div class="sk h-14 rounded-2xl"></div>
+                  <div class="sk h-14 rounded-2xl"></div>
+                </div>
                 <!-- Profile content retained -->
                 <div class="text-center">
                     <div
@@ -2300,6 +2353,22 @@
             <!-- HEALTH (SAÚDE) SCREEN -->
             <div id="screen-health"
                 class="screen hidden flex-1 bg-ios-bg dark:bg-dark-bg ios-scroll px-5 py-8 space-y-8">
+                <div class="skeleton-screen hidden" id="sk-health">
+                  <!-- score ring placeholder -->
+                  <div class="flex justify-center py-4">
+                    <div class="sk w-40 h-40 rounded-full"></div>
+                  </div>
+                  <!-- body diagram placeholder -->
+                  <div class="sk h-56 rounded-2xl"></div>
+                  <!-- 2x2 cards -->
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="sk h-20 rounded-2xl"></div>
+                    <div class="sk h-20 rounded-2xl"></div>
+                    <div class="sk h-20 rounded-2xl"></div>
+                    <div class="sk h-20 rounded-2xl"></div>
+                  </div>
+                  <div class="sk h-28 rounded-2xl"></div>
+                </div>
                 <header class="flex items-center gap-4">
                     <button onclick="app.navigate('dashboard')"
                         class="w-10 h-10 bg-gray-100 dark:bg-dark-elevated rounded-full flex items-center justify-center">
@@ -2509,7 +2578,14 @@
         <!-- ══════════════════════════════════════════════════════ -->
         <!-- TELA: SOCIAL — Comunidade e Ranking                  -->
         <!-- ══════════════════════════════════════════════════════ -->
-        <main id="screen-social" class="screen hidden flex-1 bg-ios-bg dark:bg-dark-bg ios-scroll pb-24">
+        <main id="screen-social" class="screen hidden flex-1 bg-ios-bg dark:bg-dark-bg ios-scroll pb-24 relative">
+            <div class="skeleton-screen hidden" id="sk-social">
+              <div class="sk h-32 rounded-2xl"></div>
+              <div class="sk h-5 w-24 rounded-full"></div>
+              <div class="sk h-24 rounded-2xl"></div>
+              <div class="sk h-24 rounded-2xl"></div>
+              <div class="sk h-24 rounded-2xl"></div>
+            </div>
             <header class="sticky top-0 z-10 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md border-b border-ios-separator/10 dark:border-gray-800 px-5 py-4">
                 <div class="flex items-center justify-between">
                     <h1 class="text-2xl font-black text-black dark:text-white">Comunidade</h1>
@@ -2602,6 +2678,21 @@
         <!-- TELA: TREINOS (Aluno) — com vídeos YouTube            -->
         <!-- ══════════════════════════════════════════════════════ -->
         <div id="screen-treino" class="screen hidden absolute inset-0 z-50 bg-ios-bg dark:bg-dark-bg flex flex-col">
+
+            <!-- Skeleton treino -->
+            <div class="skeleton-screen hidden" id="sk-treino">
+              <div class="flex items-center gap-3 pt-4">
+                <div class="sk w-10 h-10 rounded-full flex-shrink-0"></div>
+                <div class="sk h-6 flex-1 rounded-xl"></div>
+                <div class="sk w-10 h-10 rounded-full flex-shrink-0"></div>
+              </div>
+              <div class="sk h-24 rounded-2xl mt-2"></div>
+              <div class="sk h-5 w-32 rounded-full"></div>
+              <div class="sk h-20 rounded-2xl"></div>
+              <div class="sk h-20 rounded-2xl"></div>
+              <div class="sk h-20 rounded-2xl"></div>
+              <div class="sk h-20 rounded-2xl"></div>
+            </div>
 
             <!-- Header -->
             <header class="flex items-center justify-between px-4 pb-3 pt-safe-3 border-b border-ios-separator/10 dark:border-gray-800 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md sticky top-0 z-10">
@@ -3065,6 +3156,15 @@
         <!-- COACH SCREEN -->
         <div id="screen-coach"
             class="screen hidden absolute inset-0 z-50 bg-ios-bg dark:bg-dark-bg flex flex-col animate-fade-in">
+            <div class="skeleton-screen hidden" id="sk-coach">
+              <!-- chat bubbles -->
+              <div class="flex flex-col gap-3 p-5 pt-20">
+                <div class="flex justify-start"><div class="sk h-14 w-3/4 rounded-2xl rounded-tl-none"></div></div>
+                <div class="flex justify-end"><div class="sk h-10 w-1/2 rounded-2xl rounded-tr-none"></div></div>
+                <div class="flex justify-start"><div class="sk h-16 w-2/3 rounded-2xl rounded-tl-none"></div></div>
+                <div class="flex justify-end"><div class="sk h-10 w-1/2 rounded-2xl rounded-tr-none"></div></div>
+              </div>
+            </div>
             <!-- Top Bar -->
             <header
                 class="flex items-center justify-between px-4 pb-3 pt-safe-3 md:px-6 border-b border-ios-separator/10 bg-ios-card/80 dark:bg-dark-card/50 backdrop-blur-md sticky top-0 z-10">
@@ -4267,22 +4367,6 @@
                 'all_items_added': 'Todos os itens adicionados',
                 'try_again': 'Tente novamente',
                 'student_not_found': 'Aluno não encontrado',
-                'streak_msg_1': '🔥 {n} dias seguidos! Você está pegando fogo!',
-                'streak_msg_2': '🔥 {n} dias na ofensiva! Continue assim!',
-                'streak_msg_3': '⚡ Incrível! {n} dias consecutivos!',
-                'streak_first_day': '✅ Primeiro registro do dia! Ofensiva iniciada 🔥',
-                'toast_camera_retry': '📸 Escolha outra foto ou tente a câmera novamente',
-                'ex_sets': 'Séries',
-                'ex_reps': 'Reps',
-                'ex_rest': 'Descanso (s)',
-                'ex_weight': 'Carga (kg)',
-                'ex_interval': 'Intervalo',
-                'ex_weight_kg': 'Peso(kg)',
-                'ex_name_ph': 'Nome do exercício',
-                'ex_notes_ph': 'Obs (opcional)',
-                'ex_video_ph': 'URL do vídeo YouTube (opcional)',
-                'ex_select_ph': 'Selecionar exercício…',
-                'ex_add_btn': '＋ Exercício',
             },
             'en': {
                 'language': 'Language',
@@ -4872,22 +4956,6 @@
                 'all_items_added': 'All items added',
                 'try_again': 'Try again',
                 'student_not_found': 'Student not found',
-                'streak_msg_1': '🔥 {n} days in a row! You\'re on fire!',
-                'streak_msg_2': '🔥 {n} days on a streak! Keep it up!',
-                'streak_msg_3': '⚡ Amazing! {n} consecutive days!',
-                'streak_first_day': '✅ First log of the day! Streak started 🔥',
-                'toast_camera_retry': '📸 Choose another photo or try the camera again',
-                'ex_sets': 'Sets',
-                'ex_reps': 'Reps',
-                'ex_rest': 'Rest (s)',
-                'ex_weight': 'Weight (kg)',
-                'ex_interval': 'Interval',
-                'ex_weight_kg': 'Weight(kg)',
-                'ex_name_ph': 'Exercise name',
-                'ex_notes_ph': 'Notes (optional)',
-                'ex_video_ph': 'YouTube video URL (optional)',
-                'ex_select_ph': 'Select exercise…',
-                'ex_add_btn': '＋ Exercise',
             },
             'zh': {
                 'language': '语言',
@@ -5462,22 +5530,6 @@
                 'all_items_added': '所有项目已添加',
                 'try_again': '请重试',
                 'student_not_found': '未找到学员',
-                'streak_msg_1': '🔥 连续{n}天！你超棒的！',
-                'streak_msg_2': '🔥 {n}天连胜！继续保持！',
-                'streak_msg_3': '⚡ 惊人！连续{n}天！',
-                'streak_first_day': '✅ 今天第一次记录！连胜开始 🔥',
-                'toast_camera_retry': '📸 选择其他照片或再次尝试相机',
-                'ex_sets': '组数',
-                'ex_reps': '次数',
-                'ex_rest': '休息(秒)',
-                'ex_weight': '重量(kg)',
-                'ex_interval': '间隔',
-                'ex_weight_kg': '重量(kg)',
-                'ex_name_ph': '练习名称',
-                'ex_notes_ph': '备注（可选）',
-                'ex_video_ph': 'YouTube视频链接（可选）',
-                'ex_select_ph': '选择练习…',
-                'ex_add_btn': '＋ 添加练习',
             },
             'es': {
                 'language': 'Idioma',
@@ -6035,22 +6087,6 @@
                 'all_items_added': 'Todos los ítems añadidos',
                 'try_again': 'Intenta de nuevo',
                 'student_not_found': 'Alumno no encontrado',
-                'streak_msg_1': '🔥 ¡{n} días seguidos! ¡Estás en llamas!',
-                'streak_msg_2': '🔥 ¡{n} días en racha! ¡Sigue así!',
-                'streak_msg_3': '⚡ ¡Increíble! ¡{n} días consecutivos!',
-                'streak_first_day': '✅ ¡Primer registro del día! ¡Racha iniciada! 🔥',
-                'toast_camera_retry': '📸 Elige otra foto o intenta con la cámara de nuevo',
-                'ex_sets': 'Series',
-                'ex_reps': 'Reps',
-                'ex_rest': 'Descanso (s)',
-                'ex_weight': 'Carga (kg)',
-                'ex_interval': 'Intervalo',
-                'ex_weight_kg': 'Peso(kg)',
-                'ex_name_ph': 'Nombre del ejercicio',
-                'ex_notes_ph': 'Obs (opcional)',
-                'ex_video_ph': 'URL del vídeo YouTube (opcional)',
-                'ex_select_ph': 'Seleccionar ejercicio…',
-                'ex_add_btn': '＋ Ejercicio',
             }
         };
 
@@ -6347,7 +6383,7 @@
                 document.querySelectorAll('[data-translate]').forEach(el => {
                     const key = el.getAttribute('data-translate');
                     if (t[key]) {
-                        if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el.hasAttribute('placeholder')) {
+                        if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el.placeholder !== undefined) {
                             el.placeholder = t[key];
                         } else {
                             el.innerText = t[key];
@@ -6990,7 +7026,8 @@
                         });
                         this.state.dailyCheckins = { ...this.state.dailyCheckins, ...normalized };
                         console.log('Checkins loaded:', Object.keys(normalized).length);
-                        this.updateHealthScore(); // recalcular após check-ins carregados da API
+                        this.calculateStreak();   // recalcular ofensiva com todos os check-ins do servidor
+                        this.updateHealthScore(); // recalcular score após check-ins carregados da API
                     }
                 } catch (e) {
                     console.error('Failed to load Checkins:', e);
@@ -7046,20 +7083,27 @@
                         splash.classList.add('opacity-0', 'pointer-events-none');
                         setTimeout(() => {
                             splash.classList.add('hidden');
-                        }, 700); // Wait for transition
+                            // Mostra skeleton do dashboard imediatamente após o splash sumir
+                            // O skeleton fica até os dados do servidor chegarem (ver hideSplashSkeleton)
+                            if (this.state.isLoggedIn) {
+                                const sk = document.getElementById('sk-dashboard');
+                                if (sk) sk.classList.remove('hidden');
+                                this._splashSkeletonActive = true;
+                            }
+                        }, 700);
                     }
                 }, 2500);
 
                 // Restaura tema salvo do usuário — localStorage tem prioridade sobre preferência do sistema
                 const savedTheme = (() => { try { return localStorage.getItem('wb_theme'); } catch(e) { return null; } })();
                 if (savedTheme === 'dark') {
-                    this.toggleTheme(true);
+                    this.toggleTheme(true, false);    // aplica dark, não salva (já está salvo)
                 } else if (savedTheme === 'light') {
-                    this.toggleTheme(false);
+                    this.toggleTheme(false, false);   // aplica light, não salva
                 } else {
-                    // Sem preferência salva: usa o sistema como padrão
+                    // Sem preferência salva: usa o sistema como padrão e salva
                     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    this.toggleTheme(prefersDark);
+                    this.toggleTheme(prefersDark, true);
                 }
 
                 this.loadUserName();
@@ -7105,6 +7149,14 @@
                 setInterval(() => this.updateTime(), 60000);
                 lucide.createIcons();
                 this.renderExercises(this.state.currentWorkoutId);
+
+                // Mostra streak do cache localStorage imediatamente (sem esperar servidor)
+                const cachedStreak = parseInt(localStorage.getItem('wb_streak') || '0');
+                if (cachedStreak > 0) {
+                    this.state.userProfile.streak = cachedStreak;
+                    const el = document.getElementById('dash-streak-value');
+                    if (el) el.textContent = `${cachedStreak} ${this.t('days')}`;
+                }
 
                 // Initialize Stats & Real Data
                 this.calculateStreak();
@@ -7937,9 +7989,6 @@
                     });
                     monthlyEl.textContent = mSet.size > 0 ? `${calcRawScore(mSet)}` : '—';
                 }
-
-                // Hide skeleton after render
-                requestAnimationFrame(() => this.hideSkeleton('health'));
             },
 
             updateDailyMission() {
@@ -8006,8 +8055,6 @@
                     this.renderTreinoProgramList(programs);
                 } catch {
                     listEl.innerHTML = '<div class="text-center py-12 text-red-400"><p class="text-sm">Erro ao carregar treinos</p></div>';
-                } finally {
-                    this.hideSkeleton('treino');
                 }
             },
 
@@ -10332,7 +10379,7 @@
                   ${exercises.map((ex, i) => `
                     <div class="bg-white dark:bg-dark-card rounded-2xl p-3 border border-gray-100 dark:border-gray-800">
                       <div class="flex items-center gap-2 mb-2">
-                        <input value="${(ex.name||'').replace(/"/g,'&quot;')}" placeholder="${this.t('ex_name_ph')}"
+                        <input value="${(ex.name||'').replace(/"/g,'&quot;')}" placeholder="Nome do exercício"
                             onchange="app._updateEditorEx(${i},'name',this.value,${isDayMode})"
                             class="flex-1 text-xs font-semibold bg-transparent border-b border-gray-200 dark:border-gray-700 pb-1 outline-none focus:border-brand-neon">
                         <button onclick="app._removeEditorEx(${i},${isDayMode})"
@@ -10340,33 +10387,33 @@
                       </div>
                       <div class="grid grid-cols-2 gap-1.5">
                         <div class="flex flex-col">
-                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">${this.t('ex_sets')}</span>
+                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">Séries</span>
                           <input type="number" value="${ex.sets||3}" onchange="app._updateEditorEx(${i},'sets',parseInt(this.value)||3,${isDayMode})"
                               class="text-xs font-bold text-center bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 outline-none focus:border-brand-neon">
                         </div>
                         <div class="flex flex-col">
-                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">${this.t('ex_reps')}</span>
+                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">Reps</span>
                           <input value="${ex.reps||'10-12'}" onchange="app._updateEditorEx(${i},'reps',this.value,${isDayMode})"
                               class="text-xs font-bold text-center bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 outline-none focus:border-brand-neon">
                         </div>
                         <div class="flex flex-col">
-                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">${this.t('ex_rest')}</span>
+                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">Descanso (s)</span>
                           <input type="number" value="${ex.rest_seconds||60}" onchange="app._updateEditorEx(${i},'rest_seconds',parseInt(this.value)||60,${isDayMode})"
                               class="text-xs font-bold text-center bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 outline-none focus:border-brand-neon">
                         </div>
                         <div class="flex flex-col">
-                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">${this.t('ex_weight')}</span>
+                          <span class="text-[9px] text-ios-gray font-bold uppercase mb-0.5">Carga (kg)</span>
                           <input type="number" value="${ex.target_weight||0}" onchange="app._updateEditorEx(${i},'target_weight',parseFloat(this.value)||0,${isDayMode})"
                               class="text-xs font-bold text-center bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 outline-none focus:border-brand-neon">
                         </div>
                       </div>
-                      <input value="${(ex.notes||'').replace(/"/g,'&quot;')}" placeholder="${this.t('ex_notes_ph')}"
+                      <input value="${(ex.notes||'').replace(/"/g,'&quot;')}" placeholder="Obs (opcional)"
                           onchange="app._updateEditorEx(${i},'notes',this.value,${isDayMode})"
                           class="mt-2 w-full text-[10px] text-ios-gray bg-transparent border-b border-gray-100 dark:border-gray-800 pb-0.5 outline-none focus:border-brand-neon">
                     </div>`).join('')}
                   <button onclick="app._addEditorEx(${isDayMode})"
                       class="w-full py-2.5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-xs text-ios-gray font-black">
-                      ${this.t('ex_add_btn')}
+                      ＋ Exercício
                   </button>
                 </div>`;
             },
@@ -10597,29 +10644,29 @@
                     <div class="bg-gray-50 dark:bg-dark-elevated rounded-2xl p-3 space-y-2 ex-row" data-cat="${cat}">
                         <div class="flex items-center gap-2">
                             <select class="ex-name flex-1 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-semibold outline-none focus:border-brand-neon">
-                                <option value="">${this.t('ex_select_ph')}</option>${opts}
+                                <option value="">Selecionar exercício…</option>${opts}
                             </select>
                             <button onclick="this.closest('.ex-row').remove()" class="w-8 h-8 bg-red-50 dark:bg-red-900/20 rounded-xl text-red-400 flex-shrink-0 flex items-center justify-center font-bold">✕</button>
                         </div>
                         <div class="grid grid-cols-4 gap-1.5">
                             <div class="flex flex-col gap-1">
-                                <span class="text-[9px] font-bold text-ios-gray uppercase text-center">${this.t('ex_sets')}</span>
+                                <span class="text-[9px] font-bold text-ios-gray uppercase text-center">Séries</span>
                                 <input type="number" value="${savedEx?.sets || 3}" class="ex-sets w-full bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-sm text-center outline-none focus:border-brand-neon">
                             </div>
                             <div class="flex flex-col gap-1">
-                                <span class="text-[9px] font-bold text-ios-gray uppercase text-center">${this.t('ex_reps')}</span>
+                                <span class="text-[9px] font-bold text-ios-gray uppercase text-center">Reps</span>
                                 <input type="text" value="${savedEx?.reps || '12'}" class="ex-reps w-full bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-sm text-center outline-none focus:border-brand-neon">
                             </div>
                             <div class="flex flex-col gap-1">
-                                <span class="text-[9px] font-bold text-ios-gray uppercase text-center">${this.t('ex_interval')}</span>
+                                <span class="text-[9px] font-bold text-ios-gray uppercase text-center">Intervalo</span>
                                 <input type="text" value="${savedEx?.rest || '60s'}" class="ex-rest w-full bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-sm text-center outline-none focus:border-brand-neon" placeholder="60s">
                             </div>
                             <div class="flex flex-col gap-1">
-                                <span class="text-[9px] font-bold text-ios-gray uppercase text-center">${this.t('ex_weight_kg')}</span>
+                                <span class="text-[9px] font-bold text-ios-gray uppercase text-center">Peso(kg)</span>
                                 <input type="number" value="${savedEx?.weight || ''}" class="ex-weight w-full bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-sm text-center outline-none focus:border-brand-neon" placeholder="0">
                             </div>
                         </div>
-                        <input type="url" value="${savedEx?.video_url || ''}" placeholder="${this.t('ex_video_ph')}" class="ex-video w-full bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand-neon">
+                        <input type="url" value="${savedEx?.video_url || ''}" placeholder="URL do vídeo YouTube (opcional)" class="ex-video w-full bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand-neon">
                     </div>`;
             },
 
@@ -10892,6 +10939,14 @@
                             this.updateDashboardTotals();
                             this.renderTodayMeals();
                             this.renderRecents();
+                            this.calculateStreak();
+                            this.updateHealthScore();
+                            // Esconde skeleton do splash agora que os dados reais chegaram
+                            if (this._splashSkeletonActive) {
+                                this._splashSkeletonActive = false;
+                                const sk = document.getElementById('sk-dashboard');
+                                if (sk) sk.classList.add('hidden');
+                            }
                         }).catch(() => {});
                 }
 
@@ -11248,6 +11303,10 @@
                     } else {
                         try {
                             this.navigate('dashboard');
+                            // Mantém skeleton ativo até dados do servidor chegarem
+                            this._splashSkeletonActive = true;
+                            const skLogin = document.getElementById('sk-dashboard');
+                            if (skLogin) skLogin.classList.remove('hidden');
                             // Pull fresh server data (foods, workouts, meals) + full profile
                             this.loadRemoteData();
                             this.loadUserProfile();
@@ -11395,6 +11454,10 @@
                             authScreen.classList.add('hidden');
                             this.showToast(this.t('welcome_app'));
                             this.navigate('dashboard');
+                            // Skeleton ativo até dados chegarem
+                            this._splashSkeletonActive = true;
+                            const skSocial = document.getElementById('sk-dashboard');
+                            if (skSocial) skSocial.classList.remove('hidden');
                         }, 500);
                     }
                 } catch (e) {
@@ -13649,7 +13712,7 @@
                 }
             },
 
-            toggleTheme(forceDark = null) {
+            toggleTheme(forceDark = null, save = true) {
                 const html = document.documentElement;
                 if (forceDark === true || (forceDark === null && !this.state.darkMode)) {
                     html.classList.add('dark');
@@ -13658,8 +13721,11 @@
                     html.classList.remove('dark');
                     this.state.darkMode = false;
                 }
-                // Persiste preferência do usuário — sobrevive a refresh e saída do app
-                try { localStorage.setItem('wb_theme', this.state.darkMode ? 'dark' : 'light'); } catch(e) {}
+                // Persiste preferência apenas quando o usuário clica (save=true)
+                // Durante o init, save=false para não sobrescrever preferência salva
+                if (save) {
+                    try { localStorage.setItem('wb_theme', this.state.darkMode ? 'dark' : 'light'); } catch(e) {}
+                }
                 // Recreate icons for color change
                 setTimeout(() => lucide.createIcons(), 100);
             },
@@ -14502,85 +14568,133 @@ Instruções:
                 const p = this.state.userProfile || {};
                 const t = this.state.totals || { calories: 0, protein: 0, water: 0, carbs: 0, fat: 0 };
                 const g = this.state.goals || {};
-                // Use real calculated goals; fall back to goal-type estimates only if not set
-                const goalCal = g.calories || (p.goal === 'gain' ? 2500 : (p.goal === 'lose' ? 1800 : 2000));
-                const goalProt = g.protein || (p.goal === 'gain' ? 160 : (p.goal === 'lose' ? 140 : 120));
-                const goalCarbs = g.carbs || 200;
-                const goalFat = g.fat || 60;
-                const goalWater = Math.round((parseFloat(p.weight) || 70) * 35);
+                const goalCal  = g.calories || (p.goal === 'gain' ? 2500 : (p.goal === 'lose' ? 1800 : 2000));
+                const goalProt = g.protein  || (p.goal === 'gain' ? 160  : (p.goal === 'lose' ? 140  : 120));
+                const goalCarbs = g.carbs   || 200;
+                const goalFat   = g.fat     || 60;
+                const goalWater = (this.state.goals && this.state.goals.water) || Math.round((parseFloat(p.weight) || 70) * 35);
+                const goalSleep = (this.state.goals && this.state.goals.sleep) || 7;
 
-                // Streak
-                const streak = parseInt(localStorage.getItem('wb_streak') || '0');
+                // Streak e check-ins
+                const streak   = this.state.userProfile?.streak || parseInt(localStorage.getItem('wb_streak') || '0');
+                const checkins = this.state.dailyCheckins || {};
+                const todayPt  = new Date().toLocaleDateString('pt-BR');
+                const todayIso = new Date().toISOString().split('T')[0];
+                const ciToday  = checkins[todayPt] || checkins[todayIso] || {};
 
-                // 7 Days Consistency
-                const log = JSON.parse(localStorage.getItem('wb_activity_log') || '{}');
-                let consistencyScore = 0;
-                const days = [];
+                // 7 dias de atividade real (check-ins + refeições)
+                const mealHistory = this.state.mealHistory || {};
+                const week7 = [];
+                let activeDays7 = 0;
                 for (let i = 0; i < 7; i++) {
                     const d = new Date(); d.setDate(d.getDate() - i);
-                    const k = d.toLocaleDateString('pt-BR');
-                    if (log[k] > 0) consistencyScore++;
-                    days.push({ date: k, count: log[k] || 0 });
+                    const dPt  = d.toLocaleDateString('pt-BR');
+                    const dIso = d.toISOString().split('T')[0];
+                    const ci   = checkins[dPt] || checkins[dIso] || {};
+                    const meals = mealHistory[dPt] || mealHistory[dIso] || [];
+                    const hasActivity = Object.keys(ci).length > 0 || meals.length > 0 || (i === 0 && (this.state.mealsToday||[]).length > 0);
+                    if (hasActivity) activeDays7++;
+                    const dayMeals = i === 0 ? (this.state.mealsToday || []) : meals;
+                    const dayCals  = dayMeals.reduce((s, m) => s + (m.macros?.cal || m.calories || 0), 0);
+                    const dayProt  = dayMeals.reduce((s, m) => s + (m.macros?.p   || m.protein  || 0), 0);
+                    week7.push({
+                        date: dPt,
+                        active: hasActivity,
+                        meals: dayMeals.length,
+                        calories: Math.round(dayCals),
+                        protein: Math.round(dayProt),
+                        sleep: ci.sleep_hours || (ci.sleep ? ci.sleep / 60 : 0) || 0,
+                        mood: ci.mood || null,
+                        workout: !!(ci.workout || ci.workout_type),
+                        water_ml: ci.water_ml || 0
+                    });
                 }
-                const consistencyPct = Math.round((consistencyScore / 7) * 100);
+                const consistencyPct = Math.round((activeDays7 / 7) * 100);
 
-                // Meal Window (Simple time based)
-                const hour = new Date().getHours();
-                let windowName = this.t('meal_cafe');
-                if (hour >= 11 && hour < 15) windowName = this.t('meal_lunch');
-                else if (hour >= 15 && hour < 18) windowName = this.t('meal_snack');
-                else if (hour >= 18) windowName = this.t('meal_dinner');
+                // Refeições de hoje (detalhadas)
+                const todayMeals = (this.state.mealsToday || []).map(m => ({
+                    name: m.name,
+                    cal: Math.round(m.macros?.cal || m.calories || 0),
+                    p:   Math.round(m.macros?.p   || m.protein  || 0),
+                    c:   Math.round(m.macros?.c   || m.carbs    || 0),
+                    f:   Math.round(m.macros?.f   || m.fat      || 0),
+                    time: m.time || ''
+                }));
 
-                // Real favorites from meal history (most frequent items)
-                const recentMeals = JSON.parse(localStorage.getItem('wb_meals_recent') || '[]');
+                // Favoritos (alimentos mais frequentes)
+                const allMealsFlat = [
+                    ...(this.state.mealsToday || []),
+                    ...Object.values(mealHistory).flat()
+                ];
                 const freqMap = {};
-                recentMeals.forEach(m => {
-                    if (m.ingredients && Array.isArray(m.ingredients)) {
-                        m.ingredients.forEach(ing => {
-                            const n = ing.name || m.name;
-                            freqMap[n] = (freqMap[n] || 0) + 1;
-                        });
-                    } else if (m.name) {
-                        freqMap[m.name] = (freqMap[m.name] || 0) + 1;
-                    }
+                allMealsFlat.forEach(m => {
+                    const n = m.name; if (n) freqMap[n] = (freqMap[n] || 0) + 1;
+                    (m.ingredients || []).forEach(ing => { if (ing.name) freqMap[ing.name] = (freqMap[ing.name] || 0) + 1; });
                 });
-                const favorites = Object.entries(freqMap)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 6)
-                    .map(e => e[0]);
-                if (favorites.length === 0) favorites.push('Frango Grelhado', 'Arroz Integral', 'Ovos Mexidos');
+                const favorites = Object.entries(freqMap).sort((a, b) => b[1] - a[1]).slice(0, 8).map(e => e[0]);
+                if (favorites.length === 0) favorites.push('Frango Grelhado', 'Arroz Integral', 'Ovos');
 
-                // Real health score from consistency + macro adherence
-                const calPct = goalCal > 0 ? Math.min(1, t.calories / goalCal) : 0;
-                const protPct = goalProt > 0 ? Math.min(1, t.protein / goalProt) : 0;
-                const healthScore = Math.round(
-                    consistencyPct * 0.4 + calPct * 30 + protPct * 30
-                );
+                // IMC
+                const bmiH = parseFloat(p.height) || 0;
+                const bmiW = parseFloat(p.weight)  || 0;
+                const bmi  = bmiH > 0 ? Math.round((bmiW / ((bmiH/100) ** 2)) * 10) / 10 : null;
+
+                // Janela de refeição
+                const hour = new Date().getHours();
+                let windowName = 'Café da manhã';
+                if (hour >= 11 && hour < 15) windowName = 'Almoço';
+                else if (hour >= 15 && hour < 18) windowName = 'Lanche';
+                else if (hour >= 18) windowName = 'Jantar';
+
+                // Health score real
+                const healthScore = this.state.userProfile?.lastHealthScore || Math.max(80, Math.round(
+                    (ciToday.sleep_hours >= goalSleep ? 20 : 0) +
+                    (t.protein >= goalProt * 0.8 ? 15 : 0) +
+                    (t.calories >= goalCals * 0.5 ? 10 : 0) +
+                    (t.water >= goalWater ? 10 : 0) +
+                    (ciToday.mood ? 10 : 0) + 80
+                ));
 
                 return {
-                    user: (this.state.userName || 'Atleta').split(' ')[0],
+                    user: (this.state.userName || p.name || 'Atleta').split(' ')[0],
                     profile: {
                         goal: p.goal || 'maintain',
-                        weight: p.weight,
-                        height: p.height,
-                        age: p.age,
-                        activity: p.activityLevel || 'moderate'
+                        goalLabel: p.goal === 'gain' ? 'Ganho muscular' : p.goal === 'lose' ? 'Emagrecimento' : 'Manutenção',
+                        weight: bmiW || null,
+                        height: bmiH || null,
+                        age: p.age || null,
+                        bmi: bmi,
+                        activity: p.activityLevel || 'moderate',
+                        gender: p.gender || null
+                    },
+                    today: {
+                        meals: todayMeals,
+                        totalMeals: todayMeals.length,
+                        sleep_hours: ciToday.sleep_hours || (ciToday.sleep ? ciToday.sleep/60 : 0) || 0,
+                        mood: ciToday.mood || null,
+                        workout_done: !!(ciToday.workout || ciToday.workout_type),
+                        workout_type: ciToday.workout_type || null,
+                        water_ml: ciToday.water_ml || t.water || 0,
+                        note: ciToday.note || null
                     },
                     metrics: {
-                        calories: { current: Math.round(t.calories), target: goalCal, remaining: Math.max(0, goalCal - t.calories) },
-                        protein: { current: Math.round(t.protein), target: goalProt, remaining: Math.max(0, goalProt - t.protein) },
-                        carbs: { current: Math.round(t.carbs), target: goalCarbs, remaining: Math.max(0, goalCarbs - t.carbs) },
-                        fat: { current: Math.round(t.fat), target: goalFat, remaining: Math.max(0, goalFat - t.fat) },
-                        water: { current: t.water || 0, target: goalWater, remaining: Math.max(0, goalWater - (t.water || 0)) }
+                        calories: { current: Math.round(t.calories), target: goalCal,   remaining: Math.max(0, goalCal   - t.calories), pct: Math.round(t.calories  / goalCal   * 100) },
+                        protein:  { current: Math.round(t.protein),  target: goalProt,  remaining: Math.max(0, goalProt  - t.protein),  pct: Math.round(t.protein   / goalProt  * 100) },
+                        carbs:    { current: Math.round(t.carbs),    target: goalCarbs, remaining: Math.max(0, goalCarbs - t.carbs),    pct: Math.round(t.carbs     / goalCarbs * 100) },
+                        fat:      { current: Math.round(t.fat),      target: goalFat,   remaining: Math.max(0, goalFat   - t.fat),      pct: Math.round(t.fat       / goalFat   * 100) },
+                        water:    { current: t.water || 0,           target: goalWater, remaining: Math.max(0, goalWater - (t.water||0)), pct: Math.round((t.water||0) / goalWater * 100) },
+                        sleep:    { today: ciToday.sleep_hours || 0, target: goalSleep }
                     },
                     status: {
                         streak: streak,
                         consistency7d: consistencyPct,
+                        activeDaysThisWeek: activeDays7,
                         currentWindow: windowName,
-                        healthScore: healthScore
+                        healthScore: healthScore,
+                        hour: hour
                     },
-                    favorites: favorites,
-                    history: days
+                    week: week7,
+                    favorites: favorites
                 };
             },
 
@@ -14833,80 +14947,6 @@ Rules:
                 }
             },
 
-            // ── Skeleton Loaders ─────────────────────────────────────────
-            _skeletonTemplates: {
-                dashboard: () => `<div class="px-5 pt-4 space-y-4 pointer-events-none">
-                    <div class="skeleton h-28 w-full"></div>
-                    <div class="skeleton h-48 w-full"></div>
-                    <div class="skeleton h-12 w-2/3"></div>
-                    <div class="space-y-3">
-                        <div class="skeleton h-20 w-full"></div>
-                        <div class="skeleton h-20 w-full"></div>
-                        <div class="skeleton h-20 w-full"></div>
-                    </div></div>`,
-                stats: () => `<div class="px-5 pt-4 space-y-4 pointer-events-none">
-                    <div class="skeleton h-10 w-1/2"></div>
-                    <div class="skeleton h-36 w-full"></div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="skeleton h-24"></div><div class="skeleton h-24"></div>
-                        <div class="skeleton h-24"></div><div class="skeleton h-24"></div>
-                    </div>
-                    <div class="skeleton h-32 w-full"></div></div>`,
-                treino: () => `<div class="px-4 pt-16 space-y-4 pointer-events-none">
-                    <div class="skeleton h-12 w-full"></div>
-                    <div class="skeleton h-28 w-full"></div>
-                    <div class="skeleton h-10 w-1/3"></div>
-                    <div class="space-y-3">
-                        <div class="skeleton h-24 w-full"></div>
-                        <div class="skeleton h-24 w-full"></div>
-                        <div class="skeleton h-24 w-full"></div>
-                    </div></div>`,
-                health: () => `<div class="px-5 pt-4 space-y-4 pointer-events-none">
-                    <div class="skeleton h-32 w-full"></div>
-                    <div class="skeleton h-10 w-1/2"></div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="skeleton h-24"></div><div class="skeleton h-24"></div>
-                        <div class="skeleton h-24"></div><div class="skeleton h-24"></div>
-                    </div>
-                    <div class="skeleton h-40 w-full"></div></div>`,
-                coach: () => `<div class="px-4 pt-4 space-y-4 pointer-events-none">
-                    <div class="flex gap-3">
-                        <div class="skeleton w-9 h-9 rounded-full shrink-0"></div>
-                        <div class="skeleton h-20 flex-1"></div>
-                    </div>
-                    <div class="flex justify-end">
-                        <div class="skeleton h-12 w-2/3"></div>
-                    </div>
-                    <div class="flex gap-3">
-                        <div class="skeleton w-9 h-9 rounded-full shrink-0"></div>
-                        <div class="skeleton h-16 flex-1"></div>
-                    </div></div>`,
-            },
-
-            showSkeleton(screen) {
-                const fn = this._skeletonTemplates[screen];
-                if (!fn) return;
-                const target = document.getElementById(`screen-${screen}`);
-                if (!target) return;
-                target.querySelector('#tab-skeleton')?.remove();
-                const wrap = document.createElement('div');
-                wrap.id = 'tab-skeleton';
-                wrap.className = 'absolute inset-x-0 top-0 z-10 bg-ios-bg dark:bg-dark-bg pt-1';
-                wrap.innerHTML = fn();
-                target.style.position = 'relative';
-                target.appendChild(wrap);
-            },
-
-            hideSkeleton(screen) {
-                const target = document.getElementById(`screen-${screen}`);
-                if (!target) return;
-                const sk = target.querySelector('#tab-skeleton');
-                if (!sk) return;
-                sk.style.transition = 'opacity 0.25s';
-                sk.style.opacity = '0';
-                setTimeout(() => sk.remove(), 260);
-            },
-
             navigate(screen) {
                 console.log('Navigating to:', screen);
                 const prev = this.state.currentScreen;
@@ -14937,17 +14977,42 @@ Rules:
                     if (editBtn) editBtn.classList.add('hidden');
                 }
 
-                // Hide all screens 
+                // Hide all screens
                 document.querySelectorAll('.screen').forEach(s => {
                     s.classList.add('hidden');
                     s.classList.remove('animate-fade-in');
                 });
 
-                // Show target 
+                // Hide all skeleton screens
+                document.querySelectorAll('.skeleton-screen').forEach(sk => sk.classList.add('hidden'));
+
+                // Telas "externas" vivem fora de #main-content — esconder o container
+                // para não dividir o flex-1 e estragar o layout
+                const mainContent = document.getElementById('main-content');
+                const outerScreens = ['social', 'coach', 'treino', 'academia'];
+                if (mainContent) {
+                    if (outerScreens.includes(screen)) {
+                        mainContent.classList.add('hidden');
+                    } else {
+                        mainContent.classList.remove('hidden');
+                    }
+                }
+
+                // Show target
                 const target = document.getElementById(`screen-${screen}`);
                 if (target) {
                     target.classList.remove('hidden');
                     target.classList.add('animate-fade-in');
+                }
+
+                // Show skeleton briefly for data-heavy screens
+                const skScreens = ['dashboard', 'stats', 'health', 'social', 'profile', 'coach', 'treino'];
+                if (skScreens.includes(screen)) {
+                    const skEl = document.getElementById(`sk-${screen}`);
+                    if (skEl) {
+                        skEl.classList.remove('hidden');
+                        setTimeout(() => { skEl.classList.add('hidden'); }, 380);
+                    }
                 }
 
                 // Header Visibility for special screens
@@ -14965,11 +15030,6 @@ Rules:
 
                 this.state.currentScreen = screen;
 
-                // Show skeleton while tab loads
-                if (['dashboard','stats','treino','health','coach'].includes(screen)) {
-                    this.showSkeleton(screen);
-                }
-
                 if (prev === 'scanner' && screen !== 'scanner') {
                     this.stopCamera();
                 }
@@ -14977,27 +15037,28 @@ Rules:
                     this.renderTodayMeals();
                     this.renderRecents();
                     this.updateDashboardTotals();
-                    // dashboard is sync — hide skeleton after a brief paint delay
-                    requestAnimationFrame(() => this.hideSkeleton('dashboard'));
                 }
                 if (screen === 'treino') {
-                    this.loadTreinoScreen(); // hides skeleton inside via finally block
+                    this.loadTreinoScreen();
                 }
                 if (screen === 'health') {
-                    this.updateHealthScore(); // hides skeleton at end
-                }
-                if (screen === 'stats') {
-                    setTimeout(() => this.hideSkeleton('stats'), 350);
+                    this.updateHealthScore();
                 }
                 if (screen === 'coach') {
                     this.loadCoachState();
                     setTimeout(() => {
-                        this.hideSkeleton('coach');
                         if (this.state.coach.messages.length === 0) {
                             this.renderCoachMessage('assistant', this.t('coach_welcome'));
                             this.renderCoachOptions();
+                        } else {
+                            // Append options even if history exists, if the last message was assistant?
+                            // User said "sempre que ele responder". 
+                            // If history exists, we probably don't need to append again unless user asks.
+                            // But maybe nice to have options at the bottom anyway.
+                            // Let's stick to user request: "sempre que ele responder" (done in simulateAIResponse)
+                            // "toda vez que eu sair do chat zere ele" -> means history will be empty anyway.
                         }
-                    }, 200);
+                    }, 150);
                 }
                 if (screen === 'scanner') {
                     // Reset scanner state
@@ -16597,13 +16658,13 @@ Rules:
                     if (newStreak >= 2 && newStreak > prevStreak) {
                         // Streak cresceu!
                         const msgs = [
-                            this.t('streak_msg_1').replace('{n}', newStreak),
-                            this.t('streak_msg_2').replace('{n}', newStreak),
-                            this.t('streak_msg_3').replace('{n}', newStreak),
+                            `🔥 ${newStreak} dias seguidos! Você está pegando fogo!`,
+                            `🔥 ${newStreak} dias na ofensiva! Continue assim!`,
+                            `⚡ Incrível! ${newStreak} dias consecutivos!`
                         ];
                         this.showToast(msgs[newStreak % msgs.length], 4000);
                     } else if (newStreak === 1) {
-                        this.showToast(this.t('streak_first_day'), 3500);
+                        this.showToast('✅ Primeiro registro do dia! Ofensiva iniciada 🔥', 3500);
                     } else {
                         this.showToast(this.t('meal_registered'), 2500);
                     }
@@ -16738,7 +16799,7 @@ Rules:
                 // Remove temp meal pendente
                 this.state.recentMeals = this.state.recentMeals.filter(m => !m.pendingResult && !m.isAnalyzing);
                 this.renderRecents();
-                this.showToast(this.t('toast_camera_retry'));
+                this.showToast('📸 Escolha outra foto ou tente a câmera novamente');
             },
 
             captureMeal(event) {
@@ -16821,10 +16882,10 @@ Rules:
                     if (m.type === 'water') {
                         this.state.totals.water += (m.amount || m.grams || 0);
                     } else {
-                        this.state.totals.calories += (m.macros?.cal || 0);
-                        this.state.totals.protein  += (m.macros?.p   || 0);
-                        this.state.totals.carbs    += (m.macros?.c   || 0);
-                        this.state.totals.fat      += (m.macros?.f   || 0);
+                        this.state.totals.calories += (m.macros?.cal || m.calories || 0);
+                        this.state.totals.protein  += (m.macros?.p   || m.protein  || 0);
+                        this.state.totals.carbs    += (m.macros?.c   || m.carbs    || 0);
+                        this.state.totals.fat      += (m.macros?.f   || m.fat      || 0);
                     }
                 });
                 // Update water card
