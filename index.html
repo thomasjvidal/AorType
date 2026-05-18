@@ -90,10 +90,11 @@
           display: flex;
           flex-direction: column;
           gap: 14px;
-          background: inherit;
+          background-color: #f2f2f7;
           pointer-events: none;
           transition: opacity 0.25s ease;
         }
+        .dark .skeleton-screen { background-color: #1c1c1e; }
         .skeleton-screen.hidden { display: none; }
 
         html {
@@ -2577,7 +2578,7 @@
         <!-- ══════════════════════════════════════════════════════ -->
         <!-- TELA: SOCIAL — Comunidade e Ranking                  -->
         <!-- ══════════════════════════════════════════════════════ -->
-        <main id="screen-social" class="screen hidden flex-1 bg-ios-bg dark:bg-dark-bg ios-scroll pb-24">
+        <main id="screen-social" class="screen hidden flex-1 bg-ios-bg dark:bg-dark-bg ios-scroll pb-24 relative">
             <div class="skeleton-screen hidden" id="sk-social">
               <div class="sk h-32 rounded-2xl"></div>
               <div class="sk h-5 w-24 rounded-full"></div>
@@ -2677,6 +2678,21 @@
         <!-- TELA: TREINOS (Aluno) — com vídeos YouTube            -->
         <!-- ══════════════════════════════════════════════════════ -->
         <div id="screen-treino" class="screen hidden absolute inset-0 z-50 bg-ios-bg dark:bg-dark-bg flex flex-col">
+
+            <!-- Skeleton treino -->
+            <div class="skeleton-screen hidden" id="sk-treino">
+              <div class="flex items-center gap-3 pt-4">
+                <div class="sk w-10 h-10 rounded-full flex-shrink-0"></div>
+                <div class="sk h-6 flex-1 rounded-xl"></div>
+                <div class="sk w-10 h-10 rounded-full flex-shrink-0"></div>
+              </div>
+              <div class="sk h-24 rounded-2xl mt-2"></div>
+              <div class="sk h-5 w-32 rounded-full"></div>
+              <div class="sk h-20 rounded-2xl"></div>
+              <div class="sk h-20 rounded-2xl"></div>
+              <div class="sk h-20 rounded-2xl"></div>
+              <div class="sk h-20 rounded-2xl"></div>
+            </div>
 
             <!-- Header -->
             <header class="flex items-center justify-between px-4 pb-3 pt-safe-3 border-b border-ios-separator/10 dark:border-gray-800 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md sticky top-0 z-10">
@@ -7010,7 +7026,8 @@
                         });
                         this.state.dailyCheckins = { ...this.state.dailyCheckins, ...normalized };
                         console.log('Checkins loaded:', Object.keys(normalized).length);
-                        this.updateHealthScore(); // recalcular após check-ins carregados da API
+                        this.calculateStreak();   // recalcular ofensiva com todos os check-ins do servidor
+                        this.updateHealthScore(); // recalcular score após check-ins carregados da API
                     }
                 } catch (e) {
                     console.error('Failed to load Checkins:', e);
@@ -7066,20 +7083,27 @@
                         splash.classList.add('opacity-0', 'pointer-events-none');
                         setTimeout(() => {
                             splash.classList.add('hidden');
-                        }, 700); // Wait for transition
+                            // Mostra skeleton do dashboard imediatamente após o splash sumir
+                            // O skeleton fica até os dados do servidor chegarem (ver hideSplashSkeleton)
+                            if (this.state.isLoggedIn) {
+                                const sk = document.getElementById('sk-dashboard');
+                                if (sk) sk.classList.remove('hidden');
+                                this._splashSkeletonActive = true;
+                            }
+                        }, 700);
                     }
                 }, 2500);
 
                 // Restaura tema salvo do usuário — localStorage tem prioridade sobre preferência do sistema
                 const savedTheme = (() => { try { return localStorage.getItem('wb_theme'); } catch(e) { return null; } })();
                 if (savedTheme === 'dark') {
-                    this.toggleTheme(true);
+                    this.toggleTheme(true, false);    // aplica dark, não salva (já está salvo)
                 } else if (savedTheme === 'light') {
-                    this.toggleTheme(false);
+                    this.toggleTheme(false, false);   // aplica light, não salva
                 } else {
-                    // Sem preferência salva: usa o sistema como padrão
+                    // Sem preferência salva: usa o sistema como padrão e salva
                     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    this.toggleTheme(prefersDark);
+                    this.toggleTheme(prefersDark, true);
                 }
 
                 this.loadUserName();
@@ -7125,6 +7149,14 @@
                 setInterval(() => this.updateTime(), 60000);
                 lucide.createIcons();
                 this.renderExercises(this.state.currentWorkoutId);
+
+                // Mostra streak do cache localStorage imediatamente (sem esperar servidor)
+                const cachedStreak = parseInt(localStorage.getItem('wb_streak') || '0');
+                if (cachedStreak > 0) {
+                    this.state.userProfile.streak = cachedStreak;
+                    const el = document.getElementById('dash-streak-value');
+                    if (el) el.textContent = `${cachedStreak} ${this.t('days')}`;
+                }
 
                 // Initialize Stats & Real Data
                 this.calculateStreak();
@@ -10907,6 +10939,14 @@
                             this.updateDashboardTotals();
                             this.renderTodayMeals();
                             this.renderRecents();
+                            this.calculateStreak();
+                            this.updateHealthScore();
+                            // Esconde skeleton do splash agora que os dados reais chegaram
+                            if (this._splashSkeletonActive) {
+                                this._splashSkeletonActive = false;
+                                const sk = document.getElementById('sk-dashboard');
+                                if (sk) sk.classList.add('hidden');
+                            }
                         }).catch(() => {});
                 }
 
@@ -11263,6 +11303,10 @@
                     } else {
                         try {
                             this.navigate('dashboard');
+                            // Mantém skeleton ativo até dados do servidor chegarem
+                            this._splashSkeletonActive = true;
+                            const skLogin = document.getElementById('sk-dashboard');
+                            if (skLogin) skLogin.classList.remove('hidden');
                             // Pull fresh server data (foods, workouts, meals) + full profile
                             this.loadRemoteData();
                             this.loadUserProfile();
@@ -11410,6 +11454,10 @@
                             authScreen.classList.add('hidden');
                             this.showToast(this.t('welcome_app'));
                             this.navigate('dashboard');
+                            // Skeleton ativo até dados chegarem
+                            this._splashSkeletonActive = true;
+                            const skSocial = document.getElementById('sk-dashboard');
+                            if (skSocial) skSocial.classList.remove('hidden');
                         }, 500);
                     }
                 } catch (e) {
@@ -13664,7 +13712,7 @@
                 }
             },
 
-            toggleTheme(forceDark = null) {
+            toggleTheme(forceDark = null, save = true) {
                 const html = document.documentElement;
                 if (forceDark === true || (forceDark === null && !this.state.darkMode)) {
                     html.classList.add('dark');
@@ -13673,8 +13721,11 @@
                     html.classList.remove('dark');
                     this.state.darkMode = false;
                 }
-                // Persiste preferência do usuário — sobrevive a refresh e saída do app
-                try { localStorage.setItem('wb_theme', this.state.darkMode ? 'dark' : 'light'); } catch(e) {}
+                // Persiste preferência apenas quando o usuário clica (save=true)
+                // Durante o init, save=false para não sobrescrever preferência salva
+                if (save) {
+                    try { localStorage.setItem('wb_theme', this.state.darkMode ? 'dark' : 'light'); } catch(e) {}
+                }
                 // Recreate icons for color change
                 setTimeout(() => lucide.createIcons(), 100);
             },
@@ -14517,85 +14568,133 @@ Instruções:
                 const p = this.state.userProfile || {};
                 const t = this.state.totals || { calories: 0, protein: 0, water: 0, carbs: 0, fat: 0 };
                 const g = this.state.goals || {};
-                // Use real calculated goals; fall back to goal-type estimates only if not set
-                const goalCal = g.calories || (p.goal === 'gain' ? 2500 : (p.goal === 'lose' ? 1800 : 2000));
-                const goalProt = g.protein || (p.goal === 'gain' ? 160 : (p.goal === 'lose' ? 140 : 120));
-                const goalCarbs = g.carbs || 200;
-                const goalFat = g.fat || 60;
-                const goalWater = Math.round((parseFloat(p.weight) || 70) * 35);
+                const goalCal  = g.calories || (p.goal === 'gain' ? 2500 : (p.goal === 'lose' ? 1800 : 2000));
+                const goalProt = g.protein  || (p.goal === 'gain' ? 160  : (p.goal === 'lose' ? 140  : 120));
+                const goalCarbs = g.carbs   || 200;
+                const goalFat   = g.fat     || 60;
+                const goalWater = (this.state.goals && this.state.goals.water) || Math.round((parseFloat(p.weight) || 70) * 35);
+                const goalSleep = (this.state.goals && this.state.goals.sleep) || 7;
 
-                // Streak
-                const streak = parseInt(localStorage.getItem('wb_streak') || '0');
+                // Streak e check-ins
+                const streak   = this.state.userProfile?.streak || parseInt(localStorage.getItem('wb_streak') || '0');
+                const checkins = this.state.dailyCheckins || {};
+                const todayPt  = new Date().toLocaleDateString('pt-BR');
+                const todayIso = new Date().toISOString().split('T')[0];
+                const ciToday  = checkins[todayPt] || checkins[todayIso] || {};
 
-                // 7 Days Consistency
-                const log = JSON.parse(localStorage.getItem('wb_activity_log') || '{}');
-                let consistencyScore = 0;
-                const days = [];
+                // 7 dias de atividade real (check-ins + refeições)
+                const mealHistory = this.state.mealHistory || {};
+                const week7 = [];
+                let activeDays7 = 0;
                 for (let i = 0; i < 7; i++) {
                     const d = new Date(); d.setDate(d.getDate() - i);
-                    const k = d.toLocaleDateString('pt-BR');
-                    if (log[k] > 0) consistencyScore++;
-                    days.push({ date: k, count: log[k] || 0 });
+                    const dPt  = d.toLocaleDateString('pt-BR');
+                    const dIso = d.toISOString().split('T')[0];
+                    const ci   = checkins[dPt] || checkins[dIso] || {};
+                    const meals = mealHistory[dPt] || mealHistory[dIso] || [];
+                    const hasActivity = Object.keys(ci).length > 0 || meals.length > 0 || (i === 0 && (this.state.mealsToday||[]).length > 0);
+                    if (hasActivity) activeDays7++;
+                    const dayMeals = i === 0 ? (this.state.mealsToday || []) : meals;
+                    const dayCals  = dayMeals.reduce((s, m) => s + (m.macros?.cal || m.calories || 0), 0);
+                    const dayProt  = dayMeals.reduce((s, m) => s + (m.macros?.p   || m.protein  || 0), 0);
+                    week7.push({
+                        date: dPt,
+                        active: hasActivity,
+                        meals: dayMeals.length,
+                        calories: Math.round(dayCals),
+                        protein: Math.round(dayProt),
+                        sleep: ci.sleep_hours || (ci.sleep ? ci.sleep / 60 : 0) || 0,
+                        mood: ci.mood || null,
+                        workout: !!(ci.workout || ci.workout_type),
+                        water_ml: ci.water_ml || 0
+                    });
                 }
-                const consistencyPct = Math.round((consistencyScore / 7) * 100);
+                const consistencyPct = Math.round((activeDays7 / 7) * 100);
 
-                // Meal Window (Simple time based)
-                const hour = new Date().getHours();
-                let windowName = this.t('meal_cafe');
-                if (hour >= 11 && hour < 15) windowName = this.t('meal_lunch');
-                else if (hour >= 15 && hour < 18) windowName = this.t('meal_snack');
-                else if (hour >= 18) windowName = this.t('meal_dinner');
+                // Refeições de hoje (detalhadas)
+                const todayMeals = (this.state.mealsToday || []).map(m => ({
+                    name: m.name,
+                    cal: Math.round(m.macros?.cal || m.calories || 0),
+                    p:   Math.round(m.macros?.p   || m.protein  || 0),
+                    c:   Math.round(m.macros?.c   || m.carbs    || 0),
+                    f:   Math.round(m.macros?.f   || m.fat      || 0),
+                    time: m.time || ''
+                }));
 
-                // Real favorites from meal history (most frequent items)
-                const recentMeals = JSON.parse(localStorage.getItem('wb_meals_recent') || '[]');
+                // Favoritos (alimentos mais frequentes)
+                const allMealsFlat = [
+                    ...(this.state.mealsToday || []),
+                    ...Object.values(mealHistory).flat()
+                ];
                 const freqMap = {};
-                recentMeals.forEach(m => {
-                    if (m.ingredients && Array.isArray(m.ingredients)) {
-                        m.ingredients.forEach(ing => {
-                            const n = ing.name || m.name;
-                            freqMap[n] = (freqMap[n] || 0) + 1;
-                        });
-                    } else if (m.name) {
-                        freqMap[m.name] = (freqMap[m.name] || 0) + 1;
-                    }
+                allMealsFlat.forEach(m => {
+                    const n = m.name; if (n) freqMap[n] = (freqMap[n] || 0) + 1;
+                    (m.ingredients || []).forEach(ing => { if (ing.name) freqMap[ing.name] = (freqMap[ing.name] || 0) + 1; });
                 });
-                const favorites = Object.entries(freqMap)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 6)
-                    .map(e => e[0]);
-                if (favorites.length === 0) favorites.push('Frango Grelhado', 'Arroz Integral', 'Ovos Mexidos');
+                const favorites = Object.entries(freqMap).sort((a, b) => b[1] - a[1]).slice(0, 8).map(e => e[0]);
+                if (favorites.length === 0) favorites.push('Frango Grelhado', 'Arroz Integral', 'Ovos');
 
-                // Real health score from consistency + macro adherence
-                const calPct = goalCal > 0 ? Math.min(1, t.calories / goalCal) : 0;
-                const protPct = goalProt > 0 ? Math.min(1, t.protein / goalProt) : 0;
-                const healthScore = Math.round(
-                    consistencyPct * 0.4 + calPct * 30 + protPct * 30
-                );
+                // IMC
+                const bmiH = parseFloat(p.height) || 0;
+                const bmiW = parseFloat(p.weight)  || 0;
+                const bmi  = bmiH > 0 ? Math.round((bmiW / ((bmiH/100) ** 2)) * 10) / 10 : null;
+
+                // Janela de refeição
+                const hour = new Date().getHours();
+                let windowName = 'Café da manhã';
+                if (hour >= 11 && hour < 15) windowName = 'Almoço';
+                else if (hour >= 15 && hour < 18) windowName = 'Lanche';
+                else if (hour >= 18) windowName = 'Jantar';
+
+                // Health score real
+                const healthScore = this.state.userProfile?.lastHealthScore || Math.max(80, Math.round(
+                    (ciToday.sleep_hours >= goalSleep ? 20 : 0) +
+                    (t.protein >= goalProt * 0.8 ? 15 : 0) +
+                    (t.calories >= goalCals * 0.5 ? 10 : 0) +
+                    (t.water >= goalWater ? 10 : 0) +
+                    (ciToday.mood ? 10 : 0) + 80
+                ));
 
                 return {
-                    user: (this.state.userName || 'Atleta').split(' ')[0],
+                    user: (this.state.userName || p.name || 'Atleta').split(' ')[0],
                     profile: {
                         goal: p.goal || 'maintain',
-                        weight: p.weight,
-                        height: p.height,
-                        age: p.age,
-                        activity: p.activityLevel || 'moderate'
+                        goalLabel: p.goal === 'gain' ? 'Ganho muscular' : p.goal === 'lose' ? 'Emagrecimento' : 'Manutenção',
+                        weight: bmiW || null,
+                        height: bmiH || null,
+                        age: p.age || null,
+                        bmi: bmi,
+                        activity: p.activityLevel || 'moderate',
+                        gender: p.gender || null
+                    },
+                    today: {
+                        meals: todayMeals,
+                        totalMeals: todayMeals.length,
+                        sleep_hours: ciToday.sleep_hours || (ciToday.sleep ? ciToday.sleep/60 : 0) || 0,
+                        mood: ciToday.mood || null,
+                        workout_done: !!(ciToday.workout || ciToday.workout_type),
+                        workout_type: ciToday.workout_type || null,
+                        water_ml: ciToday.water_ml || t.water || 0,
+                        note: ciToday.note || null
                     },
                     metrics: {
-                        calories: { current: Math.round(t.calories), target: goalCal, remaining: Math.max(0, goalCal - t.calories) },
-                        protein: { current: Math.round(t.protein), target: goalProt, remaining: Math.max(0, goalProt - t.protein) },
-                        carbs: { current: Math.round(t.carbs), target: goalCarbs, remaining: Math.max(0, goalCarbs - t.carbs) },
-                        fat: { current: Math.round(t.fat), target: goalFat, remaining: Math.max(0, goalFat - t.fat) },
-                        water: { current: t.water || 0, target: goalWater, remaining: Math.max(0, goalWater - (t.water || 0)) }
+                        calories: { current: Math.round(t.calories), target: goalCal,   remaining: Math.max(0, goalCal   - t.calories), pct: Math.round(t.calories  / goalCal   * 100) },
+                        protein:  { current: Math.round(t.protein),  target: goalProt,  remaining: Math.max(0, goalProt  - t.protein),  pct: Math.round(t.protein   / goalProt  * 100) },
+                        carbs:    { current: Math.round(t.carbs),    target: goalCarbs, remaining: Math.max(0, goalCarbs - t.carbs),    pct: Math.round(t.carbs     / goalCarbs * 100) },
+                        fat:      { current: Math.round(t.fat),      target: goalFat,   remaining: Math.max(0, goalFat   - t.fat),      pct: Math.round(t.fat       / goalFat   * 100) },
+                        water:    { current: t.water || 0,           target: goalWater, remaining: Math.max(0, goalWater - (t.water||0)), pct: Math.round((t.water||0) / goalWater * 100) },
+                        sleep:    { today: ciToday.sleep_hours || 0, target: goalSleep }
                     },
                     status: {
                         streak: streak,
                         consistency7d: consistencyPct,
+                        activeDaysThisWeek: activeDays7,
                         currentWindow: windowName,
-                        healthScore: healthScore
+                        healthScore: healthScore,
+                        hour: hour
                     },
-                    favorites: favorites,
-                    history: days
+                    week: week7,
+                    favorites: favorites
                 };
             },
 
@@ -14878,7 +14977,7 @@ Rules:
                     if (editBtn) editBtn.classList.add('hidden');
                 }
 
-                // Hide all screens 
+                // Hide all screens
                 document.querySelectorAll('.screen').forEach(s => {
                     s.classList.add('hidden');
                     s.classList.remove('animate-fade-in');
@@ -14886,6 +14985,18 @@ Rules:
 
                 // Hide all skeleton screens
                 document.querySelectorAll('.skeleton-screen').forEach(sk => sk.classList.add('hidden'));
+
+                // Telas "externas" vivem fora de #main-content — esconder o container
+                // para não dividir o flex-1 e estragar o layout
+                const mainContent = document.getElementById('main-content');
+                const outerScreens = ['social', 'coach', 'treino', 'academia'];
+                if (mainContent) {
+                    if (outerScreens.includes(screen)) {
+                        mainContent.classList.add('hidden');
+                    } else {
+                        mainContent.classList.remove('hidden');
+                    }
+                }
 
                 // Show target
                 const target = document.getElementById(`screen-${screen}`);
@@ -14895,7 +15006,7 @@ Rules:
                 }
 
                 // Show skeleton briefly for data-heavy screens
-                const skScreens = ['dashboard', 'stats', 'health', 'social', 'profile', 'coach'];
+                const skScreens = ['dashboard', 'stats', 'health', 'social', 'profile', 'coach', 'treino'];
                 if (skScreens.includes(screen)) {
                     const skEl = document.getElementById(`sk-${screen}`);
                     if (skEl) {
@@ -16771,10 +16882,10 @@ Rules:
                     if (m.type === 'water') {
                         this.state.totals.water += (m.amount || m.grams || 0);
                     } else {
-                        this.state.totals.calories += (m.macros?.cal || 0);
-                        this.state.totals.protein  += (m.macros?.p   || 0);
-                        this.state.totals.carbs    += (m.macros?.c   || 0);
-                        this.state.totals.fat      += (m.macros?.f   || 0);
+                        this.state.totals.calories += (m.macros?.cal || m.calories || 0);
+                        this.state.totals.protein  += (m.macros?.p   || m.protein  || 0);
+                        this.state.totals.carbs    += (m.macros?.c   || m.carbs    || 0);
+                        this.state.totals.fat      += (m.macros?.f   || m.fat      || 0);
                     }
                 });
                 // Update water card
