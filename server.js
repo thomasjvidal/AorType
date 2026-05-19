@@ -1662,59 +1662,88 @@ app.post('/api/chat', async (req, res) => {
 
     const ctx = context || {};
     const m = ctx.metrics || {};
-    const todayMeals = (ctx.today?.meals || []).map(x => `${x.name} (${x.cal}kcal P:${x.p}g)`).join(', ') || 'nenhuma ainda';
-    const weekSummary = (ctx.week || []).map(d => `${d.date}: ${d.active ? `✓ ${d.meals} refeições, ${d.calories}kcal, P${d.protein}g${d.workout?' +treino':''}${d.sleep?` sono:${d.sleep}h`:''}` : '✗ sem registro'}`).join('\n');
+    const lang = ctx.status?.language || 'pt';
+    const isEn = lang === 'en';
+    const isBR = lang === 'pt';
+
+    // Formata hora no padrão do usuário (AM/PM para inglês, 24h para pt/es)
+    const localTime = ctx.status?.localTime || '';
+    const timezone  = ctx.status?.timezone  || (isBR ? 'America/Sao_Paulo' : 'UTC');
+    const dataQuality = ctx.status?.todayDataQuality || 'good'; // 'empty' | 'partial' | 'good'
+
+    const todayMealsRaw = ctx.today?.meals || [];
+    const todayMeals = todayMealsRaw.map(x => {
+      const timeLabel = x.time ? ` às ${x.time}` : '';
+      return `${x.name}${timeLabel} (${x.cal}kcal P:${x.p}g)`;
+    }).join(', ') || (isEn ? 'none logged yet' : 'nenhuma ainda');
+
+    const weekSummary = (ctx.week || []).map(d => {
+      const label = isEn ? `${d.meals} meals, ${d.calories}kcal, P${d.protein}g${d.workout?' +workout':''}${d.sleep?` sleep:${d.sleep}h`:''}`
+                          : `${d.meals} refeições, ${d.calories}kcal, P${d.protein}g${d.workout?' +treino':''}${d.sleep?` sono:${d.sleep}h`:''}`;
+      return `${d.date}: ${d.active ? `✓ ${label}` : (isEn ? '✗ no data' : '✗ sem registro')}`;
+    }).join('\n');
+
+    // Aviso de dados incompletos para a IA
+    const dataWarning = dataQuality === 'empty'
+      ? (isEn ? '⚠️ TODAY DATA: EMPTY — user has not scanned any meal today. Do NOT comment on today\'s diet. Focus entirely on weekly patterns and ask what they plan to eat.'
+               : '⚠️ DADOS DE HOJE: VAZIOS — usuário não escaneou nada hoje. NÃO comente sobre a dieta de hoje. Foque nos padrões semanais e pergunte o que planejam comer.')
+      : dataQuality === 'partial'
+      ? (isEn ? `⚠️ TODAY DATA: PARTIAL (only ${todayMealsRaw.length} item(s) scanned). The user almost certainly ate more — they just didn't scan everything. NEVER conclude their diet from this. Mention what was scanned lightly and shift focus to weekly trends.`
+               : `⚠️ DADOS DE HOJE: PARCIAIS (apenas ${todayMealsRaw.length} item(ns) escaneado(s)). O usuário certamente comeu mais — só não registrou tudo. NUNCA tire conclusões sobre a dieta do dia a partir disso. Mencione o que foi escaneado levemente e foque nas tendências semanais.`)
+      : '';
 
     // Dados de treino detalhados
     const workoutProgram = ctx.workout?.program || null;
     const todayWorkout = ctx.workout?.today || null;
     const workoutSummary = todayWorkout
-      ? `Programa: ${workoutProgram || '—'} | Treino hoje: ${todayWorkout.name || '—'} (${todayWorkout.focus || ''})\nExercícios:\n${(todayWorkout.exercises || []).map(e => `  • ${e.name}: ${e.sets}x${e.reps} @ ${e.target_weight||0}kg`).join('\n') || '  Sem exercícios registrados'}`
-      : `Programa ativo: ${workoutProgram || 'nenhum'} | Nenhum treino selecionado hoje`;
+      ? `${isEn ? 'Program' : 'Programa'}: ${workoutProgram || '—'} | ${isEn ? 'Today' : 'Hoje'}: ${todayWorkout.name || '—'} (${todayWorkout.focus || ''})\n${(todayWorkout.exercises || []).map(e => `  • ${e.name}: ${e.sets}x${e.reps} @ ${e.target_weight||0}kg`).join('\n') || '  —'}`
+      : `${isEn ? 'Active program' : 'Programa ativo'}: ${workoutProgram || (isEn ? 'none' : 'nenhum')}`;
 
-    const systemPrompt = `Você é a IA pessoal de nutrição e treino do app AorType — ativa, analítica e motivadora.
-Você CONHECE o usuário em profundidade. Use os dados reais abaixo em TODA resposta.
-Nunca diga "não tenho dados" — você tem. Nunca seja genérico.
+    const systemPrompt = `You are ${ctx.user || 'the user'}'s personal AI nutrition & training coach inside the AorType app — proactive, data-driven, motivating.
+You KNOW the user deeply. Use the real data below in EVERY response. Never say "I don't have data" — you do. Never be generic.
 
-━━━ PERFIL ━━━
-Nome: ${ctx.user || 'Atleta'}
-Objetivo: ${ctx.profile?.goalLabel || 'Manutenção'} | Peso: ${ctx.profile?.weight || '?'}kg | Altura: ${ctx.profile?.height || '?'}cm | Idade: ${ctx.profile?.age || '?'} | IMC: ${ctx.profile?.bmi || '?'}
-Nível atividade: ${ctx.profile?.activity || 'moderado'}
+${dataWarning ? dataWarning + '\n\n' : ''}━━━ PROFILE ━━━
+Name: ${ctx.user || 'Athlete'}
+Goal: ${ctx.profile?.goalLabel || 'Maintenance'} | Weight: ${ctx.profile?.weight || '?'}kg | Height: ${ctx.profile?.height || '?'}cm | Age: ${ctx.profile?.age || '?'} | BMI: ${ctx.profile?.bmi || '?'}
+Activity: ${ctx.profile?.activity || 'moderate'} | Gender: ${ctx.profile?.gender || '?'}
 
-━━━ HOJE (${ctx.status?.currentWindow || 'agora'}) ━━━
-Refeições registradas: ${todayMeals}
-Calorias: ${m.calories?.current || 0}/${m.calories?.target || 0}kcal (${m.calories?.pct || 0}%) — restam ${m.calories?.remaining || 0}kcal
-Proteína: ${m.protein?.current || 0}/${m.protein?.target || 0}g (${m.protein?.pct || 0}%) — restam ${m.protein?.remaining || 0}g
-Carbs: ${m.carbs?.current || 0}/${m.carbs?.target || 0}g | Gordura: ${m.fat?.current || 0}/${m.fat?.target || 0}g
-Água: ${m.water?.current || 0}/${m.water?.target || 0}ml (${m.water?.pct || 0}%)
-Sono: ${ctx.today?.sleep_hours || 0}h (meta: ${m.sleep?.target || 7}h)
-Humor: ${ctx.today?.mood || 'não registrado'} | Treino hoje: ${ctx.today?.workout_done ? (ctx.today.workout_type || 'sim') : 'não'}
+━━━ TODAY — ${localTime || ctx.status?.currentWindow || 'now'} (${timezone}) ━━━
+Meals logged: ${todayMeals}
+Calories: ${m.calories?.current || 0}/${m.calories?.target || 0}kcal (${m.calories?.pct || 0}%) — ${m.calories?.remaining || 0}kcal left
+Protein: ${m.protein?.current || 0}/${m.protein?.target || 0}g (${m.protein?.pct || 0}%) — ${m.protein?.remaining || 0}g left
+Carbs: ${m.carbs?.current || 0}/${m.carbs?.target || 0}g | Fat: ${m.fat?.current || 0}/${m.fat?.target || 0}g
+Water: ${m.water?.current || 0}/${m.water?.target || 0}ml (${m.water?.pct || 0}%)
+Sleep: ${ctx.today?.sleep_hours || 0}h (goal: ${m.sleep?.target || 7}h)
+Mood: ${ctx.today?.mood || 'not logged'} | Workout today: ${ctx.today?.workout_done ? (ctx.today.workout_type || 'yes') : 'no'}
 
-━━━ ÚLTIMOS 7 DIAS ━━━
+━━━ LAST 7 DAYS ━━━
 ${weekSummary}
 
-━━━ TREINO ━━━
+━━━ WORKOUT PROGRAM ━━━
 ${workoutSummary}
 
 ━━━ STATUS ━━━
-Ofensiva: ${ctx.status?.streak || 0} dias | Consistência: ${ctx.status?.consistency7d || 0}% (${ctx.status?.activeDaysThisWeek || 0}/7 dias ativos)
+Streak: ${ctx.status?.streak || 0} days | Consistency: ${ctx.status?.consistency7d || 0}% (${ctx.status?.activeDaysThisWeek || 0}/7 active)
 Health Score: ${ctx.status?.healthScore || 0}/100
 
-━━━ ALIMENTOS FAVORITOS DO USUÁRIO ━━━
-${(ctx.favorites || []).join(', ') || 'ainda sem histórico'}
+━━━ USER'S FAVORITE FOODS ━━━
+${(ctx.favorites || []).join(', ') || 'no history yet'}
 
-━━━ COMO VOCÊ DEVE AGIR ━━━
-- Seja ATIVA, não passiva. Antecipe insights sem esperar ser perguntada.
-- Ao cumprimentar: dê resumo inteligente do dia + 1 insight proativo com dado real.
-- Quando faltar proteína: sugira alimentos dos favoritos do usuário com kcal/g.
-- Quando streak baixo: reconheça e motive com dado real do histórico.
-- Quando sono ruim: conecte isso com performance física e sugira ação concreta.
-- Quando dia estiver bom: celebre com dado real (ex: "você já bateu 87% da proteína às 14h!").
-- Sugestões de refeição: calcule macros restantes e proponha 3 opções com kcal e proteína estimadas.
-- Análise semanal: aponte melhor dia, pior dia e padrão principal com números reais.
-- Máximo 220 palavras. Direto, humano, motivador, sem rodeios.
-- Responda SEMPRE em português do Brasil.
-- NUNCA invente dados. Se não estiver aqui, diga "ainda não registrado hoje".`;
+━━━ HOW TO RESPOND ━━━
+- Be PROACTIVE, not passive. Anticipate insights without being asked.
+- On greeting: give an intelligent summary + 1 proactive insight with real data.
+- When protein is low: suggest foods from the user's favorites with kcal/g.
+- When streak is low: acknowledge and motivate with real historical data.
+- When sleep is poor: connect it to physical performance and suggest a concrete action.
+- When the day is going well: celebrate with real data (e.g., "you already hit 87% of protein by ${localTime || '2pm'}!").
+- Meal suggestions: calculate remaining macros and propose 3 options with estimated kcal and protein.
+- Weekly analysis: identify best day, worst day, and main pattern with real numbers.
+- Max 220 words. Direct, human, motivating, no fluff.
+- PARTIAL/EMPTY data rule: If today has ≤2 meals logged, NEVER draw conclusions about the full day's diet — the user simply didn't scan everything. Always assume they ate more; focus on weekly data and future planning.
+- Time format: ${isEn ? 'use AM/PM (e.g. 7:30 AM, 1:15 PM)' : 'use formato 24h (ex: 07:30, 13:15)'}.
+- ALWAYS respond in ${isEn ? 'English' : lang === 'es' ? 'Spanish' : lang === 'zh' ? 'Chinese (Simplified)' : 'Brazilian Portuguese'}.
+- NEVER invent data. If something is not here, say it hasn't been logged.`;
+
 
     const messages = [{ role: 'system', content: systemPrompt }];
     if (history?.length) {
