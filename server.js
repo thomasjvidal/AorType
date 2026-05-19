@@ -334,8 +334,11 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Aplica middleware em tudo abaixo
-app.use(authMiddleware);
+// Aplica middleware em tudo abaixo — exceto rotas /admin (têm auth própria)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/admin')) return next();
+  authMiddleware(req, res, next);
+});
 
 // ── PERFIL ─────────────────────────────────────────────────────
 
@@ -615,10 +618,14 @@ app.post('/api/checkins', async (req, res) => {
 
 app.get('/api/chat/history', async (req, res) => {
   try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    // Apaga mensagens com mais de 1 hora para este usuário
+    await supabase.from('chat_history').delete().eq('user_id', req.userId).lt('created_at', oneHourAgo);
     const { data, error } = await supabase
       .from('chat_history')
       .select('*')
       .eq('user_id', req.userId)
+      .gte('created_at', oneHourAgo)
       .order('created_at', { ascending: true })
       .limit(100);
     if (error) throw error;
@@ -631,14 +638,15 @@ app.get('/api/chat/history', async (req, res) => {
 app.post('/api/chat/history', async (req, res) => {
   try {
     const messages = req.body.messages || [];
-    // Salva apenas as últimas mensagens novas (evita duplicação)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    // Limpa tudo do usuário (antigas + novas) e reinsere apenas as recentes
+    await supabase.from('chat_history').delete().eq('user_id', req.userId);
     const toInsert = messages.slice(-20).map(m => ({
       user_id: req.userId,
       role: m.role === 'assistant' ? 'assistant' : 'user',
       message: m.text || m.message || ''
     }));
     if (toInsert.length) {
-      await supabase.from('chat_history').delete().eq('user_id', req.userId);
       await supabase.from('chat_history').insert(toInsert);
     }
     res.json({ success: true });
@@ -1657,6 +1665,13 @@ app.post('/api/chat', async (req, res) => {
     const todayMeals = (ctx.today?.meals || []).map(x => `${x.name} (${x.cal}kcal P:${x.p}g)`).join(', ') || 'nenhuma ainda';
     const weekSummary = (ctx.week || []).map(d => `${d.date}: ${d.active ? `✓ ${d.meals} refeições, ${d.calories}kcal, P${d.protein}g${d.workout?' +treino':''}${d.sleep?` sono:${d.sleep}h`:''}` : '✗ sem registro'}`).join('\n');
 
+    // Dados de treino detalhados
+    const workoutProgram = ctx.workout?.program || null;
+    const todayWorkout = ctx.workout?.today || null;
+    const workoutSummary = todayWorkout
+      ? `Programa: ${workoutProgram || '—'} | Treino hoje: ${todayWorkout.name || '—'} (${todayWorkout.focus || ''})\nExercícios:\n${(todayWorkout.exercises || []).map(e => `  • ${e.name}: ${e.sets}x${e.reps} @ ${e.target_weight||0}kg`).join('\n') || '  Sem exercícios registrados'}`
+      : `Programa ativo: ${workoutProgram || 'nenhum'} | Nenhum treino selecionado hoje`;
+
     const systemPrompt = `Você é a IA pessoal de nutrição e treino do app AorType — ativa, analítica e motivadora.
 Você CONHECE o usuário em profundidade. Use os dados reais abaixo em TODA resposta.
 Nunca diga "não tenho dados" — você tem. Nunca seja genérico.
@@ -1677,6 +1692,9 @@ Humor: ${ctx.today?.mood || 'não registrado'} | Treino hoje: ${ctx.today?.worko
 
 ━━━ ÚLTIMOS 7 DIAS ━━━
 ${weekSummary}
+
+━━━ TREINO ━━━
+${workoutSummary}
 
 ━━━ STATUS ━━━
 Ofensiva: ${ctx.status?.streak || 0} dias | Consistência: ${ctx.status?.consistency7d || 0}% (${ctx.status?.activeDaysThisWeek || 0}/7 dias ativos)
@@ -1717,6 +1735,443 @@ ${(ctx.favorites || []).join(', ') || 'ainda sem histórico'}
     console.error('Chat error:', error);
     res.status(500).json({ error: 'Erro no chat' });
   }
+});
+
+// ══════════════════════════════════════════════════════════════
+// ── ADMIN PANEL ───────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+const ADMIN_JWT_SECRET = process.env.JWT_SECRET + '_admin';
+
+// Middleware para proteger rotas admin
+const adminAuth = (req, res, next) => {
+  const token = req.headers['x-admin-token'] || req.query.token;
+  if (!token) return res.status(401).json({ error: 'Não autorizado' });
+  try {
+    jwt.verify(token, ADMIN_JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Token inválido' });
+  }
+};
+
+// Login admin
+app.post('/admin/login', (req, res) => {
+  const { username, password } = req.body;
+  const adminUser = process.env.ADMIN_USERNAME || 'admin';
+  const adminPass = process.env.ADMIN_PASSWORD || 'macroai@admin2025';
+  if (username === adminUser && password === adminPass) {
+    const token = jwt.sign({ admin: true }, ADMIN_JWT_SECRET, { expiresIn: '24h' });
+    res.json({ token });
+  } else {
+    res.status(401).json({ error: 'Credenciais inválidas' });
+  }
+});
+
+// Listar todos os usuários com métricas básicas
+app.get('/admin/api/users', adminAuth, async (req, res) => {
+  try {
+    const { data: users } = await supabase.from('users').select('id, name, email, phone, user_type, created_at, username').order('created_at', { ascending: false });
+    const { data: profiles } = await supabase.from('profiles').select('user_id, weight, height, age, gender, goal, streak, activity_level, daily_calories, daily_protein, daily_carbs, daily_fat, biotype, diet, last_open_date');
+    const { data: subs } = await supabase.from('subscriptions').select('user_id, plan_name, amount, status, total_paid, started_at, next_billing').catch(() => ({ data: [] }));
+    const profileMap = {};
+    (profiles || []).forEach(p => { profileMap[p.user_id] = p; });
+    const subMap = {};
+    (subs || []).forEach(s => { subMap[s.user_id] = s; });
+    const result = (users || []).map(u => ({ ...u, profile: profileMap[u.id] || null, subscription: subMap[u.id] || null }));
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao buscar usuários' });
+  }
+});
+
+// Atualizar assinatura de um usuário
+app.post('/admin/api/users/:id/subscription', adminAuth, async (req, res) => {
+  try {
+    const uid = req.params.id;
+    const { plan_name, amount, status, next_billing, notes } = req.body;
+    const { data: existing } = await supabase.from('subscriptions').select('id, total_paid').eq('user_id', uid).single();
+    if (existing) {
+      const total = (parseFloat(existing.total_paid) || 0) + (parseFloat(amount) || 0);
+      await supabase.from('subscriptions').update({ plan_name, amount, status, next_billing, notes, total_paid: total, updated_at: new Date().toISOString() }).eq('user_id', uid);
+    } else {
+      await supabase.from('subscriptions').insert({ user_id: uid, plan_name, amount: amount || 0, status: status || 'ativo', next_billing, notes, total_paid: amount || 0 });
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao salvar assinatura' });
+  }
+});
+
+// Métricas de um usuário específico
+app.get('/admin/api/users/:id/metrics', adminAuth, async (req, res) => {
+  try {
+    const uid = req.params.id;
+    const [meals, checkins, workouts, chats] = await Promise.all([
+      supabase.from('meals').select('id, name, calories, protein, carbs, fat, logged_at').eq('user_id', uid).order('logged_at', { ascending: false }).limit(50),
+      supabase.from('checkins').select('date, mood, note, workout_type, workout_duration, water_ml, calories_burned, sleep_hours').eq('user_id', uid).order('date', { ascending: false }).limit(30),
+      supabase.from('workout_programs').select('id, name, category, is_public, created_at').or(`created_by.eq.${uid},is_assigned.eq.true`).limit(20),
+      supabase.from('chat_history').select('role, message, created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(100),
+    ]);
+    res.json({
+      meals: meals.data || [],
+      checkins: checkins.data || [],
+      workouts: workouts.data || [],
+      chats: chats.data || [],
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao buscar métricas' });
+  }
+});
+
+// Stats gerais do app
+app.get('/admin/api/stats', adminAuth, async (req, res) => {
+  try {
+    const [usersCount, mealsCount, checkinsCount, chatsCount] = await Promise.all([
+      supabase.from('users').select('id', { count: 'exact', head: true }),
+      supabase.from('meals').select('id', { count: 'exact', head: true }),
+      supabase.from('checkins').select('id', { count: 'exact', head: true }),
+      supabase.from('chat_history').select('id', { count: 'exact', head: true }),
+    ]);
+    // Usuários ativos últimos 7 dias
+    const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    const { count: activeWeek } = await supabase.from('meals').select('user_id', { count: 'exact', head: true }).gte('logged_at', since7d);
+    res.json({
+      totalUsers: usersCount.count || 0,
+      totalMeals: mealsCount.count || 0,
+      totalCheckins: checkinsCount.count || 0,
+      totalChats: chatsCount.count || 0,
+      activeUsersWeek: activeWeek || 0,
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao buscar stats' });
+  }
+});
+
+// Serve o painel admin
+app.get('/admin', (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MacroAI Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { background:#0a0a0a; color:#f0f0f0; font-family:system-ui,sans-serif; }
+  .card { background:#161616; border:1px solid #2a2a2a; border-radius:12px; padding:20px; }
+  .stat { background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:16px; text-align:center; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:99px; font-size:11px; font-weight:700; }
+  .badge-green { background:rgba(74,222,128,0.15); color:#4ade80; }
+  .badge-blue { background:rgba(96,165,250,0.15); color:#60a5fa; }
+  .badge-yellow { background:rgba(250,204,21,0.15); color:#facc15; }
+  .btn { padding:8px 20px; border-radius:8px; font-weight:600; cursor:pointer; border:none; transition:opacity .2s; }
+  .btn:hover { opacity:.8; }
+  .btn-primary { background:#b5f23d; color:#000; }
+  .btn-ghost { background:#222; color:#aaa; }
+  .input { background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px 14px; color:#fff; width:100%; outline:none; }
+  .input:focus { border-color:#b5f23d; }
+  .msg-user { background:#222; border-radius:8px; padding:8px 12px; margin:4px 0; }
+  .msg-ai { background:#1a2e1a; border-left:3px solid #b5f23d; border-radius:8px; padding:8px 12px; margin:4px 0; }
+  .tab { padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; color:#888; }
+  .tab.active { background:#222; color:#fff; }
+  #login-screen, #main-screen { transition: opacity .3s; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- LOGIN -->
+<div id="login-screen" class="flex items-center justify-center min-h-screen">
+  <div class="card w-full max-w-sm mx-4">
+    <div class="text-center mb-6">
+      <div class="text-3xl font-black mb-1" style="color:#b5f23d">MacroAI</div>
+      <div class="text-gray-500 text-sm">Painel Administrativo</div>
+    </div>
+    <div class="space-y-3">
+      <input id="login-user" class="input" type="text" placeholder="Usuário" onkeydown="if(e.key==='Enter')doLogin()">
+      <input id="login-pass" class="input" type="password" placeholder="Senha" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn btn-primary w-full" onclick="doLogin()">Entrar</button>
+      <div id="login-err" class="text-red-400 text-sm text-center hidden">Credenciais inválidas</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main-screen" class="hidden">
+  <!-- Header -->
+  <div class="sticky top-0 z-50 border-b border-gray-800" style="background:#0a0a0a">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-xl font-black" style="color:#b5f23d">MacroAI</span>
+        <span class="badge badge-green">Admin</span>
+      </div>
+      <button class="btn btn-ghost text-sm" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-6 py-8 space-y-8">
+    <!-- Stats Row -->
+    <div id="stats-row" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
+
+    <!-- Users + Detail -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Users List -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-lg">Usuários</h2>
+          <input id="search-input" class="input text-sm" style="width:160px" placeholder="Buscar..." oninput="filterUsers()">
+        </div>
+        <div id="users-list" class="space-y-2 max-h-[70vh] overflow-y-auto pr-1"></div>
+      </div>
+
+      <!-- User Detail -->
+      <div class="card" id="detail-panel">
+        <div class="text-gray-600 text-center py-16 text-sm">← Selecione um usuário</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let adminToken = localStorage.getItem('macroai_admin_token');
+let allUsers = [];
+let selectedUserId = null;
+
+async function doLogin() {
+  const u = document.getElementById('login-user').value;
+  const p = document.getElementById('login-pass').value;
+  try {
+    const r = await fetch('/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u, password:p}) });
+    const d = await r.json();
+    if (!r.ok) throw new Error();
+    adminToken = d.token;
+    localStorage.setItem('macroai_admin_token', adminToken);
+    showMain();
+  } catch {
+    document.getElementById('login-err').classList.remove('hidden');
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('macroai_admin_token');
+  adminToken = null;
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('main-screen').classList.add('hidden');
+}
+
+async function api(path) {
+  const r = await fetch(path, { headers:{'x-admin-token': adminToken} });
+  if (r.status === 401) { doLogout(); throw new Error('auth'); }
+  return r.json();
+}
+
+function showMain() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('main-screen').classList.remove('hidden');
+  loadStats();
+  loadUsers();
+}
+
+async function loadStats() {
+  try {
+    const s = await api('/admin/api/stats');
+    document.getElementById('stats-row').innerHTML = [
+      { label:'Usuários', value: s.totalUsers, color:'#b5f23d' },
+      { label:'Refeições', value: s.totalMeals, color:'#60a5fa' },
+      { label:'Checkins', value: s.totalCheckins, color:'#f97316' },
+      { label:'Msgs IA', value: s.totalChats, color:'#c084fc' },
+      { label:'Ativos 7d', value: s.activeUsersWeek, color:'#4ade80' },
+    ].map(s => \`<div class="stat"><div class="text-2xl font-black mb-1" style="color:\${s.color}">\${s.value}</div><div class="text-gray-500 text-xs">\${s.label}</div></div>\`).join('');
+  } catch {}
+}
+
+async function loadUsers() {
+  try {
+    allUsers = await api('/admin/api/users');
+    renderUsers(allUsers);
+  } catch {}
+}
+
+function filterUsers() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  renderUsers(allUsers.filter(u => (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q)));
+}
+
+function renderUsers(users) {
+  document.getElementById('users-list').innerHTML = users.map(u => {
+    const p = u.profile || {};
+    const s = u.subscription || {};
+    const type = u.user_type === 'academia' ? '<span class="badge badge-blue">Academia</span>' : '<span class="badge badge-yellow">Aluno</span>';
+    const initials = (u.name||'?').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
+    const active = selectedUserId === u.id ? 'border-[#b5f23d]' : 'border-transparent hover:border-gray-600';
+    const joinDate = u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '—';
+    const paid = s.total_paid ? \`R$ \${parseFloat(s.total_paid).toFixed(2)}\` : 'R$ 0,00';
+    return \`<div class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors \${active}" onclick="loadUser('\${u.id}')">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0" style="background:#222">\${initials}</div>
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-sm truncate">\${u.name || '—'}</div>
+        <div class="text-gray-500 text-xs truncate">\${u.email}</div>
+        <div class="text-gray-600 text-[10px]">Entrou: \${joinDate} · \${paid}</div>
+      </div>
+      <div class="flex flex-col items-end gap-1">
+        \${type}
+        \${p.streak ? \`<span class="text-xs text-orange-400">🔥 \${p.streak}d</span>\` : ''}
+      </div>
+    </div>\`;
+  }).join('') || '<div class="text-gray-600 text-sm text-center py-8">Nenhum usuário encontrado</div>';
+}
+
+async function loadUser(id) {
+  selectedUserId = id;
+  renderUsers(allUsers.filter(u => {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    return (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q);
+  }));
+  const user = allUsers.find(u => u.id === id);
+  const p = user?.profile || {};
+  document.getElementById('detail-panel').innerHTML = \`
+    <div class="space-y-4">
+      <div class="flex items-start gap-3 pb-4 border-b border-gray-800">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center font-bold flex-shrink-0 text-lg" style="background:#222">\${(user?.name||'?').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</div>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-base">\${user?.name || '—'}</div>
+          <div class="text-gray-400 text-xs">\${user?.email}</div>
+          \${user?.phone ? \`<div class="text-gray-500 text-xs">📱 \${user.phone}</div>\` : ''}
+          \${user?.username ? \`<div class="text-gray-600 text-xs">@\${user.username}</div>\` : ''}
+          <div class="text-gray-600 text-xs mt-1">
+            <span class="mr-3">📅 Entrou em \${user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric'}) : '—'}</span>
+            <span>\${user?.user_type === 'academia' ? '🏢 Academia' : '🎓 Aluno'}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagamento -->
+      <div class="rounded-xl p-3 border border-gray-700" style="background:#0f1f0f">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs font-bold text-green-400">💰 ASSINATURA</span>
+          <button onclick="editSubscription('\${id}')" class="text-xs text-gray-500 hover:text-white transition-colors">✏️ Editar</button>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+          <div><div class="font-bold text-green-400 text-base">R$ \${s.total_paid ? parseFloat(s.total_paid).toFixed(2) : '0,00'}</div><div class="text-gray-600">Total pago</div></div>
+          <div><div class="font-bold text-white text-base">R$ \${s.amount ? parseFloat(s.amount).toFixed(2) : '0,00'}</div><div class="text-gray-600">Mensalidade</div></div>
+          <div><div class="font-bold text-sm \${s.status === 'ativo' ? 'text-green-400' : 'text-red-400'}">\${s.status || 'sem plano'}</div><div class="text-gray-600">Status</div></div>
+        </div>
+        \${s.started_at ? \`<div class="text-gray-600 text-[10px] mt-1">Início: \${new Date(s.started_at).toLocaleDateString('pt-BR')} \${s.next_billing ? '· Próx: '+new Date(s.next_billing).toLocaleDateString('pt-BR') : ''}</div>\` : ''}
+        <div id="sub-form-\${id}" class="hidden mt-3 space-y-2">
+          <div class="flex gap-2">
+            <input id="sub-amount-\${id}" placeholder="Valor R$" type="number" step="0.01" class="input text-xs flex-1" value="\${s.amount||''}">
+            <select id="sub-status-\${id}" class="input text-xs flex-1">
+              <option value="ativo" \${s.status==='ativo'?'selected':''}>Ativo</option>
+              <option value="inadimplente" \${s.status==='inadimplente'?'selected':''}>Inadimplente</option>
+              <option value="cancelado" \${s.status==='cancelado'?'selected':''}>Cancelado</option>
+              <option value="trial" \${s.status==='trial'?'selected':''}>Trial</option>
+            </select>
+          </div>
+          <input id="sub-plan-\${id}" placeholder="Nome do plano" class="input text-xs w-full" value="\${s.plan_name||'Mensal'}">
+          <button onclick="saveSubscription('\${id}')" class="btn btn-primary w-full text-xs py-1.5">Salvar pagamento</button>
+        </div>
+      </div>
+
+      <!-- Stats perfil -->
+      <div class="grid grid-cols-4 gap-2 text-center text-xs">
+        <div class="stat"><div class="font-bold text-base">\${p.weight ? p.weight+'kg' : '—'}</div><div class="text-gray-500">Peso</div></div>
+        <div class="stat"><div class="font-bold text-base">\${p.height ? p.height+'cm' : '—'}</div><div class="text-gray-500">Altura</div></div>
+        <div class="stat"><div class="font-bold text-base">\${p.streak||0}🔥</div><div class="text-gray-500">Streak</div></div>
+        <div class="stat"><div class="font-bold text-base">\${p.daily_calories||'—'}</div><div class="text-gray-500">Meta kcal</div></div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 text-center text-xs">
+        <div class="stat"><div class="font-bold text-sm">\${p.age||'—'}</div><div class="text-gray-500">Idade</div></div>
+        <div class="stat"><div class="font-bold text-sm">\${p.gender==='male'?'♂ M':p.gender==='female'?'♀ F':'—'}</div><div class="text-gray-500">Gênero</div></div>
+        <div class="stat"><div class="font-bold text-sm">\${p.goal==='lose'?'🔻 Perda':p.goal==='gain'?'🔺 Ganho':p.goal==='maintain'?'⚖️ Manter':'—'}</div><div class="text-gray-500">Objetivo</div></div>
+      </div>
+      \${p.weight ? \`<div class="text-xs text-gray-600 bg-gray-900 rounded-lg px-3 py-2">Proteína: \${p.daily_protein||'—'}g · Carbs: \${p.daily_carbs||'—'}g · Gordura: \${p.daily_fat||'—'}g/dia\${p.diet ? ' · Dieta: '+p.diet : ''}\${p.biotype ? ' · Biótipo: '+p.biotype : ''}</div>\` : ''}
+
+      <div class="flex gap-2 flex-wrap" id="detail-tabs">
+        <div class="tab active" onclick="switchTab('chats')">Chat IA</div>
+        <div class="tab" onclick="switchTab('meals')">Refeições</div>
+        <div class="tab" onclick="switchTab('checkins')">Checkins</div>
+        <div class="tab" onclick="switchTab('workouts')">Treinos</div>
+      </div>
+      <div id="detail-content" class="text-gray-400 text-sm text-center py-6">Carregando...</div>
+    </div>\`;
+  try {
+    const m = await api(\`/admin/api/users/\${id}/metrics\`);
+    window._adminData = m;
+    switchTab('chats');
+  } catch {}
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('#detail-tabs .tab').forEach((t,i) => {
+    t.classList.toggle('active', ['chats','meals','checkins','workouts'][i] === tab);
+  });
+  const m = window._adminData;
+  if (!m) return;
+  const el = document.getElementById('detail-content');
+  if (tab === 'chats') {
+    if (!m.chats.length) { el.innerHTML = '<div class="text-gray-600 text-center py-4">Sem mensagens (expiram após 1h)</div>'; return; }
+    el.innerHTML = '<div class="space-y-2 max-h-80 overflow-y-auto">' + m.chats.slice().reverse().map(c => {
+      const cls = c.role === 'assistant' ? 'msg-ai' : 'msg-user';
+      const who = c.role === 'assistant' ? '🤖 IA' : '👤 Usuário';
+      const date = c.created_at ? new Date(c.created_at).toLocaleString('pt-BR') : '';
+      return \`<div class="\${cls}"><div class="flex justify-between mb-1"><span class="text-xs font-bold">\${who}</span><span class="text-gray-600 text-xs">\${date}</span></div><div class="text-xs">\${c.message}</div></div>\`;
+    }).join('') + '</div>';
+  } else if (tab === 'meals') {
+    if (!m.meals.length) { el.innerHTML = '<div class="text-gray-600 text-center py-4">Sem refeições registradas</div>'; return; }
+    el.innerHTML = '<div class="space-y-1 max-h-80 overflow-y-auto">' + m.meals.map(x => {
+      const date = x.logged_at ? new Date(x.logged_at).toLocaleDateString('pt-BR') : '';
+      return \`<div class="flex justify-between py-1.5 border-b border-gray-800 text-xs"><div><span class="text-white">\${x.name}</span><span class="text-gray-600 ml-2">\${date}</span></div><span class="text-gray-400 flex-shrink-0">\${x.calories||0}kcal · P\${x.protein||0}g · C\${x.carbs||0}g</span></div>\`;
+    }).join('') + '</div>';
+  } else if (tab === 'checkins') {
+    if (!m.checkins.length) { el.innerHTML = '<div class="text-gray-600 text-center py-4">Sem checkins</div>'; return; }
+    el.innerHTML = '<div class="space-y-1 max-h-80 overflow-y-auto">' + m.checkins.map(x => \`
+      <div class="py-2 border-b border-gray-800 text-xs">
+        <div class="flex justify-between mb-1"><span class="font-bold text-white">\${x.date}</span><span class="text-gray-400">\${x.mood||'—'}</span></div>
+        <div class="flex gap-3 text-gray-500">
+          <span>😴 \${x.sleep_hours||0}h</span>
+          <span>💧 \${x.water_ml||0}ml</span>
+          <span>🏋️ \${x.workout_type||'—'}</span>
+          <span>🔥 \${x.calories_burned||0}kcal</span>
+        </div>
+        \${x.note ? \`<div class="text-gray-600 mt-1 italic">"\${x.note}"</div>\` : ''}
+      </div>\`).join('') + '</div>';
+  } else {
+    if (!m.workouts.length) { el.innerHTML = '<div class="text-gray-600 text-center py-4">Sem programas de treino</div>'; return; }
+    el.innerHTML = '<div class="space-y-2 max-h-80 overflow-y-auto">' + m.workouts.map(w => \`
+      <div class="py-2 border-b border-gray-800 text-xs flex justify-between items-center">
+        <div><div class="text-white font-semibold">\${w.name}</div><div class="text-gray-500">\${w.category||'—'}</div></div>
+        <span class="badge \${w.is_public ? 'badge-green' : 'badge-yellow'}">\${w.is_public ? 'Público' : 'Privado'}</span>
+      </div>\`).join('') + '</div>';
+  }
+}
+
+function editSubscription(uid) {
+  const form = document.getElementById(\`sub-form-\${uid}\`);
+  if (form) form.classList.toggle('hidden');
+}
+
+async function saveSubscription(uid) {
+  const amount = document.getElementById(\`sub-amount-\${uid}\`)?.value;
+  const status = document.getElementById(\`sub-status-\${uid}\`)?.value;
+  const plan_name = document.getElementById(\`sub-plan-\${uid}\`)?.value;
+  try {
+    const r = await fetch(\`/admin/api/users/\${uid}/subscription\`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','x-admin-token': adminToken},
+      body: JSON.stringify({ amount: parseFloat(amount)||0, status, plan_name })
+    });
+    if (!r.ok) throw new Error();
+    // Atualiza lista e recarrega usuário
+    await loadUsers();
+    loadUser(uid);
+  } catch { alert('Erro ao salvar'); }
+}
+
+// Auto-login se tiver token
+if (adminToken) {
+  showMain();
+}
+</script>
+</body></html>`);
 });
 
 // ── EXPORTA PARA VERCEL ────────────────────────────────────────

@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com https://*.google.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://images.unsplash.com https://images.pexels.com https://api.dicebear.com https://*.dicebear.com https://*.googleusercontent.com; connect-src 'self' https://*.vercel.app https://api.openai.com https://api.groq.com https://generativelanguage.googleapis.com https://*.google.com; media-src 'self' blob:;">
+        content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com https://*.google.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://images.unsplash.com https://images.pexels.com https://api.dicebear.com https://*.dicebear.com https://*.googleusercontent.com https://img.youtube.com https://i.ytimg.com; connect-src 'self' https://*.vercel.app https://api.openai.com https://api.groq.com https://generativelanguage.googleapis.com https://*.google.com; media-src 'self' blob:; frame-src https://www.youtube.com https://youtube.com;">
     <title>AorType Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -69,6 +69,18 @@
           0%   { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
+        .life-btn {
+          background: rgba(181,242,61,0.08);
+          color: var(--color-neon, #b5f23d);
+          border: 1px solid rgba(181,242,61,0.2);
+          padding: 6px 14px;
+          border-radius: 99px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background .15s;
+        }
+        .life-btn:active { background: rgba(181,242,61,0.18); }
         .sk {
           background: linear-gradient(90deg,
             var(--sk-base, rgba(150,150,150,0.12)) 25%,
@@ -83,16 +95,17 @@
           --sk-shine: rgba(255,255,255,0.13);
         }
         .skeleton-screen {
-          position: absolute;
+          position: fixed;
           inset: 0;
-          z-index: 10;
+          z-index: 100;
           padding: 20px;
+          padding-top: 80px;
           display: flex;
           flex-direction: column;
           gap: 14px;
           background-color: #f2f2f7;
           pointer-events: none;
-          transition: opacity 0.25s ease;
+          overflow: hidden;
         }
         .dark .skeleton-screen { background-color: #1c1c1e; }
         .skeleton-screen.hidden { display: none; }
@@ -1500,6 +1513,14 @@
 
 
 
+                <!-- Checkin Diário -->
+                <div class="px-1">
+                    <button onclick="app.openCheckinModal()" class="w-full flex items-center justify-center gap-3 bg-white dark:bg-dark-card border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-black py-4 px-5 rounded-3xl text-sm btn-press transition-all shadow-sm">
+                        <i data-lucide="activity" class="w-5 h-5 text-brand-neon"></i>
+                        <span data-translate="daily_checkin">Checkin Diário</span>
+                    </button>
+                </div>
+
                 <!-- Calendar Strip -->
                 <div id="calendar-strip"
                     class="w-full bg-white dark:bg-dark-card rounded-3xl shadow-soft border border-ios-separator/30 dark:border-gray-800 p-5 mb-6">
@@ -2680,15 +2701,15 @@
         <div id="screen-treino" class="screen hidden absolute inset-0 z-50 bg-ios-bg dark:bg-dark-bg flex flex-col">
 
             <!-- Skeleton treino -->
-            <div class="skeleton-screen hidden" id="sk-treino">
-              <div class="flex items-center gap-3 pt-4">
-                <div class="sk w-10 h-10 rounded-full flex-shrink-0"></div>
-                <div class="sk h-6 flex-1 rounded-xl"></div>
-                <div class="sk w-10 h-10 rounded-full flex-shrink-0"></div>
-              </div>
-              <div class="sk h-24 rounded-2xl mt-2"></div>
-              <div class="sk h-5 w-32 rounded-full"></div>
-              <div class="sk h-20 rounded-2xl"></div>
+            <div class="skeleton-screen hidden px-4 space-y-3 pt-4 flex-1 overflow-hidden" id="sk-treino">
+              <!-- Botão skeleton -->
+              <div class="sk h-14 rounded-3xl"></div>
+              <!-- Card treino de hoje skeleton -->
+              <div class="sk h-28 rounded-2xl"></div>
+              <!-- Carrossel skeleton -->
+              <div class="sk h-36 rounded-2xl"></div>
+              <!-- Lista de programas skeleton -->
+              <div class="sk h-5 w-40 rounded-full"></div>
               <div class="sk h-20 rounded-2xl"></div>
               <div class="sk h-20 rounded-2xl"></div>
               <div class="sk h-20 rounded-2xl"></div>
@@ -2696,7 +2717,7 @@
 
             <!-- Header -->
             <header class="flex items-center justify-between px-4 pb-3 pt-safe-3 border-b border-ios-separator/10 dark:border-gray-800 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md sticky top-0 z-10">
-                <button onclick="app.handleTreinoBack()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center">
+                <button id="treino-back-btn" onclick="app.handleTreinoBack()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-elevated flex items-center justify-center invisible">
                     <i data-lucide="arrow-left" class="w-5 h-5"></i>
                 </button>
                 <div class="text-center">
@@ -2709,7 +2730,16 @@
             </header>
 
             <!-- Content -->
-            <div class="flex-1 overflow-y-auto no-scrollbar pb-8">
+            <div id="treino-content" class="flex-1 overflow-y-auto no-scrollbar" style="padding-bottom: 96px;">
+
+                <!-- ── Ações rápidas (Check-in Diário) — sempre primeiro ── -->
+                <div id="treino-quick-actions" class="px-4 pt-4 pb-2">
+                    <button onclick="app.openCheckinModal()"
+                        class="w-full flex items-center justify-center gap-3 bg-white dark:bg-dark-card border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-black py-4 px-5 rounded-3xl text-sm btn-press transition-all shadow-sm">
+                        <i data-lucide="activity" class="w-5 h-5 text-brand-neon"></i>
+                        <span data-translate="daily_checkin">Check-in Diário</span>
+                    </button>
+                </div>
 
                 <!-- ── Card "Treino de Hoje" + calendário semanal (injetado por renderTreinoHojeCard) ── -->
                 <div id="treino-hoje-card-wrap" class="hidden"></div>
@@ -2723,15 +2753,6 @@
                     </div>
                     <!-- Indicadores -->
                     <div id="workout-carousel-dots" class="flex justify-center gap-1.5 mt-2.5"></div>
-                </div>
-
-                <!-- Ações rápidas (Check-in da Vida) -->
-                <div id="treino-quick-actions" class="px-4 pt-3 pb-1">
-                    <button onclick="app.openCheckinModal()"
-                        class="w-full flex items-center justify-center gap-3 bg-white dark:bg-dark-card border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-black py-4 px-5 rounded-3xl text-sm btn-press transition-all shadow-sm">
-                        <i data-lucide="activity" class="w-5 h-5 text-brand-neon"></i>
-                        <span data-translate="daily_checkin">Check-in Diário</span>
-                    </button>
                 </div>
 
                 <!-- Seleção de programa -->
@@ -2803,22 +2824,25 @@
             </div>
 
             <!-- Modal de vídeo (YouTube embed) -->
-            <div id="treino-video-modal" class="hidden absolute inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
-                <div class="w-full max-w-lg bg-black rounded-3xl overflow-hidden shadow-2xl">
-                    <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                        <h3 id="treino-video-title" class="text-white font-bold text-sm"></h3>
-                        <button onclick="app.closeTreinoVideo()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white">
-                            <i data-lucide="x" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                    <div class="relative w-full" style="padding-bottom: 56.25%;">
-                        <iframe id="treino-video-iframe" class="absolute inset-0 w-full h-full" src="" frameborder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowfullscreen></iframe>
-                    </div>
-                    <div class="px-4 py-3">
-                        <p id="treino-video-desc" class="text-white/60 text-xs"></p>
-                    </div>
+            <!-- Modal vídeo: bottom sheet full screen, slide up -->
+            <div id="treino-video-modal" class="hidden fixed inset-0 z-[600]">
+                <!-- overlay escuro, clica para fechar -->
+                <div class="absolute inset-0 bg-black/60" onclick="app.closeTreinoVideo()"></div>
+                <!-- sheet -->
+                <div id="treino-video-sheet" class="absolute bottom-0 left-0 right-0 bg-black rounded-t-3xl overflow-hidden transition-transform duration-300 ease-out translate-y-full" style="height: 88vh;">
+                    <!-- botão fechar -->
+                    <button onclick="app.closeTreinoVideo()"
+                        class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
+                        style="background: rgba(255,255,255,0.15);">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                    <!-- vídeo preenche toda a sheet -->
+                    <iframe id="treino-video-iframe"
+                        class="w-full h-full"
+                        src=""
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>
                 </div>
             </div>
         </div>
@@ -3186,7 +3210,7 @@
 
             <!-- Chat Body -->
             <div id="coach-chat-body"
-                class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 pb-48 md:pb-56 scroll-smooth max-w-3xl mx-auto w-full">
+                class="flex-1 overflow-y-auto no-scrollbar ios-scroll px-4 md:px-6 pt-4 md:pt-6 space-y-4 scroll-smooth max-w-3xl mx-auto w-full" style="padding-bottom: 96px;">
             </div>
 
             <!-- Fixed Input Area -->
@@ -3286,6 +3310,83 @@
             </div>
             <input type="file" id="coach-file-input" class="hidden" accept="image/*"
                 onchange="app.handleCoachFileSelect(event)">
+
+            <!-- ── MODAL ÁREAS DE VIDA ─────────────────────────────── -->
+            <div id="coach-life-modal" class="hidden absolute inset-0 z-[200] flex items-end">
+                <div class="absolute inset-0 bg-black/60" onclick="app.closeCoachLifeMenu()"></div>
+                <div id="coach-life-sheet" class="relative w-full bg-ios-card dark:bg-dark-card rounded-t-3xl translate-y-full transition-transform duration-300 ease-out px-5 pt-5 pb-8 max-h-[85vh] overflow-y-auto">
+                    <div class="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-5"></div>
+                    <h3 class="font-black text-base mb-4">O que você quer explorar?</h3>
+
+                    <!-- Categorias -->
+                    <div class="space-y-3">
+                        <!-- Treino -->
+                        <div>
+                            <div class="text-xs font-bold text-ios-gray uppercase tracking-wider mb-2">💪 Treino</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="app.sendLifePrompt('Analise meu treino de hoje em detalhes — series, carga, exercícios realizados, evolução e o que melhorar')" class="life-btn">Análise do treino de hoje</button>
+                                <button onclick="app.sendLifePrompt('Como foi minha performance de treino na última semana? Veja séries, cargas e consistência')" class="life-btn">Performance da semana</button>
+                                <button onclick="app.sendLifePrompt('Estou evoluindo nas cargas e repetições dos meus treinos? Analise minha progressão')" class="life-btn">Evolução de carga</button>
+                                <button onclick="app.sendLifePrompt('Quanto tempo de descanso estou tendo entre treinos? Está adequado para o meu objetivo?')" class="life-btn">Recuperação entre treinos</button>
+                            </div>
+                        </div>
+                        <!-- Sono -->
+                        <div>
+                            <div class="text-xs font-bold text-ios-gray uppercase tracking-wider mb-2">😴 Sono</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="app.sendLifePrompt('Como está meu sono nos últimos dias? Estou dormindo o suficiente para os meus objetivos?')" class="life-btn">Como está meu sono?</button>
+                                <button onclick="app.sendLifePrompt('De que forma o meu sono está impactando minha performance nos treinos e recuperação muscular?')" class="life-btn">Impacto no treino</button>
+                                <button onclick="app.sendLifePrompt('Baseado nos meus dados, me dê dicas práticas e personalizadas para melhorar minha qualidade de sono')" class="life-btn">Dicas para dormir melhor</button>
+                            </div>
+                        </div>
+                        <!-- Nutrição -->
+                        <div>
+                            <div class="text-xs font-bold text-ios-gray uppercase tracking-wider mb-2">🥗 Nutrição</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="app.sendLifePrompt('O que devo comer agora para bater minhas metas de hoje? Considere meus macros restantes e meus favoritos')" class="life-btn">O que comer agora?</button>
+                                <button onclick="app.sendLifePrompt('Minha distribuição de macros ao longo do dia está boa? Análise detalhada de proteínas, carbs e gorduras')" class="life-btn">Distribuição de macros</button>
+                                <button onclick="app.sendLifePrompt('Estou comendo bem para o meu objetivo? Compare meu consumo real com o ideal baseado no meu perfil')" class="life-btn">Estou comendo bem?</button>
+                                <button onclick="app.sendLifePrompt('Qual é o melhor horário para eu comer baseado no meu padrão atual e meus treinos?')" class="life-btn">Timing das refeições</button>
+                            </div>
+                        </div>
+                        <!-- Hidratação -->
+                        <div>
+                            <div class="text-xs font-bold text-ios-gray uppercase tracking-wider mb-2">💧 Hidratação</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="app.sendLifePrompt('Como está minha hidratação hoje e na semana? Estou bebendo água suficiente?')" class="life-btn">Como está minha hidratação?</button>
+                                <button onclick="app.sendLifePrompt('Preciso beber mais água agora? Calcule o ideal para mim baseado no meu peso e nível de atividade')" class="life-btn">Devo beber mais?</button>
+                            </div>
+                        </div>
+                        <!-- Peso & Composição -->
+                        <div>
+                            <div class="text-xs font-bold text-ios-gray uppercase tracking-wider mb-2">⚖️ Peso & Composição</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="app.sendLifePrompt('Analise minha evolução de peso e composição corporal. Estou no caminho certo para o meu objetivo?')" class="life-btn">Evolução do meu peso</button>
+                                <button onclick="app.sendLifePrompt('Preciso ajustar minhas calorias? Analise meu consumo x gasto e me diga se devo comer mais ou menos')" class="life-btn">Ajustar calorias?</button>
+                                <button onclick="app.sendLifePrompt('Analise meu IMC, peso atual e composição corporal. O que os números dizem sobre minha saúde?')" class="life-btn">Análise do IMC</button>
+                            </div>
+                        </div>
+                        <!-- Bem-estar -->
+                        <div>
+                            <div class="text-xs font-bold text-ios-gray uppercase tracking-wider mb-2">🧘 Bem-estar</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="app.sendLifePrompt('Como está minha recuperação geral? Considere sono, treino, nutrição e humor dos últimos dias')" class="life-btn">Minha recuperação</button>
+                                <button onclick="app.sendLifePrompt('Baseado no meu humor e dados dos últimos dias, como está meu nível de estresse e o que posso fazer?')" class="life-btn">Nível de estresse</button>
+                                <button onclick="app.sendLifePrompt('O que posso fazer hoje para me sentir com mais energia e bem-estar? Análise completa do meu estado atual')" class="life-btn">Como me sentir melhor</button>
+                            </div>
+                        </div>
+                        <!-- Resumo -->
+                        <div>
+                            <div class="text-xs font-bold text-ios-gray uppercase tracking-wider mb-2">📊 Resumo</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="app.sendLifePrompt('Faça um resumo completo e detalhado do meu dia de hoje — treino, nutrição, sono, hidratação, humor e score de saúde')" class="life-btn">Resumo completo do dia</button>
+                                <button onclick="app.sendLifePrompt('Faça uma análise aprofundada da minha semana completa — dias ativos, padrões, pontos fortes e o que melhorar')" class="life-btn">Minha semana completa</button>
+                                <button onclick="app.sendLifePrompt('Quais são os próximos passos práticos para eu evoluir mais rápido em direção ao meu objetivo?')" class="life-btn">Próximos passos</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
 
@@ -3327,7 +3428,7 @@
                     <button onclick="app.navigate('coach')"
                         class="nav-btn flex flex-col items-center justify-center w-10 h-12 md:w-12 md:h-14 rounded-full text-ios-gray dark:text-dark-gray transition-all duration-300"
                         data-screen="coach">
-                        <i data-lucide="bot" class="w-5 h-5 md:w-6 md:h-6 mb-0.5"></i>
+                        <i data-lucide="message-circle" class="w-5 h-5 md:w-6 md:h-6 mb-0.5"></i>
                         <span class="text-[9px] md:text-[10px] font-bold" data-translate="coach">IA</span>
                     </button>
 
@@ -6471,10 +6572,16 @@
                     body: JSON.stringify([{ date: today, water_ml: totalWater }])
                 }).catch(err => console.error('Water checkin sync error:', err));
 
+                // Update local checkin state so updateHealthScore reads the new water total
+                const todayKey = new Date().toLocaleDateString('pt-BR');
+                if (!this.state.dailyCheckins[todayKey]) this.state.dailyCheckins[todayKey] = {};
+                this.state.dailyCheckins[todayKey].water_ml = totalWater;
+
                 this.closeWaterModal();
                 this.showToast(this.t('toast_water_added').replace('{amount}', amount));
                 this.updateDashboardTotals();
                 this.renderTodayMeals();
+                this.renderRecents();
                 this.calculateActivity();
                 this.updateHealthScore();
             },
@@ -6534,6 +6641,9 @@
 
                 this.closeSupplementModal();
                 this.renderTodayMeals();
+                this.renderRecents();
+                this.updateDashboardTotals();
+                this.updateHealthScore();
                 this.showToast(this.t('toast_item_registered').replace('{name}', item.name));
                 // Update doses count display
                 const dosesEl = document.querySelector('[data-translate="doses"] + div .text-lg');
@@ -6781,6 +6891,7 @@
                 this.showToast(this.t('toast_checkin_saved'));
                 this.closeCheckinModal();
                 this.renderHealthDiary();
+                this.updateHealthScore();
             },
 
             renderHealthDiary() {
@@ -6992,6 +7103,7 @@
                         this.renderTodayMeals();
                         this.renderRecents();
                         this.updateDashboardTotals();
+                        this.updateHealthScore(); // atualiza score/hidratação após refeições carregadas
                         console.log('Meals loaded:', meals.length);
                     }
                 } catch (e) {
@@ -7018,7 +7130,7 @@
                                 workoutSpecific: c.workout_specific || c.workoutSpecific || '',
                                 duration: c.workout_duration || c.duration || 0,
                                 caloriesBurned: c.calories_burned || c.caloriesBurned || 0,
-                                sleep: c.sleep_minutes || c.sleep || 0,
+                                sleep: c.sleep_minutes != null ? Math.round(c.sleep_minutes / 60 * 10) / 10 : (c.sleep || 0),
                                 mood: c.mood || '',
                                 note: c.note || '',
                                 water_ml: c.water_ml || 0
@@ -7028,6 +7140,7 @@
                         console.log('Checkins loaded:', Object.keys(normalized).length);
                         this.calculateStreak();   // recalcular ofensiva com todos os check-ins do servidor
                         this.updateHealthScore(); // recalcular score após check-ins carregados da API
+                        this.renderHealthDiary(); // atualizar UI do diário após dados carregados
                     }
                 } catch (e) {
                     console.error('Failed to load Checkins:', e);
@@ -7083,12 +7196,20 @@
                         splash.classList.add('opacity-0', 'pointer-events-none');
                         setTimeout(() => {
                             splash.classList.add('hidden');
-                            // Mostra skeleton do dashboard imediatamente após o splash sumir
-                            // O skeleton fica até os dados do servidor chegarem (ver hideSplashSkeleton)
-                            if (this.state.isLoggedIn) {
+                            // Mostra skeleton só se os dados ainda não chegaram
+                            if (this.state.isLoggedIn && !this._mealsLoaded) {
                                 const sk = document.getElementById('sk-dashboard');
                                 if (sk) sk.classList.remove('hidden');
                                 this._splashSkeletonActive = true;
+                                // Timeout de segurança: esconde skeleton após 8s no máximo
+                                setTimeout(() => {
+                                    if (this._splashSkeletonActive) {
+                                        this._splashSkeletonActive = false;
+                                        this._mealsLoaded = true;
+                                        const skSafe = document.getElementById('sk-dashboard');
+                                        if (skSafe) skSafe.classList.add('hidden');
+                                    }
+                                }, 8000);
                             }
                         }, 700);
                     }
@@ -7745,9 +7866,9 @@
                 // Pontuar hoje diretamente (scoreDayRaw aceita ambos os formatos de chave)
                 const todayRaw = scoreDayRaw(todayPtKey, todayIso);
 
-                // Piso biológico de 80 — o score nunca mostra abaixo de 80
-                // Acima de 80, cada ação conta imediatamente
-                const displayScore = hasAnyData ? Math.max(80, todayRaw) : null;
+                // Score de saúde: base 80 + até 20 pontos de mérito (0–100 raw → 80–100 display)
+                // Nunca abaixo de 80; cada ação empurra o agulha para cima até 100
+                const displayScore = hasAnyData ? Math.round(80 + (todayRaw / 100) * 20) : null;
 
                 // Mantemos rawScore para a "Média do mês" (histórico)
                 const rawScore = todayRaw;
@@ -7838,8 +7959,12 @@
                 // m.macros.cal (local) ou m.calories (server flat) — suporta ambos
                 const todayCals   = todayMealsAll.reduce((s, m) => s + (m.macros?.cal || m.calories || 0), 0);
                 const todayProt   = todayMealsAll.reduce((s, m) => s + (m.macros?.p   || m.protein  || 0), 0);
-                const todaySleep  = ciToday.sleep_hours || (ciToday.sleep_minutes ? ciToday.sleep_minutes / 60 : 0) || 0;
-                const todayWater  = ciToday.water_ml || 0;
+                const todaySleep  = ciToday.sleep_hours || ciToday.sleep || (ciToday.sleep_minutes ? ciToday.sleep_minutes / 60 : 0) || 0;
+                // Água: usa totals.water (soma das refeições tipo water) como fonte primária
+                // Fallback para ciToday.water_ml caso totals ainda não esteja calculado
+                const todayWater  = (this.state.totals && this.state.totals.water > 0)
+                    ? this.state.totals.water
+                    : (ciToday.water_ml || 0);
                 const todayCalBurned = ciToday.calories_burned || ciToday.caloriesBurned || 0;
                 const todayWorkout   = !!(ciToday.workout || ciToday.workout_type);
 
@@ -7943,7 +8068,8 @@
                 }
 
                 // ── Cards compactos (Hidratação, Nutrição, Atividade, Proteína) ──
-                const waterDoneCurrent = (this.state.totals && this.state.totals.water) || 0;
+                // Usa todayWater (já calculado acima) como única fonte de verdade para água
+                const waterDoneCurrent = todayWater;
                 const waterPct = goalWater > 0 ? Math.min(1, waterDoneCurrent / goalWater) : 0;
                 const hydrationEl = document.getElementById('health-hydration-val');
                 if (hydrationEl) {
@@ -8047,7 +8173,13 @@
                 }
                 const listEl = document.getElementById('treino-program-list');
                 if (!listEl) return;
-                listEl.innerHTML = `<div class="text-center py-12 text-ios-gray"><p class="text-sm">${this.t('loading_workouts')}</p></div>`;
+
+                // Mostra skeleton e esconde conteúdo
+                const sk = document.getElementById('sk-treino');
+                const content = document.getElementById('treino-content');
+                if (sk) sk.classList.remove('hidden');
+                if (content) content.classList.add('hidden');
+
                 try {
                     const res = await fetch('/api/workouts', { headers: AUTH.headers() });
                     const programs = await res.json();
@@ -8055,6 +8187,10 @@
                     this.renderTreinoProgramList(programs);
                 } catch {
                     listEl.innerHTML = '<div class="text-center py-12 text-red-400"><p class="text-sm">Erro ao carregar treinos</p></div>';
+                } finally {
+                    // Esconde skeleton e mostra conteúdo
+                    if (sk) sk.classList.add('hidden');
+                    if (content) content.classList.remove('hidden');
                 }
             },
 
@@ -8447,11 +8583,6 @@
                 // G10: Checkpoint 2 — renderizar exercícios
                 this.renderTreinoExercises(day.exercises || []);
                 if (this._renderSeq !== token) return;
-
-                // P1c: Header contextual se veio do card "Treino de Hoje"
-                this._renderWorkoutHeader(day, dayIdx);
-                // P2a: Strip de datas
-                this.renderTreinoDateStrip(program.id);
 
                 // G10: Checkpoint 3 — restaurar progresso
                 await this.loadTodayProgress(program.id);
@@ -8905,6 +9036,12 @@
                 document.getElementById('treino-hoje-card-wrap')?.classList.add('hidden');
                 const exView = document.getElementById('treino-exercises-view');
                 exView.classList.remove('hidden');
+                // Esconde nav e mostra botão voltar ao entrar no treino
+                const _nav = document.querySelector('nav');
+                if (_nav) _nav.classList.add('hidden');
+                document.getElementById('app')?.classList.remove('pb-24');
+                const _backBtn = document.getElementById('treino-back-btn');
+                if (_backBtn) _backBtn.classList.remove('invisible');
 
                 document.getElementById('treino-active-name').textContent = program.name;
                 document.getElementById('treino-subtitle').textContent = program.name;
@@ -9104,59 +9241,101 @@
                 const observations = progEx?._structured ? (progEx.observations || '') : '';
                 const cardio = progEx?._structured ? (progEx.cardio || '') : '';
                 const obsBanner = noDays && (observations || cardio) ? `
-                    <div class="bg-brand-neon/5 border border-brand-neon/20 rounded-2xl p-3 mb-3 mx-0">
+                    <div class="bg-brand-neon/5 border border-brand-neon/20 rounded-2xl p-3 mb-3">
                         ${observations ? `<p class="text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">📋 ${observations}</p>` : ''}
                         ${cardio ? `<p class="text-[11px] font-semibold text-brand-neon">🏃 Cardio: ${cardio}</p>` : ''}
                     </div>` : '';
 
+                // Cores por grupo muscular
+                const categoryColors = {
+                    'chest-triceps': '#c8f542', 'peito': '#c8f542', 'tríceps': '#c8f542',
+                    'back-biceps': '#60a5fa', 'costas': '#60a5fa', 'bíceps': '#60a5fa',
+                    'legs': '#f472b6', 'pernas': '#f472b6',
+                    'shoulders': '#fb923c', 'ombros': '#fb923c',
+                    'abs': '#a78bfa', 'abdomen': '#a78bfa', 'abdominal': '#a78bfa',
+                };
+                const progCategory = prog?.category || '';
+                const defaultColor = categoryColors[progCategory] || '#c8f542';
+
                 listEl.innerHTML = obsBanner + exercises.map((ex, idx) => {
                     const hasVideo = !!ex.video_url;
                     const sets = Array.from({ length: ex.sets || 3 }, (_, si) => si);
+                    const accentColor = categoryColors[ex.category?.toLowerCase()] || defaultColor;
+
+                    // Extrai video ID para thumbnail do YouTube
+                    const videoId = hasVideo
+                        ? (ex.video_url.includes('/embed/') ? ex.video_url.split('/embed/')[1]?.split('?')[0]
+                         : ex.video_url.includes('v=') ? ex.video_url.split('v=')[1]?.split('&')[0]
+                         : ex.video_url.split('/').pop()?.split('?')[0])
+                        : null;
+                    const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
+
+                    const p = this._getExerciseProgression(ex.name);
+
+                    const videoBtnHtml = hasVideo
+                        ? `<button onclick="app.openTreinoVideo('${ex.video_url.replace(/'/g,"\\'")}','${ex.name.replace(/'/g,"\\'")}')"
+                            class="flex-shrink-0 w-10 h-10 rounded-2xl overflow-hidden relative bg-black active:scale-95 transition-transform">
+                            ${thumbUrl ? `<img src="${thumbUrl}" class="absolute inset-0 w-full h-full object-cover opacity-50" loading="lazy" onerror="this.style.display='none'">` : ''}
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="w-6 h-6 rounded-full flex items-center justify-center" style="background:#ff0000ee;">
+                                    <svg width="8" height="8" viewBox="0 0 10 10" fill="white"><polygon points="3,1 9,5 3,9"/></svg>
+                                </div>
+                            </div>
+                           </button>`
+                        : `<button onclick="app.openTreinoVideoSearch('${ex.name.replace(/'/g,"\\'")}')"
+                            class="flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
+                            style="background:rgba(255,0,0,0.1);">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center" style="background:#ff0000bb;">
+                                <svg width="8" height="8" viewBox="0 0 10 10" fill="white"><polygon points="3,1 9,5 3,9"/></svg>
+                            </div>
+                           </button>`;
+
                     return `
-                        <div id="ex-card-${idx}" class="bg-white dark:bg-dark-card rounded-3xl p-5 border-2 border-ios-separator/30 dark:border-gray-800 shadow-sm transition-colors">
-                            <div class="flex items-start justify-between mb-4">
-                                <div class="flex-1">
-                                    ${ex.category ? `<p class="text-[9px] font-black text-brand-neon uppercase tracking-widest mb-0.5">${ex.category}</p>` : ''}
-                                    <h4 class="font-black text-base">${ex.name}</h4>
-                                    <p class="text-xs text-ios-gray mt-0.5">${ex.sets} séries × ${ex.reps} reps${ex.target_weight ? ` • ${ex.target_weight}kg` : ''}${ex.rest ? ` • ⏱ ${ex.rest}` : ''}</p>
+                        <div id="ex-card-${idx}" class="bg-white dark:bg-dark-card rounded-2xl overflow-hidden transition-all duration-300" style="border: 1.5px solid rgba(0,0,0,0.07);">
+
+                            <!-- Cabeçalho: número + nome + série info + botão vídeo -->
+                            <div class="flex items-center gap-3 px-4 pt-4 pb-3">
+                                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${accentColor}18;">
+                                    <span class="font-black text-xs" style="color:${accentColor};">${String(idx + 1).padStart(2, '0')}</span>
                                 </div>
-                                ${hasVideo ? `
-                                    <button onclick="app.openTreinoVideo('${ex.video_url}', '${ex.name}', '${ex.reps} reps')"
-                                        class="text-[11px] text-brand-neon/80 font-semibold ml-3 flex-shrink-0 active:opacity-60 transition-opacity">
-                                        ▶ Ver execução
-                                    </button>
-                                ` : ''}
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-black text-[14px] leading-tight text-gray-900 dark:text-white truncate">${ex.name}</h4>
+                                    <p class="text-[10px] text-ios-gray mt-0.5">${ex.sets} séries · ${ex.reps} reps${ex.rest_seconds ? ` · ${ex.rest_seconds}s` : ''}</p>
+                                </div>
+                                ${videoBtnHtml}
                             </div>
-                            <div class="grid grid-cols-${Math.min(ex.sets, 4)} gap-2">
-                                ${sets.map(si => `
-                                    <button onclick="app.toggleTreinoSet(${idx}, ${si}, this)"
-                                        data-ex="${idx}" data-set="${si}"
-                                        ${si > 0 ? 'disabled' : ''}
-                                        class="treino-set-btn flex flex-col items-center justify-center py-3 rounded-2xl border-2 border-gray-200 dark:border-gray-700 text-xs font-black transition-all${si > 0 ? ' opacity-40 cursor-not-allowed' : ''}">
-                                        <span class="text-[10px] font-bold text-ios-gray">Série ${si + 1}</span>
-                                        <span class="text-base mt-0.5 text-ios-gray">○</span>
-                                    </button>
-                                `).join('')}
-                            </div>
-                            <div class="flex items-center gap-3 mt-3 pt-3 border-t border-ios-separator/20 dark:border-gray-700">
-                                <span class="text-[10px] text-ios-gray font-black uppercase tracking-wider flex-shrink-0">Carga</span>
-                                <div class="flex flex-col gap-0.5 flex-1">
-                                    ${(() => { const p = this._getExerciseProgression(ex.name); return `
-                                    <div class="flex items-center gap-2">
-                                        <button onclick="app.adjustWeight(${idx}, -2.5)" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-sm font-black flex-shrink-0 flex items-center justify-center">−</button>
-                                        <input type="number" inputmode="decimal" id="weight-${idx}"
-                                            placeholder="${p.suggested > 0 ? p.suggested : ex.target_weight > 0 ? ex.target_weight : ''}"
-                                            onchange="app.saveWeight(${idx}, this.value)"
-                                            class="w-16 bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1.5 text-xs font-bold text-center outline-none focus:border-brand-neon transition-colors">
-                                        <button onclick="app.adjustWeight(${idx}, +2.5)" class="w-9 h-9 rounded-full bg-brand-neon/10 text-brand-neon text-sm font-black flex-shrink-0 flex items-center justify-center">+</button>
-                                    </div>
-                                    ${p.lastWeight > 0 ? `<span class="text-[9px] text-ios-gray">↑ ${p.lastWeight}kg · melhor: ${p.bestWeight}kg</span>` : ''}
-                                    `; })()}
+
+                            <!-- Séries -->
+                            <div class="px-4 pb-3">
+                                <div class="flex gap-2">
+                                    ${sets.map(si => `
+                                        <button onclick="app.toggleTreinoSet(${idx}, ${si}, this)"
+                                            data-ex="${idx}" data-set="${si}"
+                                            ${si > 0 ? 'disabled' : ''}
+                                            class="treino-set-btn flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl border-2 transition-all${si > 0 ? ' opacity-30 cursor-not-allowed' : ' active:scale-95'}"
+                                            style="border-color: rgba(0,0,0,0.1);">
+                                            <span class="text-[9px] font-black uppercase tracking-wider text-ios-gray">S${si + 1}</span>
+                                            <span class="text-base mt-0.5 leading-none text-ios-gray">○</span>
+                                        </button>
+                                    `).join('')}
                                 </div>
                             </div>
-                            ${ex.notes ? `<div class="mt-2 px-1 flex items-start gap-1.5">
-                                <span class="text-brand-neon text-[11px] mt-0.5 flex-shrink-0">📋</span>
-                                <p class="text-[11px] text-ios-gray leading-relaxed">${ex.notes}</p>
+
+                            <!-- Carga -->
+                            <div class="px-4 pb-4 flex items-center gap-2" style="border-top: 1px solid rgba(0,0,0,0.05);">
+                                <span class="text-[10px] text-ios-gray font-black uppercase tracking-wider">Carga</span>
+                                <button onclick="app.adjustWeight(${idx}, -2.5)" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-sm font-black flex items-center justify-center active:bg-gray-200 transition-colors">−</button>
+                                <input type="number" inputmode="decimal" id="weight-${idx}"
+                                    placeholder="${p.suggested > 0 ? p.suggested : ex.target_weight > 0 ? ex.target_weight : '0'}"
+                                    onchange="app.saveWeight(${idx}, this.value)"
+                                    class="w-14 bg-gray-50 dark:bg-dark-elevated border border-gray-200 dark:border-gray-700 rounded-xl px-1 py-1.5 text-sm font-bold text-center outline-none flex-shrink-0">
+                                <button onclick="app.adjustWeight(${idx}, +2.5)" class="w-8 h-8 rounded-full text-sm font-black flex items-center justify-center active:opacity-70 transition-opacity" style="background:${accentColor}20; color:${accentColor};">+</button>
+                                ${p.lastWeight > 0 ? `<span class="text-[9px] text-ios-gray ml-1">↑${p.lastWeight}kg · best ${p.bestWeight}kg</span>` : ''}
+                            </div>
+
+                            ${ex.notes ? `
+                            <div class="px-4 pb-3 flex items-start gap-2" style="border-top: 1px solid rgba(0,0,0,0.05);">
+                                <p class="text-[10px] text-ios-gray/70 leading-relaxed">${ex.notes}</p>
                             </div>` : ''}
                         </div>
                     `;
@@ -9172,29 +9351,56 @@
                 this.state.treinoSetsCompleted[key] = done;
 
                 if (done) {
-                    btn.classList.remove('border-gray-200', 'dark:border-gray-700');
-                    btn.classList.add('border-brand-neon', 'bg-brand-neon/10');
+                    btn.style.borderColor = '#c8f542';
+                    btn.style.backgroundColor = 'rgba(200,245,66,0.12)';
                     btn.querySelector('span:last-child').textContent = '✓';
-                    btn.querySelector('span:last-child').classList.add('text-brand-neon');
+                    btn.querySelector('span:last-child').style.color = '#c8f542';
+                    btn.querySelector('span:first-child').style.color = '#c8f542';
                 } else {
-                    btn.classList.add('border-gray-200', 'dark:border-gray-700');
-                    btn.classList.remove('border-brand-neon', 'bg-brand-neon/10');
+                    btn.style.borderColor = 'rgba(0,0,0,0.1)';
+                    btn.style.backgroundColor = '';
                     btn.querySelector('span:last-child').textContent = '○';
-                    btn.querySelector('span:last-child').classList.remove('text-brand-neon');
+                    btn.querySelector('span:last-child').style.color = '';
+                    btn.querySelector('span:first-child').style.color = '';
                 }
                 this.updateTreinoProgress();
+
+                // ── Energia Ativa por série ───────────────────────────────
+                const activeEx = (this.state.activeTreinoExercises || [])[exIdx];
+                const kcalPerSet = Math.round(8 + (activeEx?.target_weight || 0) * 0.05);
+                const todayKey = new Date().toLocaleDateString('pt-BR');
+                if (!this.state.dailyCheckins[todayKey]) this.state.dailyCheckins[todayKey] = {};
+                const ci = this.state.dailyCheckins[todayKey];
+                const prev = ci.caloriesBurned || 0;
+                ci.caloriesBurned = Math.max(0, prev + (done ? kcalPerSet : -kcalPerSet));
+                // Atualiza contador na tela
+                const energyEl = document.getElementById('treino-energy-val');
+                if (energyEl) {
+                    energyEl.textContent = ci.caloriesBurned;
+                    // Animação de bump
+                    energyEl.style.transform = 'scale(1.3)';
+                    energyEl.style.transition = 'transform 0.15s ease';
+                    setTimeout(() => { energyEl.style.transform = 'scale(1)'; }, 150);
+                }
+                // Mostra o card de energia se ainda estava oculto
+                const energyCard = document.getElementById('treino-energy-card');
+                if (energyCard && done) energyCard.classList.remove('hidden');
+                // Persiste localmente
+                localStorage.setItem('wb_health_checkin', JSON.stringify(this.state.dailyCheckins));
+                // ──────────────────────────────────────────────────────────
 
                 // Desbloqueia próxima série se marcou como feita
                 if (done) {
                     const nextBtn = document.querySelector(`[data-ex="${exIdx}"][data-set="${setIdx + 1}"]`);
                     if (nextBtn) {
                         nextBtn.disabled = false;
-                        nextBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+                        nextBtn.style.opacity = '';
+                        nextBtn.classList.remove('opacity-30', 'opacity-35', 'cursor-not-allowed');
+                        nextBtn.classList.add('active:scale-95');
                     }
                 }
 
                 // Verifica se exercício 100% concluído → borda verde
-                const activeEx = (this.state.activeTreinoExercises || [])[exIdx];
                 if (activeEx) {
                     const allDone = Array.from({ length: activeEx.sets || 3 }, (_, si) =>
                         !!this.state.treinoSetsCompleted[`${exIdx}-${si}`]).every(Boolean);
@@ -9387,7 +9593,13 @@
                 // P1b: limpar flags de modo "Treino de Hoje" e contexto de data
                 this._autoStartToday = false;
                 this._autoSelectedDayIndex = null;
-                this._calendarDateContext = null; // reset para próxima sessão usar hoje
+                this._calendarDateContext = null;
+                // Volta nav e esconde botão voltar na lista principal
+                const _nav = document.querySelector('nav');
+                if (_nav) _nav.classList.remove('hidden');
+                document.getElementById('app')?.classList.add('pb-24');
+                const _backBtn = document.getElementById('treino-back-btn');
+                if (_backBtn) _backBtn.classList.add('invisible');
             },
 
             handleTreinoBack() {
@@ -9408,30 +9620,72 @@
                 this.navigate('dashboard');
             },
 
-            openTreinoVideo(videoUrl, title, desc) {
+            openTreinoVideoSearch(exerciseName) {
                 const modal = document.getElementById('treino-video-modal');
+                const sheet = document.getElementById('treino-video-sheet');
                 const iframe = document.getElementById('treino-video-iframe');
-                const titleEl = document.getElementById('treino-video-title');
-                const descEl = document.getElementById('treino-video-desc');
-                if (!modal || !iframe) return;
-
-                let embedUrl = videoUrl;
-                const ytMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?/]+)/);
-                if (ytMatch) embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`;
-
-                if (titleEl) titleEl.textContent = title;
-                if (descEl) descEl.textContent = desc || '';
-                iframe.src = embedUrl;
+                if (!modal || !sheet || !iframe) return;
+                // Mostra placeholder enquanto vídeo não está cadastrado
+                iframe.src = '';
+                iframe.style.display = 'none';
+                let placeholder = document.getElementById('treino-video-placeholder');
+                if (!placeholder) {
+                    placeholder = document.createElement('div');
+                    placeholder.id = 'treino-video-placeholder';
+                    placeholder.className = 'absolute inset-0 flex flex-col items-center justify-center gap-4 px-8';
+                    sheet.appendChild(placeholder);
+                }
+                placeholder.style.display = 'flex';
+                placeholder.innerHTML = `
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center mb-2" style="background:rgba(255,0,0,0.15);">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff4444" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="#ff4444" stroke="none"/></svg>
+                    </div>
+                    <p class="text-white font-black text-base text-center">${exerciseName}</p>
+                    <p class="text-white/40 text-xs text-center">Vídeo em breve</p>
+                    <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(exerciseName + ' execução 3D')}" target="_blank"
+                       class="mt-2 px-5 py-2.5 rounded-2xl text-sm font-bold" style="background:rgba(255,0,0,0.2); color:#ff6666;">
+                       Buscar no YouTube ↗
+                    </a>`;
                 modal.classList.remove('hidden');
-                modal.classList.add('flex');
+                sheet.getBoundingClientRect();
+                sheet.classList.remove('translate-y-full');
+            },
+
+            openTreinoVideo(videoUrl, title) {
+                const modal = document.getElementById('treino-video-modal');
+                const sheet = document.getElementById('treino-video-sheet');
+                const iframe = document.getElementById('treino-video-iframe');
+                if (!modal || !iframe || !sheet) return;
+
+                // Monta embed URL
+                let embedUrl = videoUrl;
+                const ytEmbed = videoUrl.match(/youtube\.com\/embed\/([^?&]+)/);
+                const ytWatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?/]+)/);
+                const ytShort = videoUrl.match(/youtube\.com\/shorts\/([^?&]+)/);
+                const vid = (ytEmbed?.[1] || ytWatch?.[1] || ytShort?.[1]);
+                if (vid) embedUrl = `https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1`;
+
+                iframe.src = embedUrl;
+                iframe.style.display = '';
+                const ph = document.getElementById('treino-video-placeholder');
+                if (ph) ph.style.display = 'none';
+                modal.classList.remove('hidden');
+                sheet.getBoundingClientRect();
+                sheet.classList.remove('translate-y-full');
             },
 
             closeTreinoVideo() {
                 const modal = document.getElementById('treino-video-modal');
+                const sheet = document.getElementById('treino-video-sheet');
                 const iframe = document.getElementById('treino-video-iframe');
-                if (iframe) iframe.src = '';
-                if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+                if (!modal || !sheet) return;
+                sheet.classList.add('translate-y-full');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    if (iframe) iframe.src = '';
+                }, 300);
             },
+
 
             openTreinoHistory() {
                 const modal = document.getElementById('treino-history-modal');
@@ -10883,6 +11137,14 @@
 
             loadTodayMeals() {
                 // Background sync — REPLACE local state with server truth
+                if (!AUTH.getToken()) {
+                    // Sem token: esconde skeleton imediatamente para não ficar preso
+                    this._mealsLoaded = true;
+                    this._splashSkeletonActive = false;
+                    const skNoToken = document.getElementById('sk-dashboard');
+                    if (skNoToken) skNoToken.classList.add('hidden');
+                    return;
+                }
                 if (AUTH.getToken()) {
                     fetch('/api/meals', { headers: AUTH.headers() })
                         .then(res => res.ok ? res.json() : null)
@@ -10941,13 +11203,13 @@
                             this.renderRecents();
                             this.calculateStreak();
                             this.updateHealthScore();
-                            // Esconde skeleton do splash agora que os dados reais chegaram
-                            if (this._splashSkeletonActive) {
-                                this._splashSkeletonActive = false;
-                                const sk = document.getElementById('sk-dashboard');
-                                if (sk) sk.classList.add('hidden');
-                            }
-                        }).catch(() => {});
+                        }).catch(() => {}).finally(() => {
+                            // Esconde skeleton SEMPRE — mesmo em caso de erro de rede
+                            this._mealsLoaded = true;
+                            this._splashSkeletonActive = false;
+                            const sk = document.getElementById('sk-dashboard');
+                            if (sk) sk.classList.add('hidden');
+                        });
                 }
 
                 try {
@@ -14367,7 +14629,7 @@
                 `;
 
                 container.appendChild(div);
-                container.scrollTop = container.scrollHeight;
+                setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
                 if (window.lucide) lucide.createIcons();
             },
 
@@ -14382,6 +14644,7 @@
                     <button onclick="app.handleCoachAction('analyze_7days')" class="bg-brand-neon text-black border border-brand-neon px-4 py-2 rounded-full text-xs font-bold shadow-neon hover:bg-brand-neon/90 transition-colors">${this.t('analyze_7days')}</button>
                     <button onclick="app.handleCoachAction('favorites')" class="bg-brand-neon text-black border border-brand-neon px-4 py-2 rounded-full text-xs font-bold shadow-neon hover:bg-brand-neon/90 transition-colors">${this.t('my_favorites_label')}</button>
                     <button onclick="app.handleCoachAction('end_day')" class="bg-brand-neon text-black border border-brand-neon px-4 py-2 rounded-full text-xs font-bold shadow-neon hover:bg-brand-neon/90 transition-colors">${this.t('end_day_label')}</button>
+                    <button onclick="app.openCoachLifeMenu()" class="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold transition-colors flex-shrink-0" style="background:rgba(181,242,61,0.12);color:#b5f23d;border:1.5px solid rgba(181,242,61,0.3)">+</button>
                 `;
 
                 // Remove previous options if any to avoid clutter?
@@ -14391,7 +14654,34 @@
                 document.querySelectorAll('.coach-options').forEach(el => el.remove());
 
                 container.appendChild(div);
-                container.scrollTop = container.scrollHeight;
+                setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
+            },
+
+            openCoachLifeMenu() {
+                const modal = document.getElementById('coach-life-modal');
+                const sheet = document.getElementById('coach-life-sheet');
+                if (!modal || !sheet) return;
+                modal.classList.remove('hidden');
+                sheet.getBoundingClientRect();
+                sheet.classList.remove('translate-y-full');
+            },
+
+            closeCoachLifeMenu() {
+                const modal = document.getElementById('coach-life-modal');
+                const sheet = document.getElementById('coach-life-sheet');
+                if (!modal || !sheet) return;
+                sheet.classList.add('translate-y-full');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            },
+
+            sendLifePrompt(prompt) {
+                this.closeCoachLifeMenu();
+                setTimeout(() => {
+                    this.renderCoachMessage('user', prompt);
+                    this.state.coach.messages.push({ role: 'user', text: prompt, date: new Date().toISOString() });
+                    this.saveCoachState();
+                    this.simulateAIResponse(prompt, 'life_area');
+                }, 320);
             },
 
             handleCoachAction(action) {
@@ -14650,7 +14940,7 @@ Instruções:
                 const healthScore = this.state.userProfile?.lastHealthScore || Math.max(80, Math.round(
                     (ciToday.sleep_hours >= goalSleep ? 20 : 0) +
                     (t.protein >= goalProt * 0.8 ? 15 : 0) +
-                    (t.calories >= goalCals * 0.5 ? 10 : 0) +
+                    (t.calories >= goalCal * 0.5 ? 10 : 0) +
                     (t.water >= goalWater ? 10 : 0) +
                     (ciToday.mood ? 10 : 0) + 80
                 ));
@@ -14694,7 +14984,41 @@ Instruções:
                         hour: hour
                     },
                     week: week7,
-                    favorites: favorites
+                    favorites: favorites,
+                    workout: (() => {
+                        // Pega programa ativo e treino atual
+                        const prog = this.state.workoutPrograms?.find(p => p.is_assigned) || this.state.workoutPrograms?.[0];
+                        if (!prog) return { program: null, today: null };
+                        const exercises = prog.exercises;
+                        // Estrutura days (G9 NewWs)
+                        if (exercises && typeof exercises === 'object' && !Array.isArray(exercises) && exercises.days) {
+                            const todayWorkout = this.state.selectedWorkoutDay || exercises.days?.[0];
+                            return {
+                                program: prog.name,
+                                today: todayWorkout ? {
+                                    name: todayWorkout.name,
+                                    focus: todayWorkout.focus || '',
+                                    exercises: (todayWorkout.exercises || []).map(e => ({
+                                        name: e.name,
+                                        sets: e.sets,
+                                        reps: e.reps,
+                                        target_weight: e.target_weight || 0,
+                                        notes: e.notes || ''
+                                    }))
+                                } : null,
+                                allDays: exercises.days?.map(d => d.name) || []
+                            };
+                        }
+                        // Estrutura array simples
+                        if (Array.isArray(exercises)) {
+                            return {
+                                program: prog.name,
+                                today: { name: prog.name, focus: prog.category || '', exercises: exercises.map(e => ({ name: e.name, sets: e.sets, reps: e.reps, target_weight: e.target_weight || 0 })) },
+                                allDays: []
+                            };
+                        }
+                        return { program: prog.name, today: null };
+                    })()
                 };
             },
 
@@ -14769,7 +15093,8 @@ Instruções:
 
                 // 4. LLM INTEGRATION — Always call AI when available (overrides keyword responses for better accuracy)
                 const hasLocalKey = app.config && app.config.geminiApiKey;
-                const hasBackendKey = this.state.aiStatus && this.state.aiStatus.providers && (this.state.aiStatus.providers.groq || this.state.aiStatus.providers.gemini);
+                // Sempre tenta backend se autenticado — evita race condition com checkBackendStatus
+                const hasBackendKey = AUTH.getToken() || (this.state.aiStatus && this.state.aiStatus.providers && (this.state.aiStatus.providers.groq || this.state.aiStatus.providers.gemini));
 
                 if (hasLocalKey || hasBackendKey) {
                     try {
@@ -15005,27 +15330,35 @@ Rules:
                     target.classList.add('animate-fade-in');
                 }
 
-                // Show skeleton briefly for data-heavy screens
-                const skScreens = ['dashboard', 'stats', 'health', 'social', 'profile', 'coach', 'treino'];
-                if (skScreens.includes(screen)) {
-                    const skEl = document.getElementById(`sk-${screen}`);
-                    if (skEl) {
-                        skEl.classList.remove('hidden');
-                        setTimeout(() => { skEl.classList.add('hidden'); }, 380);
-                    }
-                }
+                // Skeletons são gerenciados por cada tela individualmente durante carregamento real
+                // treino: loadTreinoScreen() cuida do sk-treino
+                // dashboard: splash + loadTodayMeals() cuida do sk-dashboard
+                // demais telas: leem state já carregado, não precisam de skeleton na navegação
 
                 // Header Visibility for special screens
                 const header = document.querySelector('header');
                 const nav = document.querySelector('nav');
-                if (['streak', 'health', 'coach', 'treino', 'scanner'].includes(screen)) {
+                const screensNoHeader = ['streak', 'health', 'coach', 'treino', 'scanner'];
+                const screensNoNav    = ['streak', 'health', 'coach', 'scanner'];
+                if (screensNoHeader.includes(screen)) {
                     if (header) header.classList.add('hidden');
-                    if (nav) nav.classList.add('hidden');
                     document.getElementById('app').classList.remove('pb-24');
                 } else {
                     if (header) header.classList.remove('hidden');
+                    document.getElementById('app').classList.add('pb-24');
+                }
+                if (screensNoNav.includes(screen)) {
+                    if (nav) nav.classList.add('hidden');
+                } else {
+                    if (nav) nav.classList.remove('hidden');
+                }
+                // Treino: nav visível na lista principal, oculto dentro do treino
+                // (o controle fino é feito por renderExercises / voltarListaTreino)
+                if (screen === 'treino') {
                     if (nav) nav.classList.remove('hidden');
                     document.getElementById('app').classList.add('pb-24');
+                    const backBtn = document.getElementById('treino-back-btn');
+                    if (backBtn) backBtn.classList.add('invisible');
                 }
 
                 this.state.currentScreen = screen;
@@ -15042,7 +15375,9 @@ Rules:
                     this.loadTreinoScreen();
                 }
                 if (screen === 'health') {
+                    this.updateDashboardTotals(); // garante totals atualizados antes do score
                     this.updateHealthScore();
+                    this.renderHealthDiary();
                 }
                 if (screen === 'coach') {
                     this.loadCoachState();
@@ -17086,7 +17421,7 @@ Rules:
                                 </div>
                                 <div class="flex-1 z-10 relative">
                                     <div class="text-sm font-bold truncate">${m.name}</div>
-                                    <div class="text-xs text-ios-gray">${m.macros?.cal ?? m.calories ?? 0} kcal</div>
+                                    <div class="text-xs text-ios-gray">${m.type === 'water' ? `${m.amount || m.grams || 0} ml` : m.type === 'supplement' ? 'Suplemento' : `${m.macros?.cal ?? m.calories ?? 0} kcal`}</div>
                                 </div>
                                 <div class="z-10 relative text-brand-neon">
                                     <i data-lucide="chevron-right" class="w-5 h-5"></i>
@@ -17094,15 +17429,16 @@ Rules:
                             </button>
                         `;
                     } else {
+                        const itemIcon = m.type === 'water' ? '💧' : m.type === 'supplement' ? '💊' : '🍽️';
                         html += `
                             <button onclick="app.openMealDetails('${m.id}')" class="w-full bg-white dark:bg-dark-card rounded-2xl p-3 shadow-sm border border-ios-separator/30 dark:border-gray-800 flex items-center gap-4 text-left group">
                                 <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 overflow-hidden flex items-center justify-center flex-shrink-0 relative">
-                                    ${m.image ? `<img src="${m.image}" class="w-full h-full object-cover" />` : '<span class="text-xl">🍽️</span>'}
+                                    ${m.image ? `<img src="${m.image}" class="w-full h-full object-cover" />` : `<span class="text-xl">${itemIcon}</span>`}
                                     <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors"></div>
                                 </div>
                                 <div class="flex-1">
                                     <div class="text-sm font-bold truncate">${m.name}</div>
-                                    <div class="text-xs text-ios-gray">${m.macros?.cal ?? m.calories ?? 0} kcal</div>
+                                    <div class="text-xs text-ios-gray">${m.type === 'water' ? `${m.amount || m.grams || 0} ml` : m.type === 'supplement' ? 'Suplemento' : `${m.macros?.cal ?? m.calories ?? 0} kcal`}</div>
                                 </div>
                                 <i data-lucide="chevron-right" class="w-5 h-5 text-ios-gray/50 group-hover:text-brand-neon transition-colors"></i>
                             </button>
