@@ -4,6 +4,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
@@ -73,61 +74,423 @@ const authMiddleware = (req, res, next) => {
 
 // ── FOOD DATABASE ──────────────────────────────────────────────
 const FOOD_DB = {
+  // ── FRANGO ───────────────────────────────────────────────────
   'frango grelhado': { cal: 165, p: 31, c: 0, f: 3.6 },
   'frango': { cal: 165, p: 31, c: 0, f: 3.6 },
   'peito de frango': { cal: 165, p: 31, c: 0, f: 3.6 },
+  'frango assado': { cal: 190, p: 29, c: 0, f: 8 },
+  'frango frito': { cal: 246, p: 24, c: 8, f: 13 },
+  'coxa de frango': { cal: 200, p: 22, c: 0, f: 12 },
+  'sobrecoxa de frango': { cal: 222, p: 20, c: 0, f: 15 },
+  'coxa e sobrecoxa': { cal: 215, p: 21, c: 0, f: 14 },
+  'filé de frango': { cal: 160, p: 30, c: 0, f: 3.5 },
+  'nuggets': { cal: 247, p: 15, c: 16, f: 14 },
+  'frango desfiado': { cal: 170, p: 31, c: 0, f: 4 },
+
+  // ── CARNES ───────────────────────────────────────────────────
   'carne bovina': { cal: 250, p: 26, c: 0, f: 17 },
   'patinho': { cal: 219, p: 27, c: 0, f: 11 },
-  'ovos': { cal: 155, p: 13, c: 1.1, f: 11 },
-  'ovo': { cal: 155, p: 13, c: 1.1, f: 11 },
+  'picanha': { cal: 330, p: 26, c: 0, f: 25 },
+  'contra filé': { cal: 271, p: 26, c: 0, f: 18 },
+  'contrafilé': { cal: 271, p: 26, c: 0, f: 18 },
+  'alcatra': { cal: 245, p: 27, c: 0, f: 15 },
+  'maminha': { cal: 220, p: 27, c: 0, f: 12 },
+  'carne moída': { cal: 255, p: 25, c: 0, f: 17 },
+  'costela': { cal: 290, p: 22, c: 0, f: 22 },
+  'carne de sol': { cal: 230, p: 30, c: 0, f: 12 },
+  'carne seca': { cal: 255, p: 37, c: 0, f: 11 },
+  'bife': { cal: 245, p: 26, c: 0, f: 15 },
+  'steak': { cal: 270, p: 27, c: 0, f: 17 },
+  'pernil': { cal: 218, p: 28, c: 0, f: 11 },
+  'lombo': { cal: 200, p: 28, c: 0, f: 10 },
+  'porco': { cal: 242, p: 27, c: 0, f: 14 },
+  'bisteca': { cal: 230, p: 27, c: 0, f: 13 },
+
+  // ── EMBUTIDOS ────────────────────────────────────────────────
+  'linguiça': { cal: 300, p: 16, c: 2, f: 26 },
+  'calabresa': { cal: 310, p: 14, c: 3, f: 27 },
+  'salsicha': { cal: 290, p: 12, c: 2, f: 26 },
+  'bacon': { cal: 541, p: 37, c: 1.4, f: 42 },
+  'presunto': { cal: 145, p: 18, c: 2, f: 7 },
+  'peito de peru': { cal: 107, p: 22, c: 1, f: 1.5 },
+  'mortadela': { cal: 285, p: 14, c: 5, f: 24 },
+  'copa': { cal: 320, p: 20, c: 1, f: 26 },
+  'paio': { cal: 280, p: 15, c: 4, f: 23 },
+
+  // ── PEIXES E FRUTOS DO MAR ───────────────────────────────────
   'atum': { cal: 116, p: 25.5, c: 0, f: 0.5 },
+  'atum em lata': { cal: 100, p: 22, c: 0, f: 1 },
   'salmão': { cal: 208, p: 20, c: 0, f: 13 },
   'tilapia': { cal: 96, p: 20, c: 0, f: 1.7 },
+  'tilápia': { cal: 96, p: 20, c: 0, f: 1.7 },
   'peixe': { cal: 100, p: 20, c: 0, f: 2 },
+  'sardinha': { cal: 208, p: 24, c: 0, f: 12 },
+  'camarão': { cal: 99, p: 24, c: 0, f: 0.3 },
+  'bacalhau': { cal: 105, p: 25, c: 0, f: 0.5 },
+  'merluza': { cal: 80, p: 18, c: 0, f: 0.8 },
+  'traíra': { cal: 95, p: 20, c: 0, f: 1.5 },
+  'frango do mar': { cal: 90, p: 20, c: 0, f: 1 },
+
+  // ── OVOS E DERIVADOS ─────────────────────────────────────────
+  'ovos': { cal: 155, p: 13, c: 1.1, f: 11 },
+  'ovo': { cal: 155, p: 13, c: 1.1, f: 11 },
+  'ovo mexido': { cal: 148, p: 10, c: 1.6, f: 11 },
+  'ovo cozido': { cal: 155, p: 13, c: 1.1, f: 11 },
+  'omelete': { cal: 154, p: 11, c: 1.6, f: 11 },
+  'omelete de ovos': { cal: 154, p: 11, c: 1.6, f: 11 },
+  'clara de ovo': { cal: 52, p: 11, c: 0.7, f: 0.2 },
+  'gema de ovo': { cal: 322, p: 16, c: 1.8, f: 27 },
+
+  // ── ARROZ E CEREAIS ──────────────────────────────────────────
   'arroz branco': { cal: 130, p: 2.7, c: 28, f: 0.3 },
   'arroz': { cal: 130, p: 2.7, c: 28, f: 0.3 },
   'arroz integral': { cal: 111, p: 2.6, c: 23, f: 0.9 },
-  'batata doce': { cal: 86, p: 1.6, c: 20, f: 0.1 },
-  'batata': { cal: 77, p: 2, c: 17, f: 0.1 },
+  'arroz cozido': { cal: 130, p: 2.7, c: 28, f: 0.3 },
+  'arroz de forno': { cal: 155, p: 4, c: 26, f: 4 },
+  'risoto': { cal: 170, p: 5, c: 27, f: 5 },
+  'milho cozido': { cal: 86, p: 3.2, c: 19, f: 1.2 },
+  'milho': { cal: 86, p: 3.2, c: 19, f: 1.2 },
+  'cuscuz': { cal: 112, p: 3.8, c: 23, f: 0.2 },
+  'cuscuz nordestino': { cal: 112, p: 3.8, c: 23, f: 0.2 },
+
+  // ── MACARRÃO E MASSAS ────────────────────────────────────────
   'macarrao': { cal: 158, p: 5.8, c: 31, f: 0.9 },
   'macarrão': { cal: 158, p: 5.8, c: 31, f: 0.9 },
+  'macarrão cozido': { cal: 158, p: 5.8, c: 31, f: 0.9 },
+  'espaguete': { cal: 158, p: 5.8, c: 31, f: 0.9 },
+  'lasanha': { cal: 185, p: 9, c: 18, f: 8 },
+  'nhoque': { cal: 130, p: 3, c: 25, f: 2 },
+  'macarrão integral': { cal: 150, p: 6.5, c: 28, f: 1.5 },
+
+  // ── PÃES E DERIVADOS ─────────────────────────────────────────
   'pão': { cal: 265, p: 9, c: 49, f: 3.2 },
+  'pão de sal': { cal: 289, p: 8.5, c: 55, f: 3.5 },
+  'pão francês': { cal: 289, p: 8.5, c: 55, f: 3.5 },
+  'pão fatiado': { cal: 267, p: 8, c: 50, f: 4 },
+  'pão de forma': { cal: 267, p: 8, c: 50, f: 4 },
+  'pão integral': { cal: 247, p: 10, c: 42, f: 4.2 },
+  'pão de queijo': { cal: 325, p: 6, c: 50, f: 12 },
+  'pão de milho': { cal: 280, p: 6, c: 50, f: 6 },
+  'pão de hot dog': { cal: 267, p: 8, c: 50, f: 4 },
+  'pão de hamburguer': { cal: 267, p: 8, c: 50, f: 4 },
+  'pão de hambúrguer': { cal: 267, p: 8, c: 50, f: 4 },
+  'bisnaguinha': { cal: 280, p: 7, c: 52, f: 5 },
+  'baguete': { cal: 275, p: 9, c: 51, f: 3 },
+  'croissant': { cal: 406, p: 8, c: 46, f: 21 },
+  'torrada': { cal: 395, p: 11, c: 75, f: 5 },
   'tapioca': { cal: 359, p: 0.2, c: 88, f: 0 },
+  'beiju': { cal: 349, p: 0.4, c: 86, f: 0.2 },
+  'broa': { cal: 260, p: 6, c: 48, f: 5 },
+  'waffle': { cal: 291, p: 8, c: 41, f: 10 },
+  'panqueca': { cal: 220, p: 6, c: 28, f: 9 },
+
+  // ── TUBÉRCULOS E RAÍZES ──────────────────────────────────────
+  'batata doce': { cal: 86, p: 1.6, c: 20, f: 0.1 },
+  'batata': { cal: 77, p: 2, c: 17, f: 0.1 },
+  'batata inglesa': { cal: 77, p: 2, c: 17, f: 0.1 },
+  'batata cozida': { cal: 77, p: 2, c: 17, f: 0.1 },
+  'batata frita': { cal: 312, p: 3.4, c: 41, f: 15 },
+  'batata palha': { cal: 510, p: 5, c: 60, f: 28 },
+  'purê de batata': { cal: 113, p: 2, c: 17, f: 4 },
+  'mandioca': { cal: 160, p: 1.4, c: 38, f: 0.3 },
+  'aipim': { cal: 160, p: 1.4, c: 38, f: 0.3 },
+  'macaxeira': { cal: 160, p: 1.4, c: 38, f: 0.3 },
+  'mandioquinha': { cal: 94, p: 1.5, c: 22, f: 0.2 },
+  'cará': { cal: 98, p: 2, c: 23, f: 0.1 },
+  'inhame': { cal: 118, p: 1.5, c: 28, f: 0.2 },
+
+  // ── LEGUMINOSAS ──────────────────────────────────────────────
+  'feijão': { cal: 77, p: 5, c: 14, f: 0.5 },
+  'feijao': { cal: 77, p: 5, c: 14, f: 0.5 },
+  'feijão preto': { cal: 77, p: 5, c: 14, f: 0.5 },
+  'feijão carioca': { cal: 76, p: 4.8, c: 13.6, f: 0.5 },
+  'feijão branco': { cal: 89, p: 6, c: 16, f: 0.4 },
+  'lentilha': { cal: 116, p: 9, c: 20, f: 0.4 },
+  'grão de bico': { cal: 164, p: 9, c: 27, f: 2.6 },
+  'ervilha': { cal: 81, p: 5.4, c: 14, f: 0.4 },
+  'soja': { cal: 400, p: 37, c: 30, f: 19 },
+  'edamame': { cal: 122, p: 11, c: 9, f: 5 },
+  'tofu': { cal: 76, p: 8, c: 2, f: 4.5 },
+
+  // ── AVEIA E SUPLEMENTOS DE CEREAIS ──────────────────────────
   'aveia': { cal: 389, p: 17, c: 66, f: 7 },
+  'aveia em flocos': { cal: 394, p: 14, c: 68, f: 7 },
+  'farelo de aveia': { cal: 246, p: 17, c: 66, f: 7 },
+  'granola': { cal: 471, p: 10, c: 64, f: 20 },
+  'granola sem açúcar': { cal: 390, p: 10, c: 52, f: 18 },
+  'quinoa': { cal: 120, p: 4.4, c: 21, f: 1.9 },
+  'quinoa cozida': { cal: 120, p: 4.4, c: 21, f: 1.9 },
+  'chia': { cal: 486, p: 17, c: 42, f: 31 },
+  'linhaça': { cal: 534, p: 18, c: 29, f: 42 },
+  'cereal matinal': { cal: 378, p: 8, c: 82, f: 2 },
+
+  // ── VEGETAIS ─────────────────────────────────────────────────
   'salada': { cal: 15, p: 1.5, c: 2, f: 0.2 },
   'alface': { cal: 15, p: 1.5, c: 2, f: 0.2 },
-  'brocolis': { cal: 34, p: 2.8, c: 7, f: 0.4 },
   'brócolis': { cal: 34, p: 2.8, c: 7, f: 0.4 },
+  'brocolis': { cal: 34, p: 2.8, c: 7, f: 0.4 },
   'tomate': { cal: 18, p: 0.9, c: 3.9, f: 0.2 },
   'pepino': { cal: 16, p: 0.7, c: 3.6, f: 0.1 },
+  'cenoura': { cal: 41, p: 0.9, c: 10, f: 0.2 },
+  'chuchu': { cal: 19, p: 0.8, c: 4.5, f: 0.1 },
+  'abobrinha': { cal: 17, p: 1.2, c: 3.1, f: 0.3 },
+  'beterraba': { cal: 43, p: 1.6, c: 10, f: 0.2 },
+  'espinafre': { cal: 23, p: 2.9, c: 3.6, f: 0.4 },
+  'couve': { cal: 49, p: 4.3, c: 9, f: 0.7 },
+  'couve-flor': { cal: 25, p: 2, c: 5, f: 0.3 },
+  'repolho': { cal: 25, p: 1.3, c: 5.8, f: 0.1 },
+  'repolho roxo': { cal: 31, p: 1.4, c: 7, f: 0.2 },
+  'cebola': { cal: 40, p: 1.1, c: 9.3, f: 0.1 },
+  'alho': { cal: 149, p: 6.4, c: 33, f: 0.5 },
+  'pimentão': { cal: 31, p: 1, c: 7, f: 0.3 },
+  'pimentão vermelho': { cal: 31, p: 1, c: 7, f: 0.3 },
+  'pimentão verde': { cal: 27, p: 0.9, c: 6, f: 0.3 },
+  'berinjela': { cal: 25, p: 1, c: 6, f: 0.2 },
+  'quiabo': { cal: 33, p: 2, c: 7.5, f: 0.2 },
+  'vagem': { cal: 31, p: 1.8, c: 7, f: 0.1 },
+  'milho verde': { cal: 86, p: 3.2, c: 19, f: 1.2 },
+  'palmito': { cal: 115, p: 2.6, c: 26, f: 0.3 },
+  'abóbora': { cal: 26, p: 1, c: 6.5, f: 0.1 },
+  'aboboro': { cal: 26, p: 1, c: 6.5, f: 0.1 },
+  'jiló': { cal: 27, p: 1.5, c: 5.5, f: 0.3 },
+  'maxixe': { cal: 15, p: 0.8, c: 3.3, f: 0.1 },
+
+  // ── FRUTAS ───────────────────────────────────────────────────
   'banana': { cal: 89, p: 1.1, c: 23, f: 0.3 },
+  'banana prata': { cal: 89, p: 1.1, c: 23, f: 0.3 },
+  'banana nanica': { cal: 92, p: 1, c: 24, f: 0.2 },
   'maçã': { cal: 52, p: 0.3, c: 14, f: 0.2 },
   'maca': { cal: 52, p: 0.3, c: 14, f: 0.2 },
   'laranja': { cal: 47, p: 0.9, c: 12, f: 0.1 },
   'morango': { cal: 32, p: 0.7, c: 7.7, f: 0.3 },
+  'melancia': { cal: 30, p: 0.6, c: 7.6, f: 0.2 },
+  'melão': { cal: 34, p: 0.8, c: 8.2, f: 0.2 },
+  'abacaxi': { cal: 50, p: 0.5, c: 13, f: 0.1 },
+  'uva': { cal: 67, p: 0.6, c: 17, f: 0.4 },
+  'manga': { cal: 60, p: 0.8, c: 15, f: 0.4 },
+  'mamão': { cal: 43, p: 0.5, c: 11, f: 0.1 },
+  'mamão papaia': { cal: 39, p: 0.6, c: 9.8, f: 0.1 },
+  'goiaba': { cal: 68, p: 2.6, c: 14, f: 1 },
+  'acerola': { cal: 32, p: 0.8, c: 7.7, f: 0.3 },
+  'caju': { cal: 43, p: 0.9, c: 10, f: 0.3 },
+  'pêra': { cal: 57, p: 0.4, c: 15, f: 0.1 },
+  'pera': { cal: 57, p: 0.4, c: 15, f: 0.1 },
+  'pêssego': { cal: 39, p: 0.9, c: 9.5, f: 0.3 },
+  'ameixa': { cal: 46, p: 0.7, c: 11, f: 0.3 },
+  'kiwi': { cal: 61, p: 1.1, c: 15, f: 0.5 },
+  'maracujá': { cal: 97, p: 2.2, c: 23, f: 0.7 },
+  'abacate': { cal: 160, p: 2, c: 9, f: 15 },
+  'coco': { cal: 354, p: 3.3, c: 15, f: 33 },
+  'coco seco': { cal: 354, p: 3.3, c: 15, f: 33 },
+  'coco verde': { cal: 20, p: 0.4, c: 4.5, f: 0.2 },
+  'tangerina': { cal: 53, p: 0.8, c: 13, f: 0.3 },
+  'mexerica': { cal: 53, p: 0.8, c: 13, f: 0.3 },
+  'limão': { cal: 29, p: 1.1, c: 9, f: 0.3 },
+  'framboesa': { cal: 52, p: 1.2, c: 12, f: 0.7 },
+  'mirtilo': { cal: 57, p: 0.7, c: 14, f: 0.3 },
+  'blueberry': { cal: 57, p: 0.7, c: 14, f: 0.3 },
+  'pitanga': { cal: 37, p: 0.8, c: 9, f: 0.4 },
+  'jabuticaba': { cal: 58, p: 0.5, c: 14.5, f: 0.1 },
+
+  // ── LATICÍNIOS ───────────────────────────────────────────────
   'leite': { cal: 61, p: 3.2, c: 4.8, f: 3.3 },
+  'leite integral': { cal: 61, p: 3.2, c: 4.8, f: 3.3 },
+  'leite desnatado': { cal: 36, p: 3.4, c: 5, f: 0.1 },
+  'leite semidesnatado': { cal: 47, p: 3.3, c: 4.8, f: 1.5 },
+  'leite de soja': { cal: 43, p: 3.3, c: 3.7, f: 1.8 },
+  'leite de aveia': { cal: 50, p: 1, c: 9, f: 1.5 },
+  'leite de coco': { cal: 197, p: 2, c: 6, f: 21 },
   'iogurte': { cal: 59, p: 3.5, c: 3.6, f: 3.3 },
+  'iogurte natural': { cal: 59, p: 3.5, c: 3.6, f: 3.3 },
+  'iogurte grego': { cal: 97, p: 9, c: 3.6, f: 5 },
+  'iogurte desnatado': { cal: 41, p: 4, c: 4.5, f: 0.3 },
+  'iogurte proteico': { cal: 75, p: 12, c: 4, f: 0.8 },
+  'coalhada': { cal: 62, p: 3.5, c: 3.8, f: 3.5 },
   'queijo': { cal: 402, p: 25, c: 1.3, f: 33 },
+  'queijo minas': { cal: 264, p: 17, c: 3, f: 21 },
+  'queijo minas frescal': { cal: 264, p: 17, c: 3, f: 21 },
+  'queijo prato': { cal: 360, p: 23, c: 0.5, f: 29 },
+  'mussarela': { cal: 318, p: 22, c: 2.2, f: 25 },
+  'muçarela': { cal: 318, p: 22, c: 2.2, f: 25 },
+  'parmesão': { cal: 392, p: 36, c: 3.2, f: 26 },
+  'requeijão': { cal: 266, p: 11, c: 3, f: 24 },
+  'cream cheese': { cal: 342, p: 6, c: 4, f: 34 },
+  'ricota': { cal: 143, p: 11, c: 3, f: 10 },
+  'queijo coalho': { cal: 320, p: 22, c: 0, f: 25 },
+  'manteiga': { cal: 717, p: 0.9, c: 0.1, f: 81 },
+  'margarina': { cal: 720, p: 0.2, c: 0.3, f: 80 },
+  'creme de leite': { cal: 317, p: 2.8, c: 3.4, f: 33 },
+  'nata': { cal: 317, p: 2.8, c: 3.4, f: 33 },
+
+  // ── BEBIDAS ──────────────────────────────────────────────────
+  'água': { cal: 0, p: 0, c: 0, f: 0 },
+  'agua': { cal: 0, p: 0, c: 0, f: 0 },
+  'suco de laranja': { cal: 45, p: 0.7, c: 10, f: 0.2 },
+  'suco de maçã': { cal: 46, p: 0.1, c: 11, f: 0.1 },
+  'suco de uva': { cal: 60, p: 0.4, c: 14, f: 0.1 },
+  'suco de abacaxi': { cal: 54, p: 0.4, c: 13, f: 0.1 },
+  'suco de manga': { cal: 60, p: 0.5, c: 14, f: 0.2 },
+  'suco de goiaba': { cal: 62, p: 0.4, c: 15, f: 0.2 },
+  'suco de tomate': { cal: 17, p: 0.9, c: 3.9, f: 0.2 },
+  'suco de limão': { cal: 22, p: 0.4, c: 7, f: 0.2 },
+  'suco de caju': { cal: 43, p: 0.6, c: 10, f: 0.3 },
+  'suco de maracujá': { cal: 63, p: 1.4, c: 14.5, f: 0.6 },
+  'suco integral': { cal: 50, p: 0.5, c: 12, f: 0.1 },
+  'suco natural': { cal: 45, p: 0.6, c: 10, f: 0.1 },
+  'vitamina de banana': { cal: 112, p: 3.8, c: 21, f: 2.5 },
+  'vitamina de morango': { cal: 80, p: 3.5, c: 14, f: 1.5 },
+  'smoothie': { cal: 70, p: 2, c: 14, f: 1 },
+  'açaí': { cal: 247, p: 2.3, c: 25, f: 16 },
+  'café': { cal: 2, p: 0.3, c: 0, f: 0 },
+  'café preto': { cal: 2, p: 0.3, c: 0, f: 0 },
+  'café com leite': { cal: 30, p: 1.5, c: 2.5, f: 1.5 },
+  'cappuccino': { cal: 60, p: 3, c: 8, f: 2 },
+  'chá verde': { cal: 1, p: 0, c: 0.2, f: 0 },
+  'chá preto': { cal: 1, p: 0, c: 0.3, f: 0 },
+  'chá de camomila': { cal: 1, p: 0, c: 0.2, f: 0 },
+  'chá gelado': { cal: 20, p: 0, c: 5, f: 0 },
+  'red bull': { cal: 45, p: 0, c: 11, f: 0 },
+  'red bull zero': { cal: 5, p: 0, c: 1, f: 0 },
+  'monster energy': { cal: 47, p: 0, c: 11, f: 0 },
+  'coca cola': { cal: 37, p: 0, c: 9.3, f: 0 },
+  'coca cola zero': { cal: 0, p: 0, c: 0, f: 0 },
+  'pepsi': { cal: 41, p: 0, c: 10, f: 0 },
+  'guaraná': { cal: 37, p: 0, c: 9, f: 0 },
+  'guaraná zero': { cal: 0, p: 0, c: 0, f: 0 },
+  'refrigerante': { cal: 37, p: 0, c: 9, f: 0 },
+  'refrigerante zero': { cal: 0, p: 0, c: 0, f: 0 },
+  'cerveja': { cal: 43, p: 0.5, c: 3.6, f: 0 },
+  'cerveja sem álcool': { cal: 18, p: 0.5, c: 4, f: 0 },
+  'vinho tinto': { cal: 85, p: 0.1, c: 2.6, f: 0 },
+  'vinho branco': { cal: 82, p: 0.1, c: 2.6, f: 0 },
+  'isotônico': { cal: 27, p: 0, c: 6.5, f: 0 },
+  'gatorade': { cal: 26, p: 0, c: 6.5, f: 0 },
+  'powerade': { cal: 30, p: 0, c: 7.3, f: 0 },
+  'leite achocolatado': { cal: 77, p: 3.6, c: 12, f: 1.5 },
+  'chocolate quente': { cal: 78, p: 3.5, c: 11, f: 2.5 },
+  'yakult': { cal: 67, p: 1.2, c: 15, f: 0 },
+
+  // ── LANCHES E FAST FOOD ──────────────────────────────────────
   'pizza': { cal: 266, p: 11, c: 33, f: 10 },
   'hamburguer': { cal: 295, p: 17, c: 24, f: 14 },
   'hambúrguer': { cal: 295, p: 17, c: 24, f: 14 },
+  'cheeseburguer': { cal: 340, p: 19, c: 28, f: 16 },
+  'cheeseburger': { cal: 340, p: 19, c: 28, f: 16 },
+  'hot dog': { cal: 290, p: 12, c: 32, f: 13 },
+  'cachorro quente': { cal: 290, p: 12, c: 32, f: 13 },
   'sushi': { cal: 140, p: 5, c: 28, f: 1 },
+  'temaki': { cal: 210, p: 10, c: 32, f: 5 },
+  'wrap': { cal: 255, p: 14, c: 33, f: 8 },
+  'sanduíche': { cal: 260, p: 12, c: 34, f: 8 },
+  'sanduiche': { cal: 260, p: 12, c: 34, f: 8 },
+  'coxinha': { cal: 280, p: 10, c: 33, f: 13 },
+  'empada': { cal: 310, p: 9, c: 35, f: 15 },
+  'pastel': { cal: 290, p: 9, c: 34, f: 14 },
+  'pastel de forno': { cal: 250, p: 9, c: 32, f: 10 },
+  'croquete': { cal: 260, p: 10, c: 27, f: 13 },
+  'esfiha': { cal: 230, p: 8, c: 32, f: 8 },
+  'kibe': { cal: 232, p: 14, c: 19, f: 11 },
+
+  // ── DOCES E SOBREMESAS ───────────────────────────────────────
   'chocolate': { cal: 546, p: 5, c: 60, f: 31 },
+  'chocolate ao leite': { cal: 535, p: 7.7, c: 59, f: 30 },
+  'chocolate amargo': { cal: 598, p: 5.4, c: 46, f: 43 },
+  'chocolate branco': { cal: 539, p: 6, c: 59, f: 32 },
   'biscoito': { cal: 450, p: 6, c: 65, f: 18 },
-  'red bull': { cal: 45, p: 0, c: 11, f: 0 },
-  'coca cola': { cal: 37, p: 0, c: 9.3, f: 0 },
-  'coca cola zero': { cal: 0, p: 0, c: 0, f: 0 },
-  'suco de laranja': { cal: 45, p: 0.7, c: 10, f: 0.2 },
+  'bolacha': { cal: 450, p: 6, c: 65, f: 18 },
+  'biscoito recheado': { cal: 490, p: 5, c: 70, f: 21 },
+  'cookie': { cal: 498, p: 5.5, c: 66, f: 23 },
+  'bolo simples': { cal: 370, p: 5, c: 57, f: 14 },
+  'bolo de chocolate': { cal: 398, p: 5, c: 62, f: 16 },
+  'brigadeiro': { cal: 420, p: 5, c: 65, f: 16 },
+  'beijinho': { cal: 408, p: 4.5, c: 67, f: 14 },
+  'pudim': { cal: 160, p: 4, c: 27, f: 4.5 },
+  'sorvete': { cal: 207, p: 3.5, c: 24, f: 11 },
+  'açaí na tigela': { cal: 247, p: 2.3, c: 25, f: 16 },
+  'paçoca': { cal: 494, p: 14, c: 57, f: 24 },
+  'pé de moleque': { cal: 490, p: 12, c: 62, f: 22 },
+  'quindim': { cal: 377, p: 7, c: 57, f: 14 },
+  'canjica': { cal: 103, p: 3, c: 20, f: 1.5 },
+  'curau': { cal: 120, p: 2, c: 23, f: 2 },
+  'arroz doce': { cal: 145, p: 2.8, c: 27, f: 3 },
+  'doce de leite': { cal: 321, p: 7.5, c: 58, f: 7.5 },
+  'mel': { cal: 304, p: 0.3, c: 82, f: 0 },
+  'geleia': { cal: 250, p: 0.3, c: 65, f: 0.1 },
+
+  // ── OLEAGINOSAS ──────────────────────────────────────────────
+  'amendoim': { cal: 567, p: 26, c: 16, f: 49 },
+  'pasta de amendoim': { cal: 598, p: 25, c: 20, f: 51 },
+  'castanha do pará': { cal: 656, p: 14, c: 12, f: 67 },
+  'castanha de caju': { cal: 553, p: 18, c: 30, f: 44 },
+  'amêndoa': { cal: 579, p: 21, c: 22, f: 50 },
+  'amendoa': { cal: 579, p: 21, c: 22, f: 50 },
+  'nozes': { cal: 654, p: 15, c: 14, f: 65 },
+  'pistache': { cal: 562, p: 20, c: 28, f: 45 },
+  'avelã': { cal: 628, p: 15, c: 17, f: 61 },
+  'macadâmia': { cal: 718, p: 7.9, c: 14, f: 76 },
+
+  // ── CONDIMENTOS E MOLHOS ─────────────────────────────────────
+  'azeite': { cal: 884, p: 0, c: 0, f: 100 },
+  'azeite de oliva': { cal: 884, p: 0, c: 0, f: 100 },
+  'óleo de oliva': { cal: 884, p: 0, c: 0, f: 100 },
+  'oleo de coco': { cal: 892, p: 0, c: 0, f: 100 },
+  'óleo de coco': { cal: 892, p: 0, c: 0, f: 100 },
+  'oleo vegetal': { cal: 884, p: 0, c: 0, f: 100 },
+  'maionese': { cal: 680, p: 1.1, c: 1.3, f: 75 },
+  'maionese light': { cal: 322, p: 1, c: 5, f: 33 },
+  'mostarda': { cal: 70, p: 3.7, c: 6, f: 4 },
+  'ketchup': { cal: 101, p: 1.5, c: 24, f: 0.2 },
+  'molho de tomate': { cal: 29, p: 1.5, c: 5.5, f: 0.4 },
+  'shoyu': { cal: 53, p: 5.5, c: 5, f: 0.6 },
+  'açúcar': { cal: 387, p: 0, c: 100, f: 0 },
+  'açúcar mascavo': { cal: 380, p: 0, c: 98, f: 0 },
+  'adoçante': { cal: 0, p: 0, c: 0, f: 0 },
+  'sal': { cal: 0, p: 0, c: 0, f: 0 },
+  'farinha de trigo': { cal: 364, p: 10, c: 76, f: 1 },
+  'amido de milho': { cal: 381, p: 0.3, c: 91, f: 0.1 },
+  'farinha de mandioca': { cal: 361, p: 1.7, c: 88, f: 0.3 },
+
+  // ── PRATOS TÍPICOS BRASILEIROS ───────────────────────────────
+  'feijoada': { cal: 155, p: 9, c: 12, f: 7.5 },
+  'moqueca': { cal: 145, p: 15, c: 5, f: 8 },
+  'arroz com feijão': { cal: 105, p: 3.8, c: 21, f: 0.4 },
+  'virado de feijão': { cal: 125, p: 5, c: 22, f: 2 },
+  'tutu de feijão': { cal: 120, p: 5, c: 20, f: 2.5 },
+  'galinhada': { cal: 200, p: 18, c: 20, f: 6 },
+  'baião de dois': { cal: 180, p: 8, c: 28, f: 4 },
+  'buchada': { cal: 185, p: 20, c: 2, f: 10 },
+  'sarapatel': { cal: 180, p: 18, c: 5, f: 10 },
+  'peixe assado': { cal: 120, p: 22, c: 0, f: 3.5 },
+  'peixe grelhado': { cal: 115, p: 21, c: 0, f: 3 },
+  'frango com quiabo': { cal: 175, p: 20, c: 5, f: 8 },
+
+  // ── SUPLEMENTOS ──────────────────────────────────────────────
   'whey protein': { cal: 120, p: 25, c: 3, f: 2 },
+  'whey isolado': { cal: 110, p: 27, c: 1, f: 1 },
+  'caseina': { cal: 115, p: 24, c: 3.5, f: 1 },
+  'caseína': { cal: 115, p: 24, c: 3.5, f: 1 },
+  'albumina': { cal: 350, p: 73, c: 4, f: 1.5 },
   'creatina': { cal: 0, p: 0, c: 0, f: 0 },
+  'bcaa': { cal: 10, p: 2.5, c: 0, f: 0 },
+  'glutamina': { cal: 0, p: 0, c: 0, f: 0 },
+  'pre treino': { cal: 30, p: 0, c: 7, f: 0 },
+  'pré-treino': { cal: 30, p: 0, c: 7, f: 0 },
+  'colageno': { cal: 37, p: 9, c: 0, f: 0 },
+  'colágeno': { cal: 37, p: 9, c: 0, f: 0 },
   'barra de proteina': { cal: 200, p: 20, c: 20, f: 7 },
-  'feijão': { cal: 77, p: 5, c: 14, f: 0.5 },
-  'feijao': { cal: 77, p: 5, c: 14, f: 0.5 },
-  'lentilha': { cal: 116, p: 9, c: 20, f: 0.4 },
-  'grão de bico': { cal: 164, p: 9, c: 27, f: 2.6 },
-  'atum em lata': { cal: 100, p: 22, c: 0, f: 1 },
+  'barra de proteína': { cal: 200, p: 20, c: 20, f: 7 },
+
   'default': { cal: 150, p: 10, c: 15, f: 5 }
 };
+
+// ── BANCO DE ALIMENTOS EXTRA (admin-confirmed + user suggestions) ──
+const FOOD_EXTRA_PATH = path.join(__dirname, 'food_db_extra.json');
+const FOOD_SUGGESTIONS_PATH = path.join(__dirname, 'food_suggestions.json');
+
+let foodExtra = {};
+let foodSuggestions = {};
+try { foodExtra = JSON.parse(readFileSync(FOOD_EXTRA_PATH, 'utf8')); } catch {}
+try { foodSuggestions = JSON.parse(readFileSync(FOOD_SUGGESTIONS_PATH, 'utf8')); } catch {}
 
 const normalizeKey = (str) =>
   str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, '').trim();
@@ -391,10 +754,14 @@ app.post('/api/profile', async (req, res) => {
     if (avatar_url !== undefined) userUpdate.avatar_url = avatar_url;
     await supabase.from('users').update(userUpdate).eq('id', req.userId);
 
+    const { dark_mode, language } = req.body;
     const profileData = { weight, height, age, gender, goal, activity_level, biotype, diet, updated_at: new Date().toISOString() };
     // Persist streak + last open date if provided (requires streak, last_open_date columns in profiles table)
     if (streak !== undefined) profileData.streak = streak;
     if (lastOpenDate !== undefined) profileData.last_open_date = lastOpenDate;
+    // Persist user preferences
+    if (dark_mode !== undefined) profileData.dark_mode = dark_mode;
+    if (language !== undefined) profileData.language = language;
 
     // Calcula metas calóricas se tiver dados suficientes (Mifflin-St Jeor)
     if (weight && height && age && gender) {
@@ -674,7 +1041,31 @@ app.post('/api/reset', async (req, res) => {
 
 // ── BANCO DE ALIMENTOS ─────────────────────────────────────────
 
-app.get('/api/foods', (req, res) => res.json(FOOD_DB));
+app.get('/api/foods', (req, res) => res.json({ ...FOOD_DB, ...foodExtra }));
+
+// Sugestão de alimento pelo usuário (entra fila admin)
+app.post('/api/foods/suggest', async (req, res) => {
+  try {
+    const { name, cal, p, c, f } = req.body;
+    if (!name) return res.status(400).json({ error: 'missing name' });
+    const key = normalizeKey(name);
+    // Não sugerir se já existe no DB principal ou extra
+    if (foodExtra[key] || FOOD_DB[key]) return res.json({ ok: true, skipped: true });
+    foodSuggestions[key] = {
+      name: name.trim(),
+      cal: parseFloat(cal) || 0,
+      p: parseFloat(p) || 0,
+      c: parseFloat(c) || 0,
+      f: parseFloat(f) || 0,
+      suggested_by: req.userEmail || 'unknown',
+      suggested_at: new Date().toISOString()
+    };
+    try { writeFileSync(FOOD_SUGGESTIONS_PATH, JSON.stringify(foodSuggestions, null, 2)); } catch {}
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ── TREINOS ────────────────────────────────────────────────────
 
@@ -1745,7 +2136,11 @@ ${(ctx.favorites || []).join(', ') || 'no history yet'}
 - NEVER invent data. If something is not here, say it hasn't been logged.`;
 
 
-    const messages = [{ role: 'system', content: systemPrompt }];
+    // Allow caller to override system prompt (e.g. day-update mode)
+    const { systemOverride } = req.body;
+    const finalPrompt = systemOverride || systemPrompt;
+
+    const messages = [{ role: 'system', content: finalPrompt }];
     if (history?.length) {
       history.slice(-10).forEach(h => messages.push({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.text }));
     }
@@ -1763,6 +2158,41 @@ ${(ctx.favorites || []).join(', ') || 'no history yet'}
   } catch (error) {
     console.error('Chat error:', error);
     res.status(500).json({ error: 'Erro no chat' });
+  }
+});
+
+// ── TRANSCRIÇÃO DE ÁUDIO (Groq Whisper) ───────────────────────
+app.post('/api/transcribe', async (req, res) => {
+  try {
+    const { audio } = req.body;
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) return res.status(401).json({ error: 'Chave Groq não configurada' });
+    if (!audio) return res.status(400).json({ error: 'Audio ausente' });
+
+    const audioBuffer = Buffer.from(audio, 'base64');
+    const audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
+
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'audio.webm');
+    formData.append('model', 'whisper-large-v3');
+    formData.append('language', 'pt');
+    formData.append('response_format', 'json');
+
+    const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${groqKey}` },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Groq Whisper error ${response.status}: ${err}`);
+    }
+    const json = await response.json();
+    res.json({ text: json.text || '' });
+  } catch (error) {
+    console.error('Transcribe error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -1877,6 +2307,43 @@ app.get('/admin/api/stats', adminAuth, async (req, res) => {
   }
 });
 
+// ── ADMIN — BANCO DE ALIMENTOS ─────────────────────────────────
+app.get('/admin/api/foods/suggestions', adminAuth, (req, res) => {
+  res.json(foodSuggestions);
+});
+
+app.post('/admin/api/foods/confirm', adminAuth, (req, res) => {
+  try {
+    const { name, cal, p, c, f } = req.body;
+    if (!name) return res.status(400).json({ error: 'missing name' });
+    const key = normalizeKey(name);
+    foodExtra[key] = {
+      cal: parseFloat(cal) || 0,
+      p: parseFloat(p) || 0,
+      c: parseFloat(c) || 0,
+      f: parseFloat(f) || 0
+    };
+    writeFileSync(FOOD_EXTRA_PATH, JSON.stringify(foodExtra, null, 2));
+    // Remove da fila de sugestões
+    delete foodSuggestions[key];
+    writeFileSync(FOOD_SUGGESTIONS_PATH, JSON.stringify(foodSuggestions, null, 2));
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/admin/api/foods/suggestions/:name', adminAuth, (req, res) => {
+  try {
+    const key = decodeURIComponent(req.params.name);
+    delete foodSuggestions[key];
+    writeFileSync(FOOD_SUGGESTIONS_PATH, JSON.stringify(foodSuggestions, null, 2));
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Serve o painel admin
 app.get('/admin', (req, res) => {
   res.send(`<!DOCTYPE html>
@@ -1957,6 +2424,16 @@ app.get('/admin', (req, res) => {
         <div class="text-gray-600 text-center py-16 text-sm">← Selecione um usuário</div>
       </div>
     </div>
+
+    <!-- Banco de Alimentos -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-bold text-lg">🥗 Banco de Alimentos</h2>
+        <button class="btn btn-ghost text-xs" onclick="loadFoodSuggestions()">↻ Atualizar</button>
+      </div>
+      <p class="text-gray-500 text-xs mb-4">Alimentos identificados pelos usuários aguardando confirmação para o banco de dados.</p>
+      <div id="food-suggestions-list" class="text-gray-600 text-sm text-center py-4">Carregando...</div>
+    </div>
   </div>
 </div>
 
@@ -1998,6 +2475,7 @@ function showMain() {
   document.getElementById('main-screen').classList.remove('hidden');
   loadStats();
   loadUsers();
+  loadFoodSuggestions();
 }
 
 async function loadStats() {
@@ -2193,6 +2671,58 @@ async function saveSubscription(uid) {
     await loadUsers();
     loadUser(uid);
   } catch { alert('Erro ao salvar'); }
+}
+
+// ── BANCO DE ALIMENTOS ─────────────────────────────────────────
+async function loadFoodSuggestions() {
+  const el = document.getElementById('food-suggestions-list');
+  if (!el) return;
+  try {
+    const data = await api('/admin/api/foods/suggestions');
+    const items = Object.entries(data);
+    if (!items.length) {
+      el.innerHTML = '<div class="text-gray-600 text-center py-4 text-xs">Nenhuma sugestão pendente</div>';
+      return;
+    }
+    el.innerHTML = '<div class="space-y-2 max-h-80 overflow-y-auto">' + items.map(([key, f]) => \`
+      <div class="flex items-center gap-3 p-3 rounded-xl border border-gray-800" style="background:#111">
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold text-sm capitalize">\${f.name}</div>
+          <div class="text-gray-500 text-xs mt-0.5">\${f.cal} kcal · \${f.p}g prot · \${f.c}g carb · \${f.f}g gord <span class="text-gray-700">(por 100g)</span></div>
+          <div class="text-gray-700 text-[10px] mt-0.5">Por: \${f.suggested_by} · \${f.suggested_at ? new Date(f.suggested_at).toLocaleDateString('pt-BR') : ''}</div>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+          <button onclick="confirmFood('\${key}',\${f.cal},\${f.p},\${f.c},\${f.f},'\${(f.name||'').replace(/'/g,"\\\\'")}')"
+            class="btn btn-primary text-xs px-3 py-1.5" style="font-size:11px">✓ Salvar</button>
+          <button onclick="rejectFood('\${key}')"
+            class="btn btn-ghost text-xs px-3 py-1.5" style="font-size:11px">✕</button>
+        </div>
+      </div>\`).join('') + '</div>';
+  } catch (e) {
+    el.innerHTML = '<div class="text-red-400 text-xs text-center py-4">Erro ao carregar sugestões</div>';
+  }
+}
+
+async function confirmFood(key, cal, p, c, f, name) {
+  try {
+    const r = await fetch('/admin/api/foods/confirm', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','x-admin-token': adminToken},
+      body: JSON.stringify({ name, cal, p, c, f })
+    });
+    if (!r.ok) throw new Error();
+    loadFoodSuggestions();
+  } catch { alert('Erro ao confirmar'); }
+}
+
+async function rejectFood(key) {
+  try {
+    await fetch(\`/admin/api/foods/suggestions/\${encodeURIComponent(key)}\`, {
+      method: 'DELETE',
+      headers: {'x-admin-token': adminToken}
+    });
+    loadFoodSuggestions();
+  } catch { alert('Erro ao rejeitar'); }
 }
 
 // Auto-login se tiver token
