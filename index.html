@@ -15412,6 +15412,10 @@ Rules:
                 if (screen === 'treino') {
                     this.loadTreinoScreen();
                 }
+                if (screen === 'workout') {
+                    // Garante que o select de detalhe do treino seja populado ao abrir a tela
+                    setTimeout(() => this.updateWorkoutOptions(), 50);
+                }
                 if (screen === 'health') {
                     this.updateDashboardTotals(); // garante totals atualizados antes do score
                     this.updateHealthScore();
