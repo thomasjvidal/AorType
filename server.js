@@ -1555,6 +1555,20 @@ app.get('/api/checkins', async (req, res) => {
   }
 });
 
+app.delete('/api/checkins/:date', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('checkins')
+      .delete()
+      .eq('user_id', req.userId)
+      .eq('date', req.params.date);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao deletar checkin' });
+  }
+});
+
 app.post('/api/checkins', async (req, res) => {
   try {
     const entries = Array.isArray(req.body) ? req.body : Object.entries(req.body).map(([date, data]) => ({ date, ...data }));
