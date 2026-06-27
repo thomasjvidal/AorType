@@ -5,7 +5,7 @@
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["index.html", "logo.png", "favicon.png", "assets/**"]
+        "includeFiles": ["index.html", "logo.png", "favicon.png", "favicon.ico", "apple-touch-icon.png", "manifest.json", "assets/**"]
       }
     }
   ],

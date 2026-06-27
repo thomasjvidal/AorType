@@ -51,7 +51,9 @@ const PORT = process.env.PORT || 3000;
 // Serve index.html e assets sem exigir autenticação
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/favicon.png', (req, res) => res.sendFile(path.join(__dirname, 'favicon.png')));
-app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, 'favicon.png')));
+app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, 'favicon.ico')));
+app.get('/apple-touch-icon.png', (req, res) => res.sendFile(path.join(__dirname, 'apple-touch-icon.png')));
+app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
 app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, 'logo.png')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
