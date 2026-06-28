@@ -47,5 +47,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>O AorType usa a câmera para escanear e identificar os alimentos que você registra.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>O AorType usa o microfone para você registrar refeições por voz.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>O AorType acessa suas fotos para que você possa enviar uma imagem do alimento quando não usar a câmera.</string>
 </dict>
 </plist>
