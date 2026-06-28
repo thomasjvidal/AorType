@@ -1,0 +1,9 @@
+{
+  "appId": "com.aortype.app",
+  "appName": "AorType",
+  "webDir": "www",
+  "server": {
+    "url": "https://aortype.com",
+    "cleartext": false
+  }
+}
