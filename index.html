@@ -50,15 +50,15 @@
                             gray: '#8E8E93'
                         },
                         brand: {
-                            neon: '#CCFF00',
-                            lime: '#A3E635',
+                            neon: '#43AD97',
+                            lime: '#86B46B',
                             electric: '#00D9FF',
                             hot: '#FF3366'
                         }
                     },
                     boxShadow: {
                         'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
-                        'neon': '0 0 20px rgba(204, 255, 0, 0.3)',
+                        'neon': '0 0 20px rgba(67, 173, 151, 0.3)',
                         'soft': '0 20px 40px -15px rgba(0,0,0,0.1)'
                     },
                     animation: {
@@ -76,9 +76,9 @@
           100% { background-position: -200% 0; }
         }
         .life-btn {
-          background: rgba(181,242,61,0.08);
-          color: var(--color-neon, #b5f23d);
-          border: 1px solid rgba(181,242,61,0.2);
+          background: rgba(67, 173, 151, 0.08);
+          color: var(--color-neon, #43AD97);
+          border: 1px solid rgba(67, 173, 151, 0.2);
           padding: 6px 14px;
           border-radius: 99px;
           font-size: 12px;
@@ -86,7 +86,7 @@
           cursor: pointer;
           transition: background .15s;
         }
-        .life-btn:active { background: rgba(181,242,61,0.18); }
+        .life-btn:active { background: rgba(67, 173, 151, 0.18); }
         .sk {
           background: linear-gradient(90deg,
             var(--sk-base, rgba(150,150,150,0.12)) 25%,
@@ -203,8 +203,8 @@
 
         /* Checkbox label active state (Safari fallback — has-[:checked] not supported) */
         .cat-label-active {
-            border-color: #ccff00 !important;
-            background-color: rgba(204, 255, 0, 0.10) !important;
+            border-color: #43AD97 !important;
+            background-color: rgba(67, 173, 151, 0.10) !important;
         }
 
         /* Safe area + base padding combined (wins over Tailwind py-* utilities) */
@@ -251,17 +251,17 @@
         @keyframes pulse-ring {
             0% {
                 transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(204, 255, 0, 0.7);
+                box-shadow: 0 0 0 0 rgba(67, 173, 151, 0.7);
             }
 
             70% {
                 transform: scale(1);
-                box-shadow: 0 0 0 10px rgba(204, 255, 0, 0);
+                box-shadow: 0 0 0 10px rgba(67, 173, 151, 0);
             }
 
             100% {
                 transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(204, 255, 0, 0);
+                box-shadow: 0 0 0 0 rgba(67, 173, 151, 0);
             }
         }
 
@@ -332,11 +332,11 @@
         /* Toggle switch */
         .toggle-checkbox:checked {
             right: 0;
-            border-color: #CCFF00;
+            border-color: #43AD97;
         }
 
         .toggle-checkbox:checked+.toggle-label {
-            background-color: #CCFF00;
+            background-color: #43AD97;
         }
 
         /* Progress ring */
@@ -476,9 +476,9 @@
         }
 
         .ui-card.active {
-            box-shadow: 0 0 30px rgba(204, 255, 0, .25);
-            border-color: #CCFF00;
-            background: rgba(204, 255, 0, 0.05);
+            box-shadow: 0 0 30px rgba(67, 173, 151, .25);
+            border-color: #43AD97;
+            background: rgba(67, 173, 151, 0.05);
         }
 
         .dark .ui-card.active {
@@ -490,7 +490,7 @@
             position: absolute;
             inset: -2px;
             border-radius: 1.05rem;
-            background: conic-gradient(from 180deg at 50% 50%, rgba(204, 255, 0, .35), transparent 30%, transparent 70%, rgba(204, 255, 0, .35));
+            background: conic-gradient(from 180deg at 50% 50%, rgba(67, 173, 151, .35), transparent 30%, transparent 70%, rgba(67, 173, 151, .35));
             filter: blur(12px);
             opacity: 0;
             transition: opacity .3s
@@ -657,7 +657,7 @@
             transition: background .2s;
         }
         .du-recording .du-bar {
-            background: #b5f23d;
+            background: #43AD97;
             animation: duWave .55s ease-in-out infinite alternate;
             animation-delay: var(--d, 0s);
         }
@@ -695,33 +695,33 @@
 
     <!-- SPLASH SCREEN -->
     <div id="screen-splash"
-        class="absolute inset-0 z-[300] bg-black flex items-center justify-center transition-opacity duration-700">
+        class="absolute inset-0 z-[300] bg-[#F7F3EC] flex items-center justify-center transition-opacity duration-700">
         <div class="flex flex-col items-center relative">
             <div class="relative w-32 h-32 mb-6">
-                <div class="absolute inset-0 bg-brand-neon/20 rounded-full blur-2xl animate-pulse"></div>
+                <div class="absolute inset-0 bg-brand-neon/15 rounded-full blur-2xl animate-pulse"></div>
                 <img src="/assets/images/LOGOMacroAI.png" alt="AorType"
                     class="relative z-10 w-full h-full object-contain drop-shadow-2xl animate-float">
             </div>
-            <h1 class="text-4xl font-black text-white tracking-tighter animate-fade-in">AorType</h1>
+            <h1 class="text-4xl font-black text-[#324856] tracking-tighter animate-fade-in">AorType</h1>
         </div>
     </div>
 
     <!-- WELCOME SCREEN -->
     <div id="screen-welcome"
-        class="absolute inset-0 z-[250] bg-[#000000] flex flex-col hidden transition-opacity duration-500 overflow-hidden">
+        class="absolute inset-0 z-[250] bg-[#F7F3EC] flex flex-col hidden transition-opacity duration-500 overflow-hidden">
         <!-- Background Waves (SVG) -->
-        <div class="absolute top-0 left-0 w-full z-0 opacity-60">
+        <div class="absolute top-0 left-0 w-full z-0 opacity-40">
             <svg class="relative block w-full h-[320px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 1200 120" preserveAspectRatio="none">
                 <path
                     d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z"
-                    opacity=".25" class="fill-brand-neon"></path>
+                    opacity=".3" class="fill-brand-neon"></path>
                 <path
                     d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z"
-                    opacity=".5" class="fill-brand-electric"></path>
+                    opacity=".5" class="fill-brand-lime"></path>
                 <path
                     d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,248.8-84.81V0Z"
-                    class="fill-brand-hot"></path>
+                    class="fill-[#324856]" opacity=".18"></path>
             </svg>
         </div>
 
@@ -730,14 +730,14 @@
             <!-- Hero Image/Graphic -->
             <div class="w-72 h-72 relative mb-10 animate-float">
                 <div
-                    class="absolute inset-0 bg-gradient-to-tr from-brand-neon/20 via-brand-electric/10 to-brand-hot/20 rounded-full blur-[80px]">
+                    class="absolute inset-0 bg-gradient-to-tr from-brand-neon/15 via-brand-lime/10 to-[#324856]/10 rounded-full blur-[80px]">
                 </div>
                 <img src="/assets/images/LOGOMacroAI.png" alt="AorType"
                     class="w-full h-full object-contain drop-shadow-2xl">
             </div>
 
-            <h1 class="text-5xl font-black text-white tracking-tighter mb-4 text-center">AorType</h1>
-            <p class="text-gray-400 text-center text-lg font-medium max-w-xs leading-relaxed" data-translate="transform_body_mind">
+            <h1 class="text-5xl font-black text-[#324856] tracking-tighter mb-4 text-center">AorType</h1>
+            <p class="text-gray-600 text-center text-lg font-medium max-w-xs leading-relaxed" data-translate="transform_body_mind">
                 Transforme seu corpo e sua mente com o poder da inteligência artificial.
             </p>
         </div>
@@ -745,27 +745,27 @@
         <!-- Bottom Actions -->
         <div class="p-8 pb-10 w-full max-w-sm mx-auto space-y-4 relative z-10">
             <button onclick="app.showAuth('login')"
-                class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(204,255,0,0.3)] hover:shadow-[0_0_30px_rgba(204,255,0,0.5)] hover:scale-[1.02]  transition-all duration-300 text-lg uppercase tracking-wide"
+                class="w-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(67,173,151,0.3)] hover:shadow-[0_0_30px_rgba(67,173,151,0.5)] hover:scale-[1.02]  transition-all duration-300 text-lg uppercase tracking-wide"
                 data-translate="login_button">
                 Entrar
             </button>
             <button onclick="app.showAuth('register')"
-                class="w-full bg-[#1C1C1E] border border-white/10 text-white font-black py-4 rounded-2xl hover:bg-white/5  transition-all duration-300 text-lg uppercase tracking-wide"
+                class="w-full bg-[#324856] border border-transparent text-white font-black py-4 rounded-2xl hover:brightness-110  transition-all duration-300 text-lg uppercase tracking-wide"
                 data-translate="create_account">
                 Criar Conta
             </button>
 
             <!-- Language selector -->
             <div class="flex items-center justify-center pt-1 pb-2">
-                <div class="inline-flex items-center bg-white/[0.06] rounded-2xl p-1 gap-0.5">
+                <div class="inline-flex items-center bg-black/[0.05] rounded-2xl p-1 gap-0.5">
                     <button onclick="app.setLanguage('pt')" id="welcome-lang-pt"
-                        class="welcome-lang-btn px-3.5 py-1.5 rounded-xl text-[12px] font-black transition-all duration-200 text-white/35">PT</button>
+                        class="welcome-lang-btn px-3.5 py-1.5 rounded-xl text-[12px] font-black transition-all duration-200 text-black/35">PT</button>
                     <button onclick="app.setLanguage('en')" id="welcome-lang-en"
-                        class="welcome-lang-btn px-3.5 py-1.5 rounded-xl text-[12px] font-black transition-all duration-200 text-white/35">EN</button>
+                        class="welcome-lang-btn px-3.5 py-1.5 rounded-xl text-[12px] font-black transition-all duration-200 text-black/35">EN</button>
                     <button onclick="app.setLanguage('es')" id="welcome-lang-es"
-                        class="welcome-lang-btn px-3.5 py-1.5 rounded-xl text-[12px] font-black transition-all duration-200 text-white/35">ES</button>
+                        class="welcome-lang-btn px-3.5 py-1.5 rounded-xl text-[12px] font-black transition-all duration-200 text-black/35">ES</button>
                     <button onclick="app.setLanguage('zh')" id="welcome-lang-zh"
-                        class="welcome-lang-btn px-3.5 py-1.5 rounded-xl text-[12px] font-black transition-all duration-200 text-white/35">中文</button>
+                        class="welcome-lang-btn px-3.5 py-1.5 rounded-xl text-[12px] font-black transition-all duration-200 text-black/35">中文</button>
                 </div>
             </div>
         </div>
@@ -780,13 +780,13 @@
 
             <!-- Curved Header -->
             <div id="auth-header"
-                class="relative bg-[#1C1C1E] text-white pt-16 pb-12 shadow-2xl z-20 flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 overflow-hidden rounded-br-[100px]">
+                class="relative bg-[#F7F3EC] text-[#324856] pt-16 pb-12 shadow-2xl z-20 flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 overflow-hidden rounded-br-[100px]">
                 <!-- Background Decoration -->
                 <div id="auth-bg-circle-1"
-                    class="absolute top-0 right-0 w-80 h-80 bg-brand-neon/10 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none transition-all duration-1000 ease-in-out">
+                    class="absolute top-0 right-0 w-80 h-80 bg-brand-neon/15 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none transition-all duration-1000 ease-in-out">
                 </div>
                 <div id="auth-bg-circle-2"
-                    class="absolute bottom-0 left-0 w-60 h-60 bg-blue-500/10 rounded-full blur-[60px] -ml-10 -mb-10 pointer-events-none transition-all duration-1000 ease-in-out">
+                    class="absolute bottom-0 left-0 w-60 h-60 bg-[#324856]/10 rounded-full blur-[60px] -ml-10 -mb-10 pointer-events-none transition-all duration-1000 ease-in-out">
                 </div>
 
                 <!-- LOGIN HEADER CONTENT -->
@@ -801,7 +801,7 @@
 
                     <div class="relative z-10 text-center space-y-1">
                         <h1
-                            class="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-500 dark:from-white dark:to-gray-400 drop-shadow-lg">
+                            class="text-5xl font-black tracking-tighter text-[#324856] drop-shadow-lg">
                             AorType</h1>
                         <p class="text-brand-neon font-bold text-sm tracking-widest uppercase mt-2" data-translate="pocket_personal">Seu Personal de
                             Bolso</p>
@@ -812,13 +812,13 @@
                 <div id="header-register-content"
                     class="hidden flex-col items-center justify-center transition-all duration-500 w-full px-10">
                     <div
-                        class="relative z-10 w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center shadow-inner border border-white/10 mb-4 transform hover:scale-105 transition-transform duration-500">
-                        <i data-lucide="user-plus" class="w-10 h-10 text-white"></i>
+                        class="relative z-10 w-20 h-20 bg-[#324856]/5 backdrop-blur-xl rounded-3xl flex items-center justify-center shadow-inner border border-[#324856]/10 mb-4 transform hover:scale-105 transition-transform duration-500">
+                        <i data-lucide="user-plus" class="w-10 h-10 text-[#324856]"></i>
                     </div>
 
                     <div class="relative z-10 text-center space-y-1">
-                        <h1 class="text-3xl font-black tracking-tight text-white" data-translate="create_account">Criar Conta</h1>
-                        <p class="text-white/60 text-sm font-medium" data-translate="start_journey">Comece sua jornada</p>
+                        <h1 class="text-3xl font-black tracking-tight text-[#324856]" data-translate="create_account">Criar Conta</h1>
+                        <p class="text-[#324856]/60 text-sm font-medium" data-translate="start_journey">Comece sua jornada</p>
                     </div>
                 </div>
             </div>
@@ -995,7 +995,7 @@
                         </div>
 
                         <button onclick="app.handleAuth('register')"
-                            class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl shadow-neon hover:shadow-xl hover:scale-[1.02]  transition-all duration-300 text-lg tracking-wide uppercase mt-4"
+                            class="w-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black py-4 rounded-2xl shadow-neon hover:shadow-xl hover:scale-[1.02]  transition-all duration-300 text-lg tracking-wide uppercase mt-4"
                             data-translate="create_account">
                             Criar Conta
                         </button>
@@ -1181,7 +1181,7 @@
                         <div class="space-y-4">
                             <div id="current-meal-status" class="w-full">
                                 <div class="flex items-center gap-3">
-                                    <div class="px-3 py-1 bg-brand-neon text-black text-[10px] font-black uppercase tracking-widest rounded-full"
+                                    <div class="px-3 py-1 bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white text-[10px] font-black uppercase tracking-widest rounded-full"
                                         data-translate="open_status">
                                         Em Aberto
                                     </div>
@@ -1256,7 +1256,7 @@
                                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 160 160">
                                         <circle cx="80" cy="80" r="70" stroke="currentColor" stroke-width="12"
                                             fill="transparent" class="text-gray-100 dark:text-dark-elevated" />
-                                        <circle id="dash-ring-progress" cx="80" cy="80" r="70" stroke="#CCFF00"
+                                        <circle id="dash-ring-progress" cx="80" cy="80" r="70" stroke="#43AD97"
                                             stroke-width="12" fill="transparent" stroke-dasharray="440"
                                             stroke-dashoffset="440" stroke-linecap="round"
                                             class="transition-all duration-1000" />
@@ -1279,7 +1279,7 @@
                                     <div class="relative w-12 h-12 flex items-center justify-center flex-shrink-0">
                                         <svg class="w-full h-full transform -rotate-90" viewBox="0 0 64 64">
                                             <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="transparent" class="text-gray-100 dark:text-gray-800" />
-                                            <circle id="protein-ring" cx="32" cy="32" r="28" stroke="#CCFF00" stroke-width="6" fill="transparent" stroke-dasharray="175" stroke-dashoffset="175" stroke-linecap="round" class="transition-all duration-1000" />
+                                            <circle id="protein-ring" cx="32" cy="32" r="28" stroke="#43AD97" stroke-width="6" fill="transparent" stroke-dasharray="175" stroke-dashoffset="175" stroke-linecap="round" class="transition-all duration-1000" />
                                         </svg>
                                         <i data-lucide="beef" class="w-3.5 h-3.5 text-brand-neon absolute"></i>
                                     </div>
@@ -1867,7 +1867,7 @@
                         </div>
                         <div class="flex gap-2">
                             <button onclick="app.setLanguage('pt', true)" id="lang-pt"
-                                class="lang-btn w-8 h-8 rounded-full text-xs font-bold bg-brand-neon text-black transition-all flex items-center justify-center border-2 border-transparent">PT</button>
+                                class="lang-btn w-8 h-8 rounded-full text-xs font-bold bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white transition-all flex items-center justify-center border-2 border-transparent">PT</button>
                             <button onclick="app.setLanguage('en', true)" id="lang-en"
                                 class="lang-btn w-8 h-8 rounded-full text-xs font-bold bg-gray-100 dark:bg-dark-elevated text-ios-gray transition-all flex items-center justify-center border-2 border-transparent hover:bg-gray-200 dark:hover:bg-gray-700">EN</button>
                             <button onclick="app.setLanguage('zh', true)" id="lang-zh"
@@ -1976,7 +1976,7 @@
                                     <input id="edit-meal-quantity-input" type="number" value="1" min="1"
                                         class="w-16 bg-gray-50 dark:bg-dark-elevated rounded-lg px-2 py-1 font-bold text-center text-sm outline-none border border-gray-200 dark:border-gray-600 focus:border-brand-neon">
                                     <button onclick="app.saveHeaderChanges()"
-                                        class="bg-brand-neon text-black p-1.5 rounded-lg hover:brightness-110  transition-all">
+                                        class="bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white p-1.5 rounded-lg hover:brightness-110  transition-all">
                                         <i data-lucide="check" class="w-4 h-4"></i>
                                     </button>
                                 </div>
@@ -2113,7 +2113,7 @@
                     </div>
                     <!-- Galeria — botão principal -->
                     <button onclick="app.openGallery()"
-                        class="w-full max-w-xs bg-brand-neon text-black font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3 btn-press shadow-neon">
+                        class="w-full max-w-xs bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3 btn-press shadow-neon">
                         <i data-lucide="image" class="w-6 h-6"></i>
                         Escolher da galeria
                     </button>
@@ -2159,7 +2159,7 @@
                                         ✕ Rejeitar
                                     </button>
                                     <button onclick="app.confirmAllAnalysis(event)"
-                                        class="bg-brand-neon text-black px-5 py-2 rounded-xl font-bold text-sm btn-press shadow-neon hover:scale-105 transition-transform">
+                                        class="bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white px-5 py-2 rounded-xl font-bold text-sm btn-press shadow-neon hover:scale-105 transition-transform">
                                         Confirmar
                                     </button>
                                 </div>
@@ -2246,7 +2246,7 @@
                         <div class="flex flex-col gap-1 relative z-10">
                             <!-- Current User Row -->
                             <div class="flex items-center gap-4 p-4 rounded-[1.5rem] bg-brand-neon/10 border border-brand-neon/20 relative overflow-hidden">
-                                <div class="absolute left-0 top-4 bottom-4 w-1 bg-brand-neon rounded-r-full shadow-[0_0_10px_rgba(204,255,0,0.5)]"></div>
+                                <div class="absolute left-0 top-4 bottom-4 w-1 bg-brand-neon rounded-r-full shadow-[0_0_10px_rgba(67,173,151,0.5)]"></div>
                                 <div class="w-12 h-12 rounded-full bg-brand-neon/20 flex items-center justify-center text-2xl flex-shrink-0">
                                     <i data-lucide="user" class="w-6 h-6 text-brand-neon"></i>
                                 </div>
@@ -2423,7 +2423,7 @@
                         </div>
 
                         <button type="submit"
-                            class="w-full bg-brand-neon text-black font-bold py-4 rounded-2xl shadow-neon btn-press">
+                            class="w-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-bold py-4 rounded-2xl shadow-neon btn-press">
                             <span data-translate="save_workout">Salvar Treino</span>
                         </button>
                     </form>
@@ -2729,7 +2729,7 @@
                                 <p class="text-sm text-ios-gray mt-1 leading-snug" data-translate="social_ranking_desc">Convide amigos e compita para ver quem mantém a ofensiva mais longa!</p>
                             </div>
                             <button onclick="app.showToast(app.t('toast_coming_soon_ranking'), 3000)"
-                                class="bg-brand-neon text-black font-black text-sm px-6 py-3 rounded-2xl shadow-neon btn-press flex items-center gap-2">
+                                class="bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black text-sm px-6 py-3 rounded-2xl shadow-neon btn-press flex items-center gap-2">
                                 <i data-lucide="user-plus" class="w-4 h-4"></i>
                                 <span data-translate="invite_friends">Convidar Amigos</span>
                             </button>
@@ -2887,7 +2887,7 @@
                     </div>
 
                     <!-- Botão finalizar -->
-                    <button id="treino-finish-btn" onclick="app.finalizarTreino()" class="hidden w-full bg-brand-neon text-black font-black py-4 rounded-2xl text-base shadow-neon mt-4" data-translate="finish_workout">
+                    <button id="treino-finish-btn" onclick="app.finalizarTreino()" class="hidden w-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black py-4 rounded-2xl text-base shadow-neon mt-4" data-translate="finish_workout">
                         Finalizar Treino ✓
                     </button>
 
@@ -2975,7 +2975,7 @@
                 <div id="academia-tab-alunos" class="p-4 space-y-4">
                     <div class="flex items-center justify-between">
                         <p class="text-xs font-bold text-ios-gray uppercase tracking-widest">Seus Alunos</p>
-                        <button onclick="app.openAddStudentModal()" class="bg-brand-neon text-black text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1">
+                        <button onclick="app.openAddStudentModal()" class="bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1">
                             <i data-lucide="user-plus" class="w-3 h-3"></i> Adicionar
                         </button>
                     </div>
@@ -2988,7 +2988,7 @@
                 <div id="academia-tab-programas" class="hidden p-4 space-y-4">
                     <div class="flex items-center justify-between">
                         <p class="text-xs font-bold text-ios-gray uppercase tracking-widest">Programas de Treino</p>
-                        <button onclick="app.openCreateProgramModal()" class="bg-brand-neon text-black text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1">
+                        <button onclick="app.openCreateProgramModal()" class="bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1">
                             <i data-lucide="plus" class="w-3 h-3"></i> Criar
                         </button>
                     </div>
@@ -3010,7 +3010,7 @@
                     </div>
                     <!-- Period selector -->
                     <div class="flex gap-2 px-6 py-3 border-b border-gray-100 dark:border-gray-800">
-                        <button onclick="app.loadStudentHistory(30)" class="history-period-btn flex-1 py-2 rounded-2xl text-xs font-black bg-brand-neon text-black" data-days="30">30 dias</button>
+                        <button onclick="app.loadStudentHistory(30)" class="history-period-btn flex-1 py-2 rounded-2xl text-xs font-black bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white" data-days="30">30 dias</button>
                         <button onclick="app.loadStudentHistory(60)" class="history-period-btn flex-1 py-2 rounded-2xl text-xs font-black bg-gray-100 dark:bg-gray-800 text-ios-gray" data-days="60">60 dias</button>
                         <button onclick="app.loadStudentHistory(90)" class="history-period-btn flex-1 py-2 rounded-2xl text-xs font-black bg-gray-100 dark:bg-gray-800 text-ios-gray" data-days="90">90 dias</button>
                     </div>
@@ -3112,7 +3112,7 @@
                     <!-- Footer — sticky para garantir visibilidade no mobile -->
                     <div class="px-6 pt-3 flex gap-3 border-t border-gray-100 dark:border-gray-800 flex-shrink-0 sticky bottom-0 bg-white dark:bg-dark-card" style="padding-bottom:max(24px,env(safe-area-inset-bottom))">
                         <button onclick="app.closeAddStudentModal()" class="flex-1 border border-gray-200 dark:border-gray-700 py-3.5 rounded-2xl font-bold text-sm">Cancelar</button>
-                        <button onclick="app.addStudent()" id="add-student-save-btn" class="flex-1 bg-brand-neon text-black py-3.5 rounded-2xl font-black text-sm">Adicionar</button>
+                        <button onclick="app.addStudent()" id="add-student-save-btn" class="flex-1 bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white py-3.5 rounded-2xl font-black text-sm">Adicionar</button>
                     </div>
                 </div>
             </div>
@@ -3142,7 +3142,7 @@
                     </div>
                     <div class="flex gap-3 pt-2">
                         <button onclick="app.closeEditProgramModal()" class="flex-1 border border-gray-200 dark:border-gray-700 py-3 rounded-2xl font-bold text-sm">Cancelar</button>
-                        <button onclick="app.saveEditedProgram()" class="flex-1 bg-brand-neon text-black py-3 rounded-2xl font-black text-sm">Salvar</button>
+                        <button onclick="app.saveEditedProgram()" class="flex-1 bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white py-3 rounded-2xl font-black text-sm">Salvar</button>
                     </div>
                 </div>
             </div>
@@ -3226,7 +3226,7 @@
                     <!-- Actions -->
                     <div class="flex gap-3 pt-1 pb-2">
                         <button onclick="app.closeCreateProgramModal()" class="flex-1 border border-gray-200 dark:border-gray-700 py-3 rounded-2xl font-bold text-sm">Cancelar</button>
-                        <button onclick="app.saveProgram()" id="prog-save-btn" class="flex-1 bg-brand-neon text-black py-3 rounded-2xl font-black text-sm shadow-neon">Salvar Protocolo</button>
+                        <button onclick="app.saveProgram()" id="prog-save-btn" class="flex-1 bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white py-3 rounded-2xl font-black text-sm shadow-neon">Salvar Protocolo</button>
                     </div>
                 </div>
             </div>
@@ -3247,7 +3247,7 @@
                         <!-- Sections per category rendered by JS -->
                     </div>
                     <div class="px-6 pb-6 pt-3 flex-shrink-0 border-t border-gray-100 dark:border-gray-800">
-                        <button onclick="app.saveStudentWorkout()" class="w-full bg-brand-neon text-black py-4 rounded-2xl font-black text-sm shadow-neon">Salvar Configuração</button>
+                        <button onclick="app.saveStudentWorkout()" class="w-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white py-4 rounded-2xl font-black text-sm shadow-neon">Salvar Configuração</button>
                     </div>
                 </div>
             </div>
@@ -3489,7 +3489,7 @@
                     <!-- Scanner Button (Center) -->
                     <div class="relative -top-6 md:-top-8 flex-shrink-0 mx-4 md:mx-5">
                         <button onclick="app.toggleScannerMenu()"
-                            class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-brand-neon text-black flex items-center justify-center shadow-neon btn-press transform hover:scale-105 transition-transform border-4 border-ios-bg dark:border-dark-bg">
+                            class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white flex items-center justify-center shadow-neon btn-press transform hover:scale-105 transition-transform border-4 border-ios-bg dark:border-dark-bg">
                             <i data-lucide="plus" class="w-10 h-10 md:w-12 md:h-12"></i>
                         </button>
                     </div>
@@ -3651,7 +3651,7 @@
                 <!-- Populated by JS -->
             </div>
 
-            <button onclick="app.saveMealTimes()" class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl mt-4 btn-press shadow-neon">
+            <button onclick="app.saveMealTimes()" class="w-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black py-4 rounded-2xl mt-4 btn-press shadow-neon">
                 Salvar Horários
             </button>
         </div>
@@ -3874,7 +3874,7 @@
                 </div>
 
                 <button type="submit"
-                    class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(204,255,0,0.3)] btn-press flex items-center justify-center gap-2 group transition-all hover:shadow-[0_0_30px_rgba(204,255,0,0.5)] hover:scale-[1.02] ">
+                    class="w-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(67,173,151,0.3)] btn-press flex items-center justify-center gap-2 group transition-all hover:shadow-[0_0_30px_rgba(67,173,151,0.5)] hover:scale-[1.02] ">
                     <span data-translate="save_checkin">Salvar Check-in</span>
                     <i data-lucide="check" class="w-5 h-5 transition-transform group-hover:scale-110"></i>
                 </button>
@@ -3965,7 +3965,7 @@
                 <div class="flex-1 text-right text-xs text-ios-gray" id="food-bank-macro-preview">--</div>
             </div>
             <button id="food-bank-confirm-btn" onclick="app.confirmFoodBankAdd()"
-                class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl text-base shadow-neon btn-press">
+                class="w-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black py-4 rounded-2xl text-base shadow-neon btn-press">
                 + Adicionar ao Dia
             </button>
         </div>
@@ -3989,7 +3989,7 @@
                     <div class="font-bold mb-2">➕ Personalizado</div>
                     <div class="flex gap-2">
                         <input type="text" id="custom-supplement-name" placeholder="Nome + dose (ex: L-Carnitina 500mg)" class="flex-1 bg-gray-50 dark:bg-zinc-700 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-neon">
-                        <button onclick="app.logCustomSupplement()" class="bg-brand-neon text-black px-4 py-2 rounded-xl font-bold text-sm">OK</button>
+                        <button onclick="app.logCustomSupplement()" class="bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white px-4 py-2 rounded-xl font-bold text-sm">OK</button>
                     </div>
                 </div>
             </div>
@@ -4022,7 +4022,7 @@
                             class="w-full h-full rounded-full object-cover border-4 border-brand-neon"
                             id="edit-profile-preview">
                         <div
-                            class="absolute bottom-0 right-0 bg-brand-neon text-black p-2 rounded-full border-2 border-white dark:border-dark-card">
+                            class="absolute bottom-0 right-0 bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white p-2 rounded-full border-2 border-white dark:border-dark-card">
                             <i data-lucide="camera" class="w-4 h-4"></i>
                         </div>
                     </div>
@@ -4061,7 +4061,7 @@
                 </div>
 
                 <button type="submit"
-                    class="w-full bg-brand-neon text-black font-black py-4 rounded-2xl mt-4 btn-press shadow-neon"
+                    class="w-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black py-4 rounded-2xl mt-4 btn-press shadow-neon"
                     data-translate="save_changes">
                     Salvar Alterações
                 </button>
@@ -6671,10 +6671,9 @@
                 // Update welcome screen lang buttons
                 document.querySelectorAll('.welcome-lang-btn').forEach(btn => {
                     const isSelected = btn.id === `welcome-lang-${lang}`;
-                    btn.classList.toggle('bg-white/10', isSelected);
-                    btn.classList.toggle('text-white', isSelected);
-                    btn.classList.toggle('text-white/35', !isSelected);
-                    btn.classList.toggle('bg-white/10', isSelected);
+                    btn.classList.toggle('bg-black/10', isSelected);
+                    btn.classList.toggle('text-[#324856]', isSelected);
+                    btn.classList.toggle('text-black/35', !isSelected);
                 });
             },
 
@@ -7372,7 +7371,7 @@
                 div.innerHTML = `
                     <div class="max-w-[88%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${isAI
                         ? 'bg-white/10 text-white rounded-tl-none'
-                        : 'bg-brand-neon text-black font-medium rounded-tr-none'}">
+                        : 'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-medium rounded-tr-none'}">
                         ${text.replace(/\n/g, '<br>')}
                     </div>`;
                 container.appendChild(div);
@@ -11440,7 +11439,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                           ${weekCells.map(cell => `
                             <button onclick="app.openCalendarDay('${assigned.id}', ${days.indexOf(cell.dayDef)}, '${cell.dateStr}', ${cell.isRest})"
                                 class="flex-1 flex flex-col items-center py-2 rounded-2xl transition-all btn-press
-                                    ${cell.isToday ? 'bg-brand-neon text-black' : cell.pct >= 100 ? 'bg-brand-neon/15 text-brand-neon' : 'bg-white/5 text-ios-gray'}">
+                                    ${cell.isToday ? 'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white' : cell.pct >= 100 ? 'bg-brand-neon/15 text-brand-neon' : 'bg-white/5 text-ios-gray'}">
                                 <span class="text-[9px] font-bold uppercase mb-1">${weekLabels[cell.wd]}</span>
                                 <span class="text-[11px] font-black">${cell.label}</span>
                                 <span class="text-[9px] mt-0.5">${cell.pct >= 100 ? '✓' : cell.pct > 0 ? cell.pct + '%' : ''}</span>
@@ -11652,7 +11651,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                                 <p class="text-xs text-ios-gray mt-0.5 truncate">${d.focus || ''}${d.rest_label ? ' · ⏱ ' + d.rest_label : ''}</p>
                             </div>
                             <div class="flex items-center gap-2 flex-shrink-0">
-                                ${i === suggestedIdx ? '<span class="text-[9px] bg-brand-neon text-black px-2 py-0.5 rounded-full font-black">Hoje ✓</span>' : ''}
+                                ${i === suggestedIdx ? '<span class="text-[9px] bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white px-2 py-0.5 rounded-full font-black">Hoje ✓</span>' : ''}
                                 <span class="text-[10px] text-ios-gray font-bold">${(d.exercises || []).length} ex</span>
                             </div>
                         </button>`).join('')}
@@ -11739,7 +11738,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                          ${d.hasSession ? `onclick="app._calDayClick('${d.dateStr}')"` : ''}>
                         <div class="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black
                             ${d.isToday ? 'ring-2 ring-brand-neon' : ''}
-                            ${d.hasSession ? 'bg-brand-neon text-black' : 'bg-gray-100 dark:bg-gray-800 text-ios-gray'}">
+                            ${d.hasSession ? 'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white' : 'bg-gray-100 dark:bg-gray-800 text-ios-gray'}">
                             ${d.hasSession && d.dayName ? d.dayName : d.label.split('/')[0]}
                         </div>
                         <span class="text-[8px] text-ios-gray">${d.isToday ? this.t('today') : d.label.split('/')[1] || ''}</span>
@@ -12053,7 +12052,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                 if (!el) {
                     el = document.createElement('div');
                     el.id = 'treino-save-indicator';
-                    el.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-brand-neon text-black text-[11px] font-black px-4 py-2 rounded-full shadow-lg z-50 pointer-events-none';
+                    el.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white text-[11px] font-black px-4 py-2 rounded-full shadow-lg z-50 pointer-events-none';
                     el.style.transition = 'opacity 0.5s';
                     document.body.appendChild(el);
                 }
@@ -13158,7 +13157,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                 if (!exView) return;
                 const subscribeBtn = document.createElement('button');
                 subscribeBtn.id = 'shop-subscribe-btn';
-                subscribeBtn.className = 'mx-4 mb-4 w-[calc(100%-2rem)] py-3 rounded-2xl bg-brand-neon text-black font-black text-sm';
+                subscribeBtn.className = 'mx-4 mb-4 w-[calc(100%-2rem)] py-3 rounded-2xl bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black text-sm';
                 subscribeBtn.textContent = this.t('use_as_main_plan');
                 subscribeBtn.onclick = () => app.subscribeToProgram(programId);
                 const finishBtn = exView.querySelector('#treino-finish-btn') || exView.querySelector('[onclick*="finalizarTreino"]');
@@ -14082,7 +14081,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                             </div>
                             ${!hasPrograms ? `
                             <button onclick="app.switchAcademiaTab('programas'); setTimeout(()=>app.openCreateProgramModal(),150);"
-                                class="mx-auto flex items-center gap-2 bg-brand-neon text-black text-sm font-black px-5 py-3 rounded-2xl shadow-neon">
+                                class="mx-auto flex items-center gap-2 bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white text-sm font-black px-5 py-3 rounded-2xl shadow-neon">
                                 <i data-lucide="dumbbell" class="w-4 h-4"></i>
                                 ${this.t('create_workout_protocol')}
                             </button>` : ''}
@@ -14115,7 +14114,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                                     </div>
                                 </button>
                                 <div class="flex gap-1.5 items-center shrink-0">
-                                    <button onclick="app.editStudentProgram(${idx})" class="bg-brand-neon text-black text-[11px] font-black px-3 py-1.5 rounded-full">${this.t('workout_btn')}</button>
+                                    <button onclick="app.editStudentProgram(${idx})" class="bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white text-[11px] font-black px-3 py-1.5 rounded-full">${this.t('workout_btn')}</button>
                                     <button onclick="app.removeStudent('${link.id || link.student_id}')" class="text-red-400 text-[11px] font-bold border border-red-400/30 px-2.5 py-1.5 rounded-full">✕</button>
                                 </div>
                             </div>
@@ -14171,7 +14170,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                     const isToday = dateStr === today;
                     // P2b: células compactas + clicáveis se houver sessão
                     cells += `<div class="w-6 h-6 flex items-center justify-center rounded-full text-[9px] font-bold mx-auto
-                        ${hasSession ? 'bg-brand-neon text-black cursor-pointer' : 'bg-gray-100 dark:bg-dark-elevated text-ios-gray'}
+                        ${hasSession ? 'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white cursor-pointer' : 'bg-gray-100 dark:bg-dark-elevated text-ios-gray'}
                         ${isToday ? 'ring-2 ring-brand-neon ring-offset-1' : ''}"
                         ${hasSession ? `onclick="app._calDayClick('${dateStr}')"` : ''}>${d}</div>`;
                 }
@@ -14282,7 +14281,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                 // Update period buttons
                 document.querySelectorAll('.history-period-btn').forEach(btn => {
                     const active = parseInt(btn.dataset.days) === days;
-                    btn.className = `history-period-btn flex-1 py-2 rounded-2xl text-xs font-black ${active ? 'bg-brand-neon text-black' : 'bg-gray-100 dark:bg-gray-800 text-ios-gray'}`;
+                    btn.className = `history-period-btn flex-1 py-2 rounded-2xl text-xs font-black ${active ? 'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white' : 'bg-gray-100 dark:bg-gray-800 text-ios-gray'}`;
                 });
 
                 const body = document.getElementById('student-history-body');
@@ -14645,7 +14644,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                     if (previewExs.length > 0) {
                         previewList.innerHTML = previewExs.map((ex, i) =>
                             `<div class="flex items-center gap-2 text-xs bg-gray-50 dark:bg-dark-elevated rounded-xl px-3 py-2 border border-ios-separator/30">
-                                <span class="w-5 h-5 rounded-full bg-brand-neon text-black font-black flex items-center justify-center flex-shrink-0">${i+1}</span>
+                                <span class="w-5 h-5 rounded-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black flex items-center justify-center flex-shrink-0">${i+1}</span>
                                 <span class="font-semibold flex-1">${ex.name || ''}</span>
                                 <span class="text-ios-gray font-mono flex-shrink-0">${ex.sets||3}x${ex.reps||'12'}</span>
                             </div>`
@@ -14888,7 +14887,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                           ${days.map((d, i) => `
                             <button onclick="app._editorTab=${i};app.renderAIExerciseEditor()"
                                 class="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-black transition-all
-                                ${i === this._editorTab ? 'bg-brand-neon text-black' : 'bg-gray-100 dark:bg-gray-800 text-ios-gray'}">
+                                ${i === this._editorTab ? 'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white' : 'bg-gray-100 dark:bg-gray-800 text-ios-gray'}">
                                 ${d.name}
                             </button>`).join('')}
                           <button onclick="app._addEditorDay()"
@@ -16449,7 +16448,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                                         <div class="absolute inset-0 rounded-full bg-brand-neon/20 blur-xl animate-pulse"></div>
                                         
                                         <!-- Photo Container -->
-                                        <div class="w-48 h-48 rounded-full overflow-hidden border-4 border-brand-neon shadow-[0_0_30px_rgba(204,255,0,0.3)] bg-gray-100 dark:bg-zinc-800 relative z-10">
+                                        <div class="w-48 h-48 rounded-full overflow-hidden border-4 border-brand-neon shadow-[0_0_30px_rgba(67,173,151,0.3)] bg-gray-100 dark:bg-zinc-800 relative z-10">
                                             <img id="onb-photo-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%232a2a2a'/><stop offset='1' stop-color='%231f1f1f'/></linearGradient></defs><circle cx='64' cy='64' r='64' fill='url(%23g)'/><circle cx='64' cy='48' r='22' fill='none' stroke='%23fff' stroke-width='6'/><path d='M20 104c10-24 36-34 44-34s34 10 44 34' fill='none' stroke='%23fff' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/></svg>" class="w-full h-full object-cover object-center transition-transform duration-500 hover:scale-105">
                                         </div>
                                         
@@ -16638,8 +16637,8 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
 
                                     <!-- Unit Toggle -->
                                     <div class="mt-8 flex gap-3 items-center">
-                                        <button onclick="app.setHeightUnit('cm')" id="height-unit-cm" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='metric'?'bg-brand-neon text-black':'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400'}">cm</button>
-                                        <button onclick="app.setHeightUnit('imperial')" id="height-unit-ft" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='imperial'?'bg-brand-neon text-black':'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400'}">ft / in</button>
+                                        <button onclick="app.setHeightUnit('cm')" id="height-unit-cm" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='metric'?'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white':'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400'}">cm</button>
+                                        <button onclick="app.setHeightUnit('imperial')" id="height-unit-ft" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='imperial'?'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white':'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400'}">ft / in</button>
                                     </div>
                                 </div>
                                 
@@ -16691,8 +16690,8 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
 
                                     <!-- Unit Toggle -->
                                     <div class="mt-8 flex gap-3 items-center">
-                                        <button onclick="app.setWeightUnit('metric')" id="weight-unit-kg" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='metric'?'bg-brand-neon text-black':'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400'}">kg</button>
-                                        <button onclick="app.setWeightUnit('imperial')" id="weight-unit-lbs" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='imperial'?'bg-brand-neon text-black':'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400'}">lbs</button>
+                                        <button onclick="app.setWeightUnit('metric')" id="weight-unit-kg" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='metric'?'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white':'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400'}">kg</button>
+                                        <button onclick="app.setWeightUnit('imperial')" id="weight-unit-lbs" class="px-5 py-2 rounded-full font-bold text-sm transition-all ${(data.unitSystem||'metric')==='imperial'?'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white':'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400'}">lbs</button>
                                     </div>
                                 </div>
                                 
@@ -17694,7 +17693,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                             const label = this.t(o.lk); const desc = this.t(o.dk);
                             const isActive = data.supplements[key];
                             const activeClass = isActive
-                                ? 'border-brand-neon bg-brand-neon/10 ring-1 ring-brand-neon shadow-[0_0_20px_rgba(204,255,0,0.15)]'
+                                ? 'border-brand-neon bg-brand-neon/10 ring-1 ring-brand-neon shadow-[0_0_20px_rgba(67,173,151,0.15)]'
                                 : 'border-transparent bg-white dark:bg-zinc-900/80 hover:border-brand-neon/30';
 
                             // Special card for "Outro" when active — shows text input
@@ -17874,7 +17873,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                                         <div class="absolute inset-4 border-2 border-transparent border-b-brand-neon/60 border-l-brand-neon/60 rounded-full animate-[spin_2s_linear_infinite_reverse]"></div>
                                         
                                         <!-- Inner Core -->
-                                        <div class="relative w-24 h-24 bg-white dark:bg-zinc-900 rounded-full shadow-[0_0_30px_rgba(204,255,0,0.15)] flex items-center justify-center z-10 border border-gray-100 dark:border-white/5 backdrop-blur-md">
+                                        <div class="relative w-24 h-24 bg-white dark:bg-zinc-900 rounded-full shadow-[0_0_30px_rgba(67,173,151,0.15)] flex items-center justify-center z-10 border border-gray-100 dark:border-white/5 backdrop-blur-md">
                                             <div class="w-16 h-16 bg-gradient-to-tr from-brand-neon to-brand-green rounded-full flex items-center justify-center shadow-inner animate-pulse">
                                                 <i data-lucide="brain-circuit" class="w-8 h-8 text-black animate-pulse"></i>
                                             </div>
@@ -17940,7 +17939,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
 
                                 <!-- Header compacto -->
                                 <div class="flex items-center gap-3 mb-5 flex-shrink-0">
-                                    <div class="w-11 h-11 bg-brand-neon/10 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(204,255,0,0.15)] flex-shrink-0">
+                                    <div class="w-11 h-11 bg-brand-neon/10 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(67,173,151,0.15)] flex-shrink-0">
                                         <i data-lucide="trophy" class="w-5 h-5 text-brand-neon"></i>
                                     </div>
                                     <div>
@@ -17955,7 +17954,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                                     <div class="relative">
                                         <span class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 block">${this.t('daily_goal_label')}</span>
                                         <div class="flex items-baseline gap-1.5 mt-0.5">
-                                            <span class="text-5xl font-black tracking-tighter text-brand-neon leading-none" style="text-shadow:0 0 25px rgba(204,255,0,0.5)">${macros.calories}</span>
+                                            <span class="text-5xl font-black tracking-tighter text-brand-neon leading-none" style="text-shadow:0 0 25px rgba(67, 173, 151, 0.5)">${macros.calories}</span>
                                             <span class="text-lg font-bold text-white/60">kcal</span>
                                         </div>
                                     </div>
@@ -19095,7 +19094,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                         <img src="/assets/images/LOGOMacroAI.png" class="w-full h-full object-cover">
                      </div>`;
 
-                const bubbleColor = isUser ? 'bg-brand-neon text-black' : 'bg-ios-card dark:bg-dark-elevated text-black dark:text-white border border-gray-100 dark:border-gray-800';
+                const bubbleColor = isUser ? 'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white' : 'bg-ios-card dark:bg-dark-elevated text-black dark:text-white border border-gray-100 dark:border-gray-800';
 
                 // Helper to parse markdown-like syntax
                 const parseMarkdown = (txt) => {
@@ -19162,11 +19161,11 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                 const div = document.createElement('div');
                 div.className = 'flex flex-wrap gap-2 mt-2 animate-fade-in coach-options ml-11 mb-4';
                 div.innerHTML = `
-                    <button onclick="app.handleCoachAction('what_to_eat')" class="bg-brand-neon text-black border border-brand-neon px-4 py-2 rounded-full text-xs font-bold shadow-neon hover:bg-brand-neon/90 transition-colors">O que comer agora?</button>
-                    <button onclick="app.handleCoachAction('analyze_week')" class="bg-brand-neon text-black border border-brand-neon px-4 py-2 rounded-full text-xs font-bold shadow-neon hover:bg-brand-neon/90 transition-colors">Análise da semana</button>
-                    <button onclick="app.handleCoachAction('day_summary')" class="bg-brand-neon text-black border border-brand-neon px-4 py-2 rounded-full text-xs font-bold shadow-neon hover:bg-brand-neon/90 transition-colors">Resumo do dia</button>
-                    <button onclick="app.handleCoachAction('end_day')" class="bg-brand-neon text-black border border-brand-neon px-4 py-2 rounded-full text-xs font-bold shadow-neon hover:bg-brand-neon/90 transition-colors">${this.t('end_day_label')}</button>
-                    <button onclick="app.openCoachLifeMenu()" class="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold transition-colors flex-shrink-0" style="background:rgba(181,242,61,0.12);color:#b5f23d;border:1.5px solid rgba(181,242,61,0.3)">+</button>
+                    <button onclick="app.handleCoachAction('what_to_eat')" class="bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white border border-brand-neon px-4 py-2 rounded-full text-xs font-bold shadow-neon hover:bg-brand-neon/90 transition-colors">O que comer agora?</button>
+                    <button onclick="app.handleCoachAction('analyze_week')" class="bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white border border-brand-neon px-4 py-2 rounded-full text-xs font-bold shadow-neon hover:bg-brand-neon/90 transition-colors">Análise da semana</button>
+                    <button onclick="app.handleCoachAction('day_summary')" class="bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white border border-brand-neon px-4 py-2 rounded-full text-xs font-bold shadow-neon hover:bg-brand-neon/90 transition-colors">Resumo do dia</button>
+                    <button onclick="app.handleCoachAction('end_day')" class="bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white border border-brand-neon px-4 py-2 rounded-full text-xs font-bold shadow-neon hover:bg-brand-neon/90 transition-colors">${this.t('end_day_label')}</button>
+                    <button onclick="app.openCoachLifeMenu()" class="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold transition-colors flex-shrink-0" style="background:rgba(67, 173, 151, 0.12);color:#43AD97;border:1.5px solid rgba(67, 173, 151, 0.3)">+</button>
                 `;
 
                 // Remove previous options if any to avoid clutter?
@@ -20466,7 +20465,7 @@ Rules:
                             <div class="space-y-2">
                                 ${Array(ex.sets).fill(0).map((_, i) => {
                         const isDone = exProgress[i] === true;
-                        const btnClass = isDone ? 'bg-brand-neon text-black shadow-neon' : 'bg-gray-200 dark:bg-gray-800 text-gray-500';
+                        const btnClass = isDone ? 'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white shadow-neon' : 'bg-gray-200 dark:bg-gray-800 text-gray-500';
 
                         return `
                                 <div class="flex items-center gap-3 text-sm ${i > 0 && !isDone && !exProgress[i - 1] ? 'opacity-50' : ''}">
@@ -22772,7 +22771,7 @@ Rules:
                                 <div class="absolute inset-0 bg-brand-neon/5 group-hover:bg-brand-neon/10 transition-colors"></div>
                                 <div class="w-16 h-16 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center relative z-10 flex-shrink-0">
                                     ${m.image ? `<img src="${m.image}" class="w-full h-full object-cover"/>` : '<span class="text-xl">✨</span>'}
-                                    <div class="absolute bottom-1 right-1 bg-brand-neon text-black text-[8px] font-bold px-1.5 py-0.5 rounded-full">${this.t('ready')}</div>
+                                    <div class="absolute bottom-1 right-1 bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">${this.t('ready')}</div>
                                 </div>
                                 <div class="flex-1 z-10"><div class="text-sm font-bold truncate">${m.name}</div>
                                     <div class="text-xs text-ios-gray">${Math.round(m.macros?.cal ?? m.calories ?? 0)} kcal</div></div>
@@ -23482,7 +23481,7 @@ Rules:
                     let btnClass = `
                         group relative flex flex-col items-center justify-center py-3 rounded-2xl transition-all duration-300 cursor-pointer select-none
                         ${isSelected
-                            ? 'bg-brand-neon text-black shadow-lg shadow-brand-neon/40 scale-105 z-10'
+                            ? 'bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white shadow-lg shadow-brand-neon/40 scale-105 z-10'
                             : 'bg-transparent text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-600 dark:hover:text-gray-200'
                         }
                     `;
@@ -23490,7 +23489,7 @@ Rules:
                     // Bottom indicator: today dot (neon) OR data dot (white/dim)
                     let bottomIndicator = '';
                     if (isToday && !isSelected) {
-                        bottomIndicator = `<div class="absolute bottom-1.5 w-1.5 h-1.5 rounded-full bg-brand-neon shadow-[0_0_5px_#ccff00]"></div>`;
+                        bottomIndicator = `<div class="absolute bottom-1.5 w-1.5 h-1.5 rounded-full bg-brand-neon shadow-[0_0_5px_#43AD97]"></div>`;
                     } else if (hasData && !isSelected) {
                         bottomIndicator = `<div class="absolute bottom-1.5 w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></div>`;
                     } else if (hasData && isSelected) {
