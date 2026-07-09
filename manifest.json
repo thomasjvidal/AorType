@@ -4,8 +4,8 @@
   "description": "AorType - Personal nutrition and fitness AI assistant",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#F7F3EC",
+  "theme_color": "#F7F3EC",
   "icons": [
     {
       "src": "/assets/images/icon-192.png",
