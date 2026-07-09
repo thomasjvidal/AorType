@@ -220,6 +220,19 @@
         .h-safe-top {
             height: env(safe-area-inset-top);
         }
+        .pt-safe-12 {
+            padding-top: calc(env(safe-area-inset-top) + 3rem) !important;
+        }
+        .pt-safe-16 {
+            padding-top: calc(env(safe-area-inset-top) + 4rem) !important;
+        }
+        /* Full-bleed entry screens (splash/welcome) must span the true dynamic
+           viewport, or the dark body background shows through as a bar under
+           the home indicator on iOS. */
+        #screen-splash,
+        #screen-welcome {
+            height: 100dvh;
+        }
 
         /* Animations */
         @keyframes slideUpSheet {
@@ -780,7 +793,7 @@
 
             <!-- Curved Header -->
             <div id="auth-header"
-                class="relative bg-[#F7F3EC] text-[#324856] pt-16 pb-12 shadow-2xl z-20 flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 overflow-hidden rounded-br-[100px]">
+                class="relative bg-[#F7F3EC] text-[#324856] pt-safe-16 pb-12 shadow-2xl z-20 flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 overflow-hidden rounded-br-[100px]">
                 <!-- Background Decoration -->
                 <div id="auth-bg-circle-1"
                     class="absolute top-0 right-0 w-80 h-80 bg-brand-neon/15 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none transition-all duration-1000 ease-in-out">
@@ -15591,8 +15604,8 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                         if (authHeader) {
                             authHeader.classList.remove('rounded-bl-[100px]');
                             authHeader.classList.add('rounded-br-[100px]');
-                            authHeader.classList.remove('pt-12', 'pb-8');
-                            authHeader.classList.add('pt-16', 'pb-12');
+                            authHeader.classList.remove('pt-safe-12', 'pb-8');
+                            authHeader.classList.add('pt-safe-16', 'pb-12');
                         }
                     } else {
                         formLogin.classList.add('hidden');
@@ -15602,8 +15615,8 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                         if (authHeader) {
                             authHeader.classList.remove('rounded-br-[100px]');
                             authHeader.classList.add('rounded-bl-[100px]');
-                            authHeader.classList.remove('pt-16', 'pb-12');
-                            authHeader.classList.add('pt-12', 'pb-8');
+                            authHeader.classList.remove('pt-safe-16', 'pb-12');
+                            authHeader.classList.add('pt-safe-12', 'pb-8');
                         }
                     }
                 }
@@ -15656,8 +15669,8 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                         authHeader.classList.remove('rounded-br-[100px]');
                         authHeader.classList.add('rounded-bl-[100px]');
                         // Compact Header for Register (Balanced size)
-                        authHeader.classList.remove('pt-16', 'pb-12');
-                        authHeader.classList.add('pt-12', 'pb-8');
+                        authHeader.classList.remove('pt-safe-16', 'pb-12');
+                        authHeader.classList.add('pt-safe-12', 'pb-8');
                     }
 
                     // Update Header Background (More distinct for Register - Purple/Pink vibe)
@@ -15695,8 +15708,8 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                         authHeader.classList.remove('rounded-bl-[100px]');
                         authHeader.classList.add('rounded-br-[100px]');
                         // Restore Large Header for Login
-                        authHeader.classList.remove('pt-12', 'pb-8');
-                        authHeader.classList.add('pt-16', 'pb-12');
+                        authHeader.classList.remove('pt-safe-12', 'pb-8');
+                        authHeader.classList.add('pt-safe-16', 'pb-12');
                     }
 
                     // Reset Header Background
