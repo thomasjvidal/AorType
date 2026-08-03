@@ -55,6 +55,8 @@ app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, 'favicon
 app.get('/apple-touch-icon.png', (req, res) => res.sendFile(path.join(__dirname, 'apple-touch-icon.png')));
 app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
 app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, 'logo.png')));
+app.get('/privacidade', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
+app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // ── AUTH MIDDLEWARE ────────────────────────────────────────────
