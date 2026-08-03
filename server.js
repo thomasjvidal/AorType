@@ -57,6 +57,8 @@ app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manif
 app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, 'logo.png')));
 app.get('/privacidade', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
+app.get('/suporte', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
+app.get('/support', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // ── AUTH MIDDLEWARE ────────────────────────────────────────────
