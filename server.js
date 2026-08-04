@@ -1245,12 +1245,24 @@ app.post('/api/auth/register-complete', async (req, res) => {
     if (existing) return res.status(409).json({ error: 'Email já cadastrado' });
 
     const password_hash = await bcrypt.hash(password, 10);
+
+    // Ensure username is unique by appending random suffix if needed
+    let finalUsername = username || null;
+    if (finalUsername) {
+      const { data: existingUser } = await supabase.from('users').select('id').eq('username', finalUsername).single();
+      if (existingUser) finalUsername = finalUsername + Math.floor(Math.random() * 9000 + 1000);
+    }
+
     const { data: user, error: userErr } = await supabase
       .from('users')
-      .insert({ email, password_hash, name, username, user_type })
+      .insert({ email, password_hash, name, username: finalUsername, user_type })
       .select()
       .single();
-    if (userErr) throw userErr;
+    if (userErr) {
+      console.error('Register-complete user insert error:', userErr);
+      if (userErr.code === '23505') return res.status(409).json({ error: 'Email já cadastrado' });
+      return res.status(500).json({ error: 'Erro ao criar conta: ' + (userErr.message || userErr.code) });
+    }
 
     // Salva avatar se enviado
     const avatarUrl = profile?.avatar || profile?.avatar_url;
