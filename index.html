@@ -616,9 +616,14 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
     <script>
-        window.AUTH_CONFIG = { googleClientId: '', appleClientId: '', appleRedirectURI: '' };
-        fetch('/api/auth/config').then(r => r.json()).then(cfg => {
-            window.AUTH_CONFIG = cfg;
+        window.AUTH_CONFIG = {
+            googleClientId: '246294595079-4kbog4vav3h1a2cako3tvee8ednmob74.apps.googleusercontent.com',
+            appleClientId: '',
+            appleRedirectURI: 'https://aortype.com'
+        };
+        fetch('https://aortype.com/api/auth/config').then(r => r.json()).then(cfg => {
+            if (cfg.googleClientId) window.AUTH_CONFIG.googleClientId = cfg.googleClientId;
+            if (cfg.appleClientId) window.AUTH_CONFIG.appleClientId = cfg.appleClientId;
             if (window.app) window.app.initAuthProviders();
         }).catch(() => {});
     </script>
