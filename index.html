@@ -618,7 +618,7 @@
     <script>
         window.AUTH_CONFIG = {
             googleClientId: '246294595079-4kbog4vav3h1a2cako3tvee8ednmob74.apps.googleusercontent.com',
-            appleClientId: '',
+            appleClientId: 'com.aortype.web',
             appleRedirectURI: 'https://aortype.com'
         };
         fetch('https://aortype.com/api/auth/config').then(r => r.json()).then(cfg => {
@@ -15993,7 +15993,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
 
             async completeSocialLogin(profile) {
                 try {
-                    const res = await fetch('/api/auth/social-login', {
+                    const res = await fetch('https://aortype.com/api/auth/social-login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email: profile.email, name: profile.name, provider: profile.provider })
