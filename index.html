@@ -616,7 +616,11 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
     <script>
-        window.AUTH_CONFIG = window.AUTH_CONFIG || { googleClientId: '', appleClientId: '', appleRedirectURI: '' };
+        window.AUTH_CONFIG = { googleClientId: '', appleClientId: '', appleRedirectURI: '' };
+        fetch('/api/auth/config').then(r => r.json()).then(cfg => {
+            window.AUTH_CONFIG = cfg;
+            if (window.app) window.app.initAuthProviders();
+        }).catch(() => {});
     </script>
     <style>
         /* Recording Animations */
@@ -15982,17 +15986,27 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                 });
             },
 
-            completeSocialLogin(profile) {
+            async completeSocialLogin(profile) {
                 try {
-                    this.state.isLoggedIn = true;
+                    const res = await fetch('/api/auth/social-login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: profile.email, name: profile.name, provider: profile.provider })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) { this.showToast(data.error || this.t('login_error')); return; }
+
+                    AUTH.setToken(data.token);
                     localStorage.setItem('aortype_auth', 'true');
-                    if (profile) {
-                        this.state.userProfile.name = profile.name || this.state.userProfile.name;
-                        this.state.userProfile.email = profile.email || this.state.userProfile.email;
-                        if (profile.avatar) this.state.userProfile.avatar = profile.avatar;
-                        this.state.userName = this.state.userProfile.name || 'User';
-                        localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
-                    }
+                    localStorage.setItem('aortype_user_type', data.userType || 'aluno');
+                    this.state.isLoggedIn = true;
+                    this.state.userType = data.userType || 'aluno';
+                    this.state.userProfile.name = data.name || profile.name;
+                    this.state.userProfile.email = data.email || profile.email;
+                    if (profile.avatar) this.state.userProfile.avatar = profile.avatar;
+                    this.state.userName = this.state.userProfile.name || 'User';
+                    localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
+
                     const authScreen = document.getElementById('screen-auth');
                     if (authScreen) {
                         authScreen.classList.add('opacity-0', 'pointer-events-none');
@@ -16000,12 +16014,12 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                             authScreen.classList.add('hidden');
                             this.showToast(this.t('welcome_app'));
                             this.navigate('dashboard');
-                            // Skeleton ativo até dados chegarem
                             this._splashSkeletonActive = true;
                             this._mealsLoaded = false;
                             const skSocial = document.getElementById('sk-dashboard');
                             if (skSocial) skSocial.classList.remove('hidden');
                             this.loadRemoteData();
+                            this.loadUserProfile();
                         }, 500);
                     }
                 } catch (e) {

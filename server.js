@@ -1312,6 +1312,50 @@ app.post('/api/auth/register-complete', async (req, res) => {
   }
 });
 
+// Auth config — retorna client IDs via env vars (nunca exponha secrets aqui)
+app.get('/api/auth/config', (req, res) => {
+  res.json({
+    googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+    appleClientId: process.env.APPLE_CLIENT_ID || '',
+    appleRedirectURI: process.env.APPLE_REDIRECT_URI || 'https://aortype.com'
+  });
+});
+
+// Social login — cria ou acha o usuário pelo email e retorna JWT
+app.post('/api/auth/social-login', async (req, res) => {
+  try {
+    const { email, name, provider } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email obrigatório' });
+
+    let { data: user } = await supabase.from('users').select('id, email, name, user_type').eq('email', email).single();
+
+    if (!user) {
+      let finalUsername = '@' + email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const { data: existingUser } = await supabase.from('users').select('id').eq('username', finalUsername).single();
+      if (existingUser) finalUsername = finalUsername + Math.floor(Math.random() * 9000 + 1000);
+
+      const { data: newUser, error: userErr } = await supabase
+        .from('users')
+        .insert({ email, name: name || email.split('@')[0], username: finalUsername, user_type: 'aluno', password_hash: 'social_' + (provider || 'oauth') })
+        .select()
+        .single();
+
+      if (userErr) {
+        console.error('Social login insert error:', userErr);
+        return res.status(500).json({ error: 'Erro ao criar conta' });
+      }
+      user = newUser;
+      await supabase.from('profiles').insert({ user_id: user.id, onboarding_done: false });
+    }
+
+    const token = jwt.sign({ userId: user.id, email, userType: user.user_type }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, userId: user.id, email, name: user.name, userType: user.user_type });
+  } catch (e) {
+    console.error('Social login error:', e);
+    res.status(500).json({ error: 'Erro no login social' });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
