@@ -15965,48 +15965,42 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
             },
 
             loginWithApple() {
-                const cfg = window.AUTH_CONFIG || {};
-                if (!cfg.appleClientId) {
-                    this.showToast(this.t('configure_apple'));
-                    return;
-                }
-                const doSignIn = () => {
-                    try {
-                        AppleID.auth.init({
-                            clientId: cfg.appleClientId,
-                            scope: 'name email',
-                            redirectURI: cfg.appleRedirectURI || 'https://aortype.com',
-                            usePopup: true
-                        });
-                    } catch(e) {}
-                    AppleID.auth.signIn().then((response) => {
-                        try {
-                            const idToken = response.authorization && response.authorization.id_token;
-                            let payload = {};
-                            if (idToken) {
-                                const s = idToken.split('.')[1];
-                                payload = JSON.parse(atob(s.replace(/-/g, '+').replace(/_/g, '/')));
-                            }
-                            const user = response.user || {};
-                            const name = user && user.name ? (user.name.firstName ? (user.name.firstName + ' ' + (user.name.lastName || '')) : '') : (payload.name || '');
-                            const email = (user && user.email) || payload.email || '';
-                            const profile = { name: name || 'Apple User', email, avatar: '', provider: 'apple' };
-                            this.completeSocialLogin(profile);
-                        } catch (e) {
-                            this.showToast(this.t('apple_login_failed'));
-                        }
-                    }).catch(() => {
-                        this.showToast(this.t('apple_login_cancelled'));
-                    });
+                const handler = (event) => {
+                    if (event.origin !== 'https://aortype.com') return;
+                    const data = event.data || {};
+                    if (!data.appleToken && !data.appleError) return;
+                    window.removeEventListener('message', handler);
+                    if (data.appleError) { this.showToast(data.appleError); return; }
+                    AUTH.setToken(data.appleToken);
+                    localStorage.setItem('aortype_auth', 'true');
+                    localStorage.setItem('aortype_user_type', data.appleUserType || 'aluno');
+                    this.state.isLoggedIn = true;
+                    this.state.userType = data.appleUserType || 'aluno';
+                    this.state.userProfile.name = data.appleName || 'Apple User';
+                    this.state.userProfile.email = data.appleEmail || '';
+                    this.state.userName = this.state.userProfile.name;
+                    localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
+                    const authScreen = document.getElementById('screen-auth');
+                    if (authScreen) {
+                        authScreen.classList.add('opacity-0', 'pointer-events-none');
+                        setTimeout(() => {
+                            authScreen.classList.add('hidden');
+                            this.showToast(this.t('welcome_app'));
+                            this.navigate('dashboard');
+                            this._splashSkeletonActive = true;
+                            this._mealsLoaded = false;
+                            const sk = document.getElementById('sk-dashboard');
+                            if (sk) sk.classList.remove('hidden');
+                            this.loadRemoteData();
+                            this.loadUserProfile();
+                        }, 500);
+                    }
                 };
-                if (!window.AppleID) {
-                    const s = document.createElement('script');
-                    s.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
-                    s.onload = doSignIn;
-                    s.onerror = () => this.showToast('Não foi possível carregar Apple Sign In');
-                    document.head.appendChild(s);
-                } else {
-                    doSignIn();
+                window.addEventListener('message', handler);
+                const popup = window.open('https://aortype.com/api/auth/apple/start', 'apple-signin', 'width=500,height=600,left=200,top=100');
+                if (!popup) {
+                    window.removeEventListener('message', handler);
+                    this.showToast('Permita popups para fazer login com Apple');
                 }
             },
 

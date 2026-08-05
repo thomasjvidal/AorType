@@ -36,6 +36,7 @@ const app = express();
 app.set('etag', false); // Desabilita ETags globalmente — evita respostas 304 com dados antigos
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Desabilita cache HTTP em todas as rotas /api — dados sempre frescos
 app.use('/api', (req, res, next) => {
@@ -1319,6 +1320,74 @@ app.get('/api/auth/config', (req, res) => {
     appleClientId: process.env.APPLE_CLIENT_ID || '',
     appleRedirectURI: process.env.APPLE_REDIRECT_URI || 'https://aortype.com'
   });
+});
+
+// Apple OAuth — inicia o fluxo redirecionando para a Apple
+app.get('/api/auth/apple/start', (req, res) => {
+  const clientId = process.env.APPLE_CLIENT_ID || 'com.aortype.web';
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: 'https://aortype.com/api/auth/apple/callback',
+    response_type: 'code id_token',
+    scope: 'name email',
+    response_mode: 'form_post',
+    state: Math.random().toString(36).substring(2)
+  });
+  res.redirect(`https://appleid.apple.com/auth/authorize?${params}`);
+});
+
+// Apple OAuth — callback recebe POST da Apple com id_token
+app.post('/api/auth/apple/callback', async (req, res) => {
+  const closeWithData = (data) => {
+    res.send(`<!DOCTYPE html><html><body><script>
+      try { window.opener && window.opener.postMessage(${JSON.stringify(data)}, 'https://aortype.com'); } catch(e) {}
+      window.close();
+    </script></body></html>`);
+  };
+  try {
+    const { id_token, user: userJson } = req.body;
+    if (!id_token) return closeWithData({ appleError: 'Token não recebido' });
+
+    let email = '', name = '';
+    try {
+      const payload = JSON.parse(Buffer.from(id_token.split('.')[1], 'base64url').toString());
+      email = payload.email || '';
+    } catch(e) {
+      try {
+        const payload = JSON.parse(Buffer.from(id_token.split('.')[1], 'base64').toString());
+        email = payload.email || '';
+      } catch(e2) {}
+    }
+    if (userJson) {
+      try {
+        const u = typeof userJson === 'string' ? JSON.parse(userJson) : userJson;
+        const first = u.name?.firstName || '';
+        const last = u.name?.lastName || '';
+        name = (first + ' ' + last).trim();
+        if (u.email && !email) email = u.email;
+      } catch(e) {}
+    }
+    if (!email) return closeWithData({ appleError: 'Email não encontrado' });
+
+    let { data: user } = await supabase.from('users').select('id,email,name,user_type').eq('email', email).single();
+    if (!user) {
+      let finalUsername = '@' + email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const { data: ex } = await supabase.from('users').select('id').eq('username', finalUsername).single();
+      if (ex) finalUsername += Math.floor(Math.random() * 9000 + 1000);
+      const { data: newUser, error: uErr } = await supabase.from('users').insert({
+        email, name: name || email.split('@')[0], username: finalUsername,
+        user_type: 'aluno', password_hash: 'social_apple'
+      }).select().single();
+      if (uErr) return closeWithData({ appleError: 'Erro ao criar conta' });
+      user = newUser;
+      await supabase.from('profiles').insert({ user_id: user.id, onboarding_done: false });
+    }
+    const token = jwt.sign({ userId: user.id, email, userType: user.user_type }, JWT_SECRET, { expiresIn: '30d' });
+    closeWithData({ appleToken: token, appleEmail: email, appleName: user.name || name, appleUserType: user.user_type });
+  } catch(e) {
+    console.error('Apple callback error:', e);
+    closeWithData({ appleError: 'Erro interno' });
+  }
 });
 
 // Social login — cria ou acha o usuário pelo email e retorna JWT
