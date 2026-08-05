@@ -1323,22 +1323,37 @@ app.get('/api/auth/config', (req, res) => {
 });
 
 // Apple OAuth — inicia o fluxo redirecionando para a Apple
+// platform=ios → callback usa deep link; sem platform → callback usa postMessage
 app.get('/api/auth/apple/start', (req, res) => {
   const clientId = process.env.APPLE_CLIENT_ID || 'com.aortype.web';
+  const platform = req.query.platform || 'web';
+  const state = (platform === 'ios' ? 'ios_' : '') + Math.random().toString(36).substring(2);
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: 'https://aortype.com/api/auth/apple/callback',
     response_type: 'code id_token',
     scope: 'name email',
     response_mode: 'form_post',
-    state: Math.random().toString(36).substring(2)
+    state
   });
   res.redirect(`https://appleid.apple.com/auth/authorize?${params}`);
 });
 
 // Apple OAuth — callback recebe POST da Apple com id_token
 app.post('/api/auth/apple/callback', async (req, res) => {
+  const { state } = req.body;
+  const isIOS = (state || '').startsWith('ios_');
   const closeWithData = (data) => {
+    if (isIOS) {
+      const p = new URLSearchParams();
+      if (data.appleError) { p.set('error', data.appleError); return res.redirect(`aortype://auth?${p}`); }
+      p.set('token', data.appleToken);
+      p.set('email', data.appleEmail || '');
+      p.set('name', data.appleName || '');
+      p.set('userType', data.appleUserType || 'aluno');
+      p.set('isNew', data.appleIsNew ? 'true' : 'false');
+      return res.redirect(`aortype://auth?${p}`);
+    }
     res.send(`<!DOCTYPE html><html><body><script>
       try { window.opener && window.opener.postMessage(${JSON.stringify(data)}, 'https://aortype.com'); } catch(e) {}
       window.close();
