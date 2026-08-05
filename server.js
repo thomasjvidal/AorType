@@ -1370,7 +1370,9 @@ app.post('/api/auth/apple/callback', async (req, res) => {
     if (!email) return closeWithData({ appleError: 'Email não encontrado' });
 
     let { data: user } = await supabase.from('users').select('id,email,name,user_type').eq('email', email).single();
+    let isNew = false;
     if (!user) {
+      isNew = true;
       let finalUsername = '@' + email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
       const { data: ex } = await supabase.from('users').select('id').eq('username', finalUsername).single();
       if (ex) finalUsername += Math.floor(Math.random() * 9000 + 1000);
@@ -1383,7 +1385,7 @@ app.post('/api/auth/apple/callback', async (req, res) => {
       await supabase.from('profiles').insert({ user_id: user.id, onboarding_done: false });
     }
     const token = jwt.sign({ userId: user.id, email, userType: user.user_type }, JWT_SECRET, { expiresIn: '30d' });
-    closeWithData({ appleToken: token, appleEmail: email, appleName: user.name || name, appleUserType: user.user_type });
+    closeWithData({ appleToken: token, appleEmail: email, appleName: user.name || name, appleUserType: user.user_type, appleIsNew: isNew });
   } catch(e) {
     console.error('Apple callback error:', e);
     closeWithData({ appleError: 'Erro interno' });
@@ -1403,7 +1405,9 @@ app.post('/api/auth/google-profile', async (req, res) => {
     if (!u.email) return res.status(400).json({ error: 'Email não encontrado' });
 
     let { data: user } = await supabase.from('users').select('id,email,name,user_type').eq('email', u.email).single();
+    let isNew = false;
     if (!user) {
+      isNew = true;
       let finalUsername = '@' + u.email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
       const { data: ex } = await supabase.from('users').select('id').eq('username', finalUsername).single();
       if (ex) finalUsername += Math.floor(Math.random() * 9000 + 1000);
@@ -1416,7 +1420,7 @@ app.post('/api/auth/google-profile', async (req, res) => {
       await supabase.from('profiles').insert({ user_id: user.id, onboarding_done: false });
     }
     const token = jwt.sign({ userId: user.id, email: u.email, userType: user.user_type }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, email: u.email, name: user.name || u.name, userType: user.user_type, avatar: u.picture || '' });
+    res.json({ token, email: u.email, name: user.name || u.name, userType: user.user_type, avatar: u.picture || '', isNew });
   } catch(e) {
     console.error('Google profile error:', e);
     res.status(500).json({ error: 'Erro ao buscar perfil Google' });
@@ -1430,8 +1434,10 @@ app.post('/api/auth/social-login', async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email obrigatório' });
 
     let { data: user } = await supabase.from('users').select('id, email, name, user_type').eq('email', email).single();
+    let isNew = false;
 
     if (!user) {
+      isNew = true;
       let finalUsername = '@' + email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
       const { data: existingUser } = await supabase.from('users').select('id').eq('username', finalUsername).single();
       if (existingUser) finalUsername = finalUsername + Math.floor(Math.random() * 9000 + 1000);
@@ -1451,7 +1457,7 @@ app.post('/api/auth/social-login', async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user.id, email, userType: user.user_type }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, userId: user.id, email, name: user.name, userType: user.user_type });
+    res.json({ token, userId: user.id, email, name: user.name, userType: user.user_type, isNew });
   } catch (e) {
     console.error('Social login error:', e);
     res.status(500).json({ error: 'Erro no login social' });
