@@ -15884,14 +15884,20 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                             client_id: cfg.googleClientId,
                             scope: 'openid email profile',
                             callback: async (token) => {
+                                if (token.error || !token.access_token) {
+                                    this.showToast(this.t('google_profile_error'));
+                                    return;
+                                }
                                 try {
                                     const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
                                         headers: { Authorization: 'Bearer ' + token.access_token }
                                     });
+                                    if (!res.ok) { this.showToast(this.t('google_profile_error')); return; }
                                     const u = await res.json();
+                                    if (!u.email) { this.showToast(this.t('google_profile_error')); return; }
                                     const profile = {
                                         name: u.name || u.given_name || '',
-                                        email: u.email || '',
+                                        email: u.email,
                                         avatar: u.picture || '',
                                         provider: 'google'
                                     };
