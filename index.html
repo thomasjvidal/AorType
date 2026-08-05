@@ -943,7 +943,7 @@
 
                 <!-- Register Container (Hidden) -->
                 <div id="form-register"
-                    class="hidden flex-1 flex flex-col justify-between px-8 pt-2 pb-14 transition-all duration-500 animate-slide-up">
+                    class="hidden flex flex-col px-8 pt-2 pb-24 transition-all duration-500 animate-slide-up">
                     <div class="space-y-5 max-w-sm mx-auto w-full mt-10">
 
                         <div class="space-y-4">
@@ -1023,7 +1023,7 @@
                         </button>
                     </div>
 
-                    <div class="space-y-6 max-w-sm mx-auto w-full mb-2 mt-2">
+                    <div class="space-y-6 max-w-sm mx-auto w-full mt-8">
                         <!-- Social Register -->
                         <div class="space-y-6">
                             <div class="flex items-center gap-3">
@@ -16064,36 +16064,35 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
 
             async _nativeAppleSignIn() {
                 try {
-                    const { SignInWithApple } = window.Capacitor.Plugins;
-                    if (!SignInWithApple) { this.showToast('Apple Sign In indisponível'); return; }
-                    const result = await SignInWithApple.authorize({
-                        clientId: 'com.aortype.app',
-                        redirectURI: 'https://aortype.com/api/auth/apple/callback',
-                        scopes: 'email name',
-                        state: Math.random().toString(36).substring(2),
-                        nonce: Math.random().toString(36).substring(2),
-                    });
-                    const { identityToken, email, givenName, familyName } = result.response;
-                    const res = await fetch('https://aortype.com/api/auth/apple/native', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ identityToken, email, givenName, familyName })
-                    });
-                    const data = await res.json();
-                    if (!res.ok || !data.token) { this.showToast(data.error || 'Erro ao autenticar com Apple'); return; }
-                    AUTH.setToken(data.token);
-                    await this.completeSocialLogin({
-                        name: data.name || '',
-                        email: data.email || '',
-                        avatar: '',
-                        provider: 'apple',
-                        isNew: data.isNew,
-                        userType: data.userType || 'aluno',
-                        _tokenAlreadySet: true
-                    });
+                    const { Browser, App } = window.Capacitor.Plugins;
+                    if (!Browser) { this.showToast('Browser plugin indisponível'); return; }
+                    let listener = null;
+                    if (App) {
+                        listener = await App.addListener('appUrlOpen', async (data) => {
+                            listener.remove();
+                            try { await Browser.close(); } catch(e) {}
+                            try {
+                                const url = new URL(data.url);
+                                const error = url.searchParams.get('error');
+                                if (error) { this.showToast(error); return; }
+                                const token = url.searchParams.get('token');
+                                if (!token) { this.showToast('Erro ao autenticar com Apple'); return; }
+                                AUTH.setToken(token);
+                                await this.completeSocialLogin({
+                                    name: url.searchParams.get('name') || '',
+                                    email: url.searchParams.get('email') || '',
+                                    avatar: '',
+                                    provider: 'apple',
+                                    isNew: url.searchParams.get('isNew') === 'true',
+                                    userType: url.searchParams.get('userType') || 'aluno',
+                                    _tokenAlreadySet: true
+                                });
+                            } catch(e) { this.showToast('Erro ao autenticar com Apple'); }
+                        });
+                    }
+                    await Browser.open({ url: 'https://aortype.com/api/auth/apple/start?platform=ios', presentationStyle: 'popover' });
                 } catch(e) {
-                    if (e && (e.code === '1001' || e.message === 'canceled')) return;
-                    this.showToast('Erro ao autenticar com Apple');
+                    this.showToast('Erro ao abrir autenticação Apple');
                 }
             },
 
