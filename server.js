@@ -1392,6 +1392,114 @@ app.post('/api/auth/apple/callback', async (req, res) => {
   }
 });
 
+// Apple Sign In nativo (iOS Capacitor plugin)
+app.post('/api/auth/apple/native', async (req, res) => {
+  try {
+    const { identityToken, email: appleEmail, givenName, familyName } = req.body;
+    if (!identityToken) return res.status(400).json({ error: 'Token não fornecido' });
+    let email = appleEmail || '';
+    let name = '';
+    try {
+      const payload = JSON.parse(Buffer.from(identityToken.split('.')[1], 'base64url').toString());
+      if (!email && payload.email) email = payload.email;
+    } catch(e) {
+      try {
+        const payload = JSON.parse(Buffer.from(identityToken.split('.')[1], 'base64').toString());
+        if (!email && payload.email) email = payload.email;
+      } catch(e2) {}
+    }
+    if (givenName || familyName) name = ((givenName || '') + ' ' + (familyName || '')).trim();
+    if (!email) return res.status(400).json({ error: 'Email não encontrado' });
+    let { data: user } = await supabase.from('users').select('id,email,name,user_type').eq('email', email).single();
+    let isNew = false;
+    if (!user) {
+      isNew = true;
+      let finalUsername = '@' + email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const { data: ex } = await supabase.from('users').select('id').eq('username', finalUsername).single();
+      if (ex) finalUsername += Math.floor(Math.random() * 9000 + 1000);
+      const { data: newUser, error: uErr } = await supabase.from('users').insert({
+        email, name: name || email.split('@')[0], username: finalUsername,
+        user_type: 'aluno', password_hash: 'social_apple'
+      }).select().single();
+      if (uErr) return res.status(500).json({ error: 'Erro ao criar conta' });
+      user = newUser;
+      await supabase.from('profiles').insert({ user_id: user.id, onboarding_done: false });
+    }
+    const token = jwt.sign({ userId: user.id, email, userType: user.user_type }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, email, name: user.name || name, userType: user.user_type, isNew });
+  } catch(e) {
+    console.error('Apple native auth error:', e);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// Google OAuth server-side — inicia fluxo (para iOS via @capacitor/browser)
+app.get('/api/auth/google/start', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) return res.status(500).send('Google Client ID não configurado');
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: 'https://aortype.com/api/auth/google/callback',
+    response_type: 'code',
+    scope: 'openid email profile',
+    state: Math.random().toString(36).substring(2),
+    access_type: 'online',
+    prompt: 'select_account'
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+// Google OAuth server-side — callback (redireciona para deep link do app)
+app.get('/api/auth/google/callback', async (req, res) => {
+  const { code, error } = req.query;
+  const redirectToApp = (params) => res.redirect(`aortype://auth?${new URLSearchParams(params)}`);
+  if (error || !code) return redirectToApp({ error: 'Login cancelado' });
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (!clientSecret) return redirectToApp({ error: 'Configuração incompleta' });
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code, client_id: clientId, client_secret: clientSecret,
+        redirect_uri: 'https://aortype.com/api/auth/google/callback',
+        grant_type: 'authorization_code'
+      })
+    });
+    const tokens = await tokenRes.json();
+    if (!tokens.access_token) return redirectToApp({ error: 'Falha ao obter token' });
+    const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` }
+    });
+    const u = await userRes.json();
+    const email = u.email;
+    const name = u.name || '';
+    const avatar = u.picture || '';
+    if (!email) return redirectToApp({ error: 'Email não encontrado' });
+    let { data: user } = await supabase.from('users').select('id,email,name,user_type').eq('email', email).single();
+    let isNew = false;
+    if (!user) {
+      isNew = true;
+      let finalUsername = '@' + email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const { data: ex } = await supabase.from('users').select('id').eq('username', finalUsername).single();
+      if (ex) finalUsername += Math.floor(Math.random() * 9000 + 1000);
+      const { data: newUser, error: uErr } = await supabase.from('users').insert({
+        email, name: name || email.split('@')[0], username: finalUsername,
+        user_type: 'aluno', password_hash: 'social_google'
+      }).select().single();
+      if (uErr) return redirectToApp({ error: 'Erro ao criar conta' });
+      user = newUser;
+      await supabase.from('profiles').insert({ user_id: user.id, onboarding_done: false });
+    }
+    const token = jwt.sign({ userId: user.id, email, userType: user.user_type }, JWT_SECRET, { expiresIn: '30d' });
+    redirectToApp({ token, email, name: user.name || name, avatar, userType: user.user_type, isNew: isNew ? 'true' : 'false' });
+  } catch(e) {
+    console.error('Google callback error:', e);
+    redirectToApp({ error: 'Erro interno' });
+  }
+});
+
 // Google profile — backend busca o perfil e cria sessão com o access_token do browser
 app.post('/api/auth/google-profile', async (req, res) => {
   try {

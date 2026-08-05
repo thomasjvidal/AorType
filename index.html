@@ -15975,6 +15975,12 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
             },
 
             loginWithGoogle() {
+                // Native iOS: open server-side Google OAuth in in-app browser
+                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                    this._nativeGoogleSignIn();
+                    return;
+                }
+                // Web: GIS popup flow
                 if (!window.google || !window.AUTH_CONFIG || !window.AUTH_CONFIG.googleClientId) {
                     this.showToast(this.t('configure_google'));
                     return;
@@ -15989,7 +15995,47 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                 }
             },
 
+            async _nativeGoogleSignIn() {
+                try {
+                    const { Browser, App } = window.Capacitor.Plugins;
+                    if (!Browser) { this.showToast('Browser plugin indisponível'); return; }
+                    let listener = null;
+                    if (App) {
+                        listener = await App.addListener('appUrlOpen', async (data) => {
+                            listener.remove();
+                            try { await Browser.close(); } catch(e) {}
+                            try {
+                                const url = new URL(data.url);
+                                const error = url.searchParams.get('error');
+                                if (error) { this.showToast(error); return; }
+                                const token = url.searchParams.get('token');
+                                if (!token) { this.showToast('Erro ao autenticar com Google'); return; }
+                                AUTH.setToken(token);
+                                await this.completeSocialLogin({
+                                    name: url.searchParams.get('name') || '',
+                                    email: url.searchParams.get('email') || '',
+                                    avatar: url.searchParams.get('avatar') || '',
+                                    provider: 'google',
+                                    isNew: url.searchParams.get('isNew') === 'true',
+                                    userType: url.searchParams.get('userType') || 'aluno',
+                                    _tokenAlreadySet: true
+                                });
+                            } catch(e) { this.showToast('Erro ao autenticar com Google'); }
+                        });
+                    }
+                    await Browser.open({ url: 'https://aortype.com/api/auth/google/start', presentationStyle: 'popover' });
+                } catch(e) {
+                    this.showToast('Erro ao abrir autenticação Google');
+                }
+            },
+
             loginWithApple() {
+                // Native iOS: use @capacitor-community/apple-sign-in
+                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                    this._nativeAppleSignIn();
+                    return;
+                }
+                // Web: popup OAuth flow
                 const handler = (event) => {
                     if (event.origin !== 'https://aortype.com') return;
                     const data = event.data || {};
@@ -16013,6 +16059,41 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                 if (!popup) {
                     window.removeEventListener('message', handler);
                     this.showToast('Permita popups para fazer login com Apple');
+                }
+            },
+
+            async _nativeAppleSignIn() {
+                try {
+                    const { SignInWithApple } = window.Capacitor.Plugins;
+                    if (!SignInWithApple) { this.showToast('Apple Sign In indisponível'); return; }
+                    const result = await SignInWithApple.authorize({
+                        clientId: 'com.aortype.app',
+                        redirectURI: 'https://aortype.com/api/auth/apple/callback',
+                        scopes: 'email name',
+                        state: Math.random().toString(36).substring(2),
+                        nonce: Math.random().toString(36).substring(2),
+                    });
+                    const { identityToken, email, givenName, familyName } = result.response;
+                    const res = await fetch('https://aortype.com/api/auth/apple/native', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ identityToken, email, givenName, familyName })
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.token) { this.showToast(data.error || 'Erro ao autenticar com Apple'); return; }
+                    AUTH.setToken(data.token);
+                    await this.completeSocialLogin({
+                        name: data.name || '',
+                        email: data.email || '',
+                        avatar: '',
+                        provider: 'apple',
+                        isNew: data.isNew,
+                        userType: data.userType || 'aluno',
+                        _tokenAlreadySet: true
+                    });
+                } catch(e) {
+                    if (e && (e.code === '1001' || e.message === 'canceled')) return;
+                    this.showToast('Erro ao autenticar com Apple');
                 }
             },
 

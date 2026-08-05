@@ -53,5 +53,16 @@
 	<string>O AorType usa o microfone para você registrar refeições por voz.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>O AorType acessa suas fotos para que você possa enviar uma imagem do alimento quando não usar a câmera.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>aortype</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.aortype.app</string>
+		</dict>
+	</array>
 </dict>
 </plist>
