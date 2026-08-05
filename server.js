@@ -1390,6 +1390,39 @@ app.post('/api/auth/apple/callback', async (req, res) => {
   }
 });
 
+// Google profile — backend busca o perfil e cria sessão com o access_token do browser
+app.post('/api/auth/google-profile', async (req, res) => {
+  try {
+    const { access_token } = req.body;
+    if (!access_token) return res.status(400).json({ error: 'Token não fornecido' });
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+    if (!r.ok) return res.status(400).json({ error: 'Token inválido' });
+    const u = await r.json();
+    if (!u.email) return res.status(400).json({ error: 'Email não encontrado' });
+
+    let { data: user } = await supabase.from('users').select('id,email,name,user_type').eq('email', u.email).single();
+    if (!user) {
+      let finalUsername = '@' + u.email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const { data: ex } = await supabase.from('users').select('id').eq('username', finalUsername).single();
+      if (ex) finalUsername += Math.floor(Math.random() * 9000 + 1000);
+      const { data: newUser, error: uErr } = await supabase.from('users').insert({
+        email: u.email, name: u.name || u.given_name || u.email.split('@')[0],
+        username: finalUsername, user_type: 'aluno', password_hash: 'social_google'
+      }).select().single();
+      if (uErr) return res.status(500).json({ error: 'Erro ao criar conta' });
+      user = newUser;
+      await supabase.from('profiles').insert({ user_id: user.id, onboarding_done: false });
+    }
+    const token = jwt.sign({ userId: user.id, email: u.email, userType: user.user_type }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, email: u.email, name: user.name || u.name, userType: user.user_type, avatar: u.picture || '' });
+  } catch(e) {
+    console.error('Google profile error:', e);
+    res.status(500).json({ error: 'Erro ao buscar perfil Google' });
+  }
+});
+
 // Social login — cria ou acha o usuário pelo email e retorna JWT
 app.post('/api/auth/social-login', async (req, res) => {
   try {

@@ -15889,19 +15889,38 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                                     return;
                                 }
                                 try {
-                                    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                                        headers: { Authorization: 'Bearer ' + token.access_token }
+                                    const res = await fetch('https://aortype.com/api/auth/google-profile', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ access_token: token.access_token })
                                     });
-                                    if (!res.ok) { this.showToast(this.t('google_profile_error')); return; }
-                                    const u = await res.json();
-                                    if (!u.email) { this.showToast(this.t('google_profile_error')); return; }
-                                    const profile = {
-                                        name: u.name || u.given_name || '',
-                                        email: u.email,
-                                        avatar: u.picture || '',
-                                        provider: 'google'
-                                    };
-                                    this.completeSocialLogin(profile);
+                                    const data = await res.json();
+                                    if (!res.ok || !data.token) { this.showToast(data.error || this.t('google_profile_error')); return; }
+                                    AUTH.setToken(data.token);
+                                    localStorage.setItem('aortype_auth', 'true');
+                                    localStorage.setItem('aortype_user_type', data.userType || 'aluno');
+                                    this.state.isLoggedIn = true;
+                                    this.state.userType = data.userType || 'aluno';
+                                    this.state.userProfile.name = data.name || '';
+                                    this.state.userProfile.email = data.email || '';
+                                    if (data.avatar) this.state.userProfile.avatar = data.avatar;
+                                    this.state.userName = this.state.userProfile.name || 'User';
+                                    localStorage.setItem('aortype_profile', JSON.stringify(this._profileForStorage()));
+                                    const authScreen = document.getElementById('screen-auth');
+                                    if (authScreen) {
+                                        authScreen.classList.add('opacity-0', 'pointer-events-none');
+                                        setTimeout(() => {
+                                            authScreen.classList.add('hidden');
+                                            this.showToast(this.t('welcome_app'));
+                                            this.navigate('dashboard');
+                                            this._splashSkeletonActive = true;
+                                            this._mealsLoaded = false;
+                                            const sk = document.getElementById('sk-dashboard');
+                                            if (sk) sk.classList.remove('hidden');
+                                            this.loadRemoteData();
+                                            this.loadUserProfile();
+                                        }, 500);
+                                    }
                                 } catch (e) { this.showToast(this.t('google_profile_error')); }
                             }
                         });
