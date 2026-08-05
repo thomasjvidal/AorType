@@ -1899,6 +1899,22 @@
                         </div>
                     </div>
 
+                    <button onclick="app.openEditProfile()"
+                        class="w-full px-5 py-4 flex items-center justify-between border-b border-ios-separator/30 dark:border-gray-800 btn-press">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="user-pen" class="w-5 h-5 text-ios-gray"></i>
+                            <span class="font-semibold" data-translate="edit_profile">Editar Perfil</span>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-ios-gray"></i>
+                    </button>
+                    <button onclick="app.startOnboardingFlow(true)"
+                        class="w-full px-5 py-4 flex items-center justify-between border-b border-ios-separator/30 dark:border-gray-800 btn-press">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="sliders-horizontal" class="w-5 h-5 text-ios-gray"></i>
+                            <span class="font-semibold">Dados Físicos & Plano</span>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-ios-gray"></i>
+                    </button>
                     <button onclick="app.openMealTimesEditor()"
                         class="w-full px-5 py-4 flex items-center justify-between border-b border-ios-separator/30 dark:border-gray-800 btn-press">
                         <div class="flex items-center gap-3">
@@ -16164,16 +16180,14 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                     });
             },
 
-            startOnboardingFlow() {
+            startOnboardingFlow(editMode = false) {
                 const screen = document.getElementById('screen-onboarding-flow');
                 screen.classList.remove('hidden');
-                // Hide other screens
                 document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-
                 setTimeout(() => screen.classList.remove('opacity-0'), 10);
-
-                // Reset avatar for new user - prevent previous user's photo from showing
-                this.state.userProfile.avatar = '';
+                if (!editMode) {
+                    this.state.userProfile.avatar = '';
+                }
                 this.state.onboarding.currentStep = 0;
                 this.renderOnboardingStep();
             },
