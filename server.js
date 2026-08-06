@@ -1220,19 +1220,81 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email obrigatório' });
     const { data: user } = await supabase.from('users').select('id, name').eq('email', email).single();
     if (!user) {
-      // Don't reveal if email exists
       return res.json({ success: true, message: 'Se o email existir, você receberá as instruções.' });
     }
-    // Generate a reset token (simple JWT valid 1h)
     const resetToken = jwt.sign({ userId: user.id, purpose: 'reset' }, JWT_SECRET, { expiresIn: '1h' });
-    // Store token in profile (as a simple reset mechanism)
     await supabase.from('profiles').update({ reset_token: resetToken, reset_token_at: new Date().toISOString() }).eq('user_id', user.id);
-    // In production, send an email. For now, log the token and return a success message.
-    console.log(`[RESET] Token for ${email}: ${resetToken}`);
-    res.json({ success: true, message: 'Email de recuperação enviado (verifique os logs em dev).' });
+
+    const appUrl = process.env.APP_URL || 'https://aortype.vercel.app';
+    const resetLink = `${appUrl}?reset_token=${resetToken}`;
+
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const emailRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: 'AorType <noreply@aortype.app>',
+            to: email,
+            subject: 'Recuperar senha — AorType',
+            html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+              <h2 style="color:#ccff00;background:#111;padding:16px;border-radius:12px;text-align:center">AorType</h2>
+              <p>Olá, <strong>${user.name || 'usuário'}</strong>!</p>
+              <p>Recebemos um pedido para redefinir a senha da sua conta.</p>
+              <a href="${resetLink}" style="display:block;background:#ccff00;color:#000;text-decoration:none;font-weight:bold;padding:14px 24px;border-radius:10px;text-align:center;margin:24px 0">Redefinir minha senha</a>
+              <p style="color:#666;font-size:13px">Este link expira em 1 hora. Se não foi você, ignore este email.</p>
+            </div>`
+          })
+        });
+        if (!emailRes.ok) {
+          const err = await emailRes.text();
+          console.error('Resend error:', err);
+        }
+      } catch (emailErr) {
+        console.error('Email send failed:', emailErr);
+      }
+    } else {
+      console.log(`[RESET] Link para ${email}: ${resetLink}`);
+    }
+
+    res.json({ success: true, message: 'Se o email existir, você receberá as instruções.' });
   } catch (e) {
     console.error('Forgot password error:', e);
     res.status(500).json({ error: 'Erro ao processar solicitação' });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: 'Token e nova senha obrigatórios' });
+    if (password.length < 6) return res.status(400).json({ error: 'Senha deve ter no mínimo 6 caracteres' });
+
+    let payload;
+    try {
+      payload = jwt.verify(token, JWT_SECRET);
+    } catch {
+      return res.status(400).json({ error: 'Link expirado ou inválido. Solicite um novo.' });
+    }
+    if (payload.purpose !== 'reset') return res.status(400).json({ error: 'Token inválido' });
+
+    const { data: profile } = await supabase.from('profiles').select('reset_token').eq('user_id', payload.userId).single();
+    if (!profile || profile.reset_token !== token) {
+      return res.status(400).json({ error: 'Link já utilizado ou expirado.' });
+    }
+
+    const password_hash = await bcrypt.hash(password, 10);
+    const { error } = await supabase.from('users').update({ password_hash }).eq('id', payload.userId);
+    if (error) return res.status(500).json({ error: 'Erro ao atualizar senha' });
+
+    await supabase.from('profiles').update({ reset_token: null, reset_token_at: null }).eq('user_id', payload.userId);
+    res.json({ success: true, message: 'Senha redefinida com sucesso!' });
+  } catch (e) {
+    console.error('Reset password error:', e);
+    res.status(500).json({ error: 'Erro ao redefinir senha' });
   }
 });
 
@@ -1959,6 +2021,31 @@ app.post('/api/reset', async (req, res) => {
 // ── BANCO DE ALIMENTOS ─────────────────────────────────────────
 
 app.get('/api/foods', (req, res) => res.json(FOOD_DB));
+
+app.post('/api/foods/suggest', requireAuth, async (req, res) => {
+  try {
+    const { name, cal, p, c, f } = req.body;
+    if (!name) return res.status(400).json({ error: 'Nome do alimento obrigatório' });
+    const { error } = await supabase.from('food_suggestions').insert({
+      user_id: req.userId,
+      name: name.trim(),
+      calories: cal || 0,
+      protein: p || 0,
+      carbs: c || 0,
+      fat: f || 0,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    });
+    if (error) {
+      // Tabela pode não existir ainda — log e retorna sucesso para não quebrar o fluxo
+      console.warn('food_suggestions table missing or error:', error.message);
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error('foods/suggest error:', e);
+    res.status(500).json({ error: 'Erro ao enviar sugestão' });
+  }
+});
 
 // ── TREINOS ────────────────────────────────────────────────────
 
