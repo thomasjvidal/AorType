@@ -1112,9 +1112,36 @@ const FOOD_DB = {
 const normalizeKey = (str) =>
   str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, '').trim();
 
+// ── FOOD DB DINÂMICO ──────────────────────────────────────────
+// Começa com FOOD_DB hardcoded, sobrescreve com alimentos do Supabase (sem redeploy)
+let _foodDbCache = { ...FOOD_DB };
+
+async function loadFoodsFromDb() {
+  try {
+    const { data, error } = await supabase
+      .from('foods')
+      .select('name, calories, protein, carbs, fat')
+      .eq('status', 'approved')
+      .limit(5000);
+    if (error || !data?.length) return;
+    const dbFoods = {};
+    data.forEach(f => {
+      const key = (f.name || '').toLowerCase().trim();
+      if (key) dbFoods[key] = { cal: f.calories || 0, p: f.protein || 0, c: f.carbs || 0, f: f.fat || 0 };
+    });
+    _foodDbCache = { ...FOOD_DB, ...dbFoods };
+    console.log(`[Foods] ${data.length} do Supabase + ${Object.keys(FOOD_DB).length} hardcoded = ${Object.keys(_foodDbCache).length} total`);
+  } catch (e) {
+    console.error('[Foods] Erro ao carregar do Supabase, usando hardcoded:', e.message);
+  }
+}
+
+loadFoodsFromDb();
+setInterval(loadFoodsFromDb, 30 * 60 * 1000); // refresh a cada 30 min
+
 const matchFood = (name) => {
   const n = normalizeKey(name);
-  for (const [key, val] of Object.entries(FOOD_DB)) {
+  for (const [key, val] of Object.entries(_foodDbCache)) {
     if (key === 'default') continue;
     if (n.includes(normalizeKey(key)) || normalizeKey(key).includes(n)) return val;
   }
@@ -1220,19 +1247,81 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email obrigatório' });
     const { data: user } = await supabase.from('users').select('id, name').eq('email', email).single();
     if (!user) {
-      // Don't reveal if email exists
       return res.json({ success: true, message: 'Se o email existir, você receberá as instruções.' });
     }
-    // Generate a reset token (simple JWT valid 1h)
     const resetToken = jwt.sign({ userId: user.id, purpose: 'reset' }, JWT_SECRET, { expiresIn: '1h' });
-    // Store token in profile (as a simple reset mechanism)
     await supabase.from('profiles').update({ reset_token: resetToken, reset_token_at: new Date().toISOString() }).eq('user_id', user.id);
-    // In production, send an email. For now, log the token and return a success message.
-    console.log(`[RESET] Token for ${email}: ${resetToken}`);
-    res.json({ success: true, message: 'Email de recuperação enviado (verifique os logs em dev).' });
+
+    const appUrl = process.env.APP_URL || 'https://aortype.vercel.app';
+    const resetLink = `${appUrl}?reset_token=${resetToken}`;
+
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const emailRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: 'AorType <noreply@aortype.app>',
+            to: email,
+            subject: 'Recuperar senha — AorType',
+            html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+              <h2 style="color:#ccff00;background:#111;padding:16px;border-radius:12px;text-align:center">AorType</h2>
+              <p>Olá, <strong>${user.name || 'usuário'}</strong>!</p>
+              <p>Recebemos um pedido para redefinir a senha da sua conta.</p>
+              <a href="${resetLink}" style="display:block;background:#ccff00;color:#000;text-decoration:none;font-weight:bold;padding:14px 24px;border-radius:10px;text-align:center;margin:24px 0">Redefinir minha senha</a>
+              <p style="color:#666;font-size:13px">Este link expira em 1 hora. Se não foi você, ignore este email.</p>
+            </div>`
+          })
+        });
+        if (!emailRes.ok) {
+          const err = await emailRes.text();
+          console.error('Resend error:', err);
+        }
+      } catch (emailErr) {
+        console.error('Email send failed:', emailErr);
+      }
+    } else {
+      console.log(`[RESET] Link para ${email}: ${resetLink}`);
+    }
+
+    res.json({ success: true, message: 'Se o email existir, você receberá as instruções.' });
   } catch (e) {
     console.error('Forgot password error:', e);
     res.status(500).json({ error: 'Erro ao processar solicitação' });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: 'Token e nova senha obrigatórios' });
+    if (password.length < 6) return res.status(400).json({ error: 'Senha deve ter no mínimo 6 caracteres' });
+
+    let payload;
+    try {
+      payload = jwt.verify(token, JWT_SECRET);
+    } catch {
+      return res.status(400).json({ error: 'Link expirado ou inválido. Solicite um novo.' });
+    }
+    if (payload.purpose !== 'reset') return res.status(400).json({ error: 'Token inválido' });
+
+    const { data: profile } = await supabase.from('profiles').select('reset_token').eq('user_id', payload.userId).single();
+    if (!profile || profile.reset_token !== token) {
+      return res.status(400).json({ error: 'Link já utilizado ou expirado.' });
+    }
+
+    const password_hash = await bcrypt.hash(password, 10);
+    const { error } = await supabase.from('users').update({ password_hash }).eq('id', payload.userId);
+    if (error) return res.status(500).json({ error: 'Erro ao atualizar senha' });
+
+    await supabase.from('profiles').update({ reset_token: null, reset_token_at: null }).eq('user_id', payload.userId);
+    res.json({ success: true, message: 'Senha redefinida com sucesso!' });
+  } catch (e) {
+    console.error('Reset password error:', e);
+    res.status(500).json({ error: 'Erro ao redefinir senha' });
   }
 });
 
@@ -1876,14 +1965,18 @@ app.post('/api/checkins', async (req, res) => {
       const { error } = await supabase.from('checkins').upsert(upsertData, { onConflict: 'user_id,date' });
       if (error) {
         console.error('Checkin upsert error:', JSON.stringify(error));
-        // If extra columns don't exist yet (migration not run), retry with base columns only
         const isColumnError = error.code === 'PGRST204' || error.code === '42703' ||
           (error.message && (error.message.includes('column') || error.message.includes('does not exist')));
         if (isColumnError) {
           const baseData = { user_id: req.userId, date: upsertData.date, mood: upsertData.mood, workout_type: upsertData.workout_type, workout_duration: upsertData.workout_duration, workout_intensity: upsertData.workout_intensity, sleep_minutes: upsertData.sleep_minutes, water_ml: upsertData.water_ml };
           const { error: e2 } = await supabase.from('checkins').upsert(baseData, { onConflict: 'user_id,date' });
-          if (e2) console.error('Checkin base upsert error:', JSON.stringify(e2));
-          else console.log('Checkin saved (base fields only — run migrate.sql to enable full saving)');
+          if (e2) {
+            console.error('Checkin base upsert error:', JSON.stringify(e2));
+            return res.status(500).json({ error: 'Erro ao salvar checkin: ' + e2.message });
+          }
+          console.log('Checkin saved (base fields only — run migrate.sql to enable full saving)');
+        } else {
+          return res.status(500).json({ error: 'Erro ao salvar checkin: ' + error.message });
         }
       }
     }
@@ -1954,7 +2047,32 @@ app.post('/api/reset', async (req, res) => {
 
 // ── BANCO DE ALIMENTOS ─────────────────────────────────────────
 
-app.get('/api/foods', (req, res) => res.json(FOOD_DB));
+app.get('/api/foods', (req, res) => res.json(_foodDbCache));
+
+app.post('/api/foods/suggest', requireAuth, async (req, res) => {
+  try {
+    const { name, cal, p, c, f } = req.body;
+    if (!name) return res.status(400).json({ error: 'Nome do alimento obrigatório' });
+    const { error } = await supabase.from('food_suggestions').insert({
+      user_id: req.userId,
+      name: name.trim(),
+      calories: cal || 0,
+      protein: p || 0,
+      carbs: c || 0,
+      fat: f || 0,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    });
+    if (error) {
+      // Tabela pode não existir ainda — log e retorna sucesso para não quebrar o fluxo
+      console.warn('food_suggestions table missing or error:', error.message);
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error('foods/suggest error:', e);
+    res.status(500).json({ error: 'Erro ao enviar sugestão' });
+  }
+});
 
 // ── TREINOS ────────────────────────────────────────────────────
 
@@ -2978,6 +3096,43 @@ app.post('/api/analyze-image', async (req, res) => {
   }
 });
 
+// ── TRANSCRIÇÃO DE ÁUDIO (Whisper via Groq) ──────────────────────
+
+app.post('/api/transcribe', requireAuth, async (req, res) => {
+  try {
+    const { audio } = req.body;
+    if (!audio) return res.status(400).json({ error: 'Audio base64 obrigatório' });
+
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) return res.status(500).json({ error: 'IA não configurada' });
+
+    const audioBuffer = Buffer.from(audio, 'base64');
+    const form = new FormData();
+    form.set('file', new File([audioBuffer], 'audio.webm', { type: 'audio/webm' }));
+    form.set('model', 'whisper-large-v3');
+    form.set('language', 'pt');
+    form.set('response_format', 'json');
+
+    const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${groqKey}` },
+      body: form,
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('Groq transcribe error:', err);
+      return res.status(500).json({ error: 'Erro na transcrição' });
+    }
+
+    const data = await response.json();
+    res.json({ text: data.text || '' });
+  } catch (e) {
+    console.error('Transcribe error:', e);
+    res.status(500).json({ error: 'Erro ao transcrever áudio' });
+  }
+});
+
 // ── CHAT COM IA ────────────────────────────────────────────────
 
 app.post('/api/chat', async (req, res) => {
@@ -3039,7 +3194,7 @@ Calories: ${m.calories?.current || 0}/${m.calories?.target || 0}kcal (${m.calori
 Protein: ${m.protein?.current || 0}/${m.protein?.target || 0}g (${m.protein?.pct || 0}%) — ${m.protein?.remaining || 0}g left
 Carbs: ${m.carbs?.current || 0}/${m.carbs?.target || 0}g | Fat: ${m.fat?.current || 0}/${m.fat?.target || 0}g
 Water: ${m.water?.current || 0}/${m.water?.target || 0}ml (${m.water?.pct || 0}%)
-Sleep: ${ctx.today?.sleep_hours || 0}h (goal: ${m.sleep?.target || 7}h)
+Sleep: ${ctx.today?.sleep_minutes ? Math.round(ctx.today.sleep_minutes / 60 * 10) / 10 : 0}h (goal: ${m.sleep?.target || 7}h)
 Mood: ${ctx.today?.mood || 'not logged'} | Workout today: ${ctx.today?.workout_done ? (ctx.today.workout_type || 'yes') : 'no'}
 
 ━━━ LAST 7 DAYS ━━━
@@ -3114,7 +3269,11 @@ const adminAuth = (req, res, next) => {
 app.post('/admin/login', (req, res) => {
   const { username, password } = req.body;
   const adminUser = process.env.ADMIN_USERNAME || 'admin';
-  const adminPass = process.env.ADMIN_PASSWORD || 'macroai@admin2025';
+  const adminPass = process.env.ADMIN_PASSWORD;
+  if (!adminPass) {
+    console.warn('[SECURITY] ADMIN_PASSWORD env var not set — admin login disabled for safety');
+    return res.status(401).json({ error: 'Admin não configurado. Defina ADMIN_PASSWORD nas variáveis de ambiente.' });
+  }
   if (username === adminUser && password === adminPass) {
     const token = jwt.sign({ admin: true }, ADMIN_JWT_SECRET, { expiresIn: '24h' });
     res.json({ token });
@@ -3164,7 +3323,7 @@ app.get('/admin/api/users/:id/metrics', adminAuth, async (req, res) => {
     const uid = req.params.id;
     const [meals, checkins, workouts, chats] = await Promise.all([
       supabase.from('meals').select('id, name, calories, protein, carbs, fat, logged_at').eq('user_id', uid).order('logged_at', { ascending: false }).limit(50),
-      supabase.from('checkins').select('date, mood, note, workout_type, workout_duration, water_ml, calories_burned, sleep_hours').eq('user_id', uid).order('date', { ascending: false }).limit(30),
+      supabase.from('checkins').select('date, mood, note, workout_type, workout_duration, water_ml, calories_burned, sleep_minutes').eq('user_id', uid).order('date', { ascending: false }).limit(30),
       supabase.from('workout_programs').select('id, name, category, is_public, created_at').or(`created_by.eq.${uid},is_assigned.eq.true`).limit(20),
       supabase.from('chat_history').select('role, message, created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(100),
     ]);
@@ -3482,7 +3641,7 @@ function switchTab(tab) {
       <div class="py-2 border-b border-gray-800 text-xs">
         <div class="flex justify-between mb-1"><span class="font-bold text-white">\${x.date}</span><span class="text-gray-400">\${x.mood||'—'}</span></div>
         <div class="flex gap-3 text-gray-500">
-          <span>😴 \${x.sleep_hours||0}h</span>
+          <span>😴 \${x.sleep_minutes ? Math.round(x.sleep_minutes/60*10)/10 : 0}h</span>
           <span>💧 \${x.water_ml||0}ml</span>
           <span>🏋️ \${x.workout_type||'—'}</span>
           <span>🔥 \${x.calories_burned||0}kcal</span>

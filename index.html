@@ -118,14 +118,12 @@
         .skeleton-screen.hidden { display: none; }
 
         html {
-            font-size: 75%;
-            /* Scales down UI for mobile */
+            font-size: 87.5%; /* 14px base — compact mas dentro dos mínimos de toque Apple (44px) */
         }
 
         @media (min-width: 768px) {
             html {
                 font-size: 100%;
-                /* Reset for tablet/desktop */
             }
         }
 
@@ -1252,7 +1250,8 @@
 
                     <!-- Main Dashboard Carousel -->
                     <div id="dashboard-carousel"
-                        class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-6 px-6 pb-2 gap-4"
+                        class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-6 px-6 pb-6 gap-4"
+                        style="overflow-y: visible"
                         onscroll="app.handleDashboardScroll()">
 
                         <!-- PAGE 1: Calories & Main Macros (Ring + P/C/F) -->
@@ -2164,7 +2163,8 @@
 
                 <!-- Action Button for Analysis -->
                 <div id="scanner-action-bar"
-                    class="absolute bottom-24 left-0 right-0 flex justify-center items-center gap-6 pointer-events-auto z-20 transition-all duration-300">
+                    class="absolute left-0 right-0 flex justify-center items-center gap-6 pointer-events-auto z-20 transition-all duration-300"
+                    style="bottom: calc(6rem + env(safe-area-inset-bottom, 0px))">
                     <button onclick="app.toggleCameraFacing()"
                         class="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white border-2 border-white btn-press">
                         <i data-lucide="refresh-cw" class="w-6 h-6"></i>
@@ -10141,6 +10141,14 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                 this._finishingWorkout = false;
                 this.checkBackendStatus();
 
+                // Checar se URL tem reset_token (link de recuperação de senha)
+                const urlParams = new URLSearchParams(window.location.search);
+                const resetToken = urlParams.get('reset_token');
+                if (resetToken) {
+                    history.replaceState({}, '', window.location.pathname);
+                    setTimeout(() => this.openResetPasswordModal(resetToken), 800);
+                }
+
                 // --- SPLASH & ROUTING ---
                 const splash = document.getElementById('screen-splash');
                 const welcome = document.getElementById('screen-welcome');
@@ -15950,6 +15958,56 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                 }
             },
 
+            openResetPasswordModal(token) {
+                this._resetPasswordToken = token;
+                let modal = document.getElementById('modal-reset-password');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'modal-reset-password';
+                    modal.className = 'fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6';
+                    modal.innerHTML = `
+                        <div class="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+                            <h2 class="text-xl font-black text-black dark:text-white mb-1">Nova senha</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Digite sua nova senha para acessar o AorType.</p>
+                            <input id="reset-pwd-input" type="password" placeholder="Nova senha (mín. 6 caracteres)"
+                                class="w-full border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 rounded-2xl px-4 py-3 text-base font-semibold text-black dark:text-white outline-none focus:border-brand-neon mb-3">
+                            <input id="reset-pwd-confirm" type="password" placeholder="Confirmar nova senha"
+                                class="w-full border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 rounded-2xl px-4 py-3 text-base font-semibold text-black dark:text-white outline-none focus:border-brand-neon mb-5">
+                            <button onclick="app.submitResetPassword()"
+                                class="w-full bg-brand-neon text-black font-black py-3 rounded-2xl text-base">
+                                Redefinir senha
+                            </button>
+                            <p id="reset-pwd-error" class="text-red-500 text-sm text-center mt-3 hidden"></p>
+                        </div>`;
+                    document.body.appendChild(modal);
+                }
+                modal.classList.remove('hidden');
+            },
+
+            async submitResetPassword() {
+                const pwd = document.getElementById('reset-pwd-input')?.value || '';
+                const confirm = document.getElementById('reset-pwd-confirm')?.value || '';
+                const errEl = document.getElementById('reset-pwd-error');
+                if (pwd.length < 6) { if(errEl){errEl.textContent='Senha deve ter no mínimo 6 caracteres';errEl.classList.remove('hidden');} return; }
+                if (pwd !== confirm) { if(errEl){errEl.textContent='As senhas não coincidem';errEl.classList.remove('hidden');} return; }
+                try {
+                    const res = await fetch('/api/auth/reset-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: this._resetPasswordToken, password: pwd })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        document.getElementById('modal-reset-password')?.remove();
+                        this.showToast('Senha redefinida! Faça login com a nova senha.');
+                    } else {
+                        if(errEl){errEl.textContent=data.error||'Erro ao redefinir senha';errEl.classList.remove('hidden');}
+                    }
+                } catch {
+                    if(errEl){errEl.textContent='Erro de conexão';errEl.classList.remove('hidden');}
+                }
+            },
+
             async handleForgotPassword() {
                 const emailInput = document.getElementById('login-email');
                 const email = emailInput ? emailInput.value.trim() : '';
@@ -20746,6 +20804,59 @@ Rules:
                 await this.initCamera();
             },
 
+            async _initCameraCapacitor() {
+                // No app nativo iOS, plugins estão em window.Capacitor.Plugins (registrados pela camada nativa após cap sync)
+                const CameraPlugin = window.Capacitor?.Plugins?.Camera;
+                if (!CameraPlugin) {
+                    console.warn('Capacitor Camera plugin not available — run: npm install @capacitor/camera && npx cap sync');
+                    this._showCapacitorCameraFallback();
+                    return;
+                }
+
+                // Esconde o feed de vídeo (não tem preview ao vivo no app nativo sem plugin extra)
+                const video = document.getElementById('camera-feed');
+                const actionBar = document.getElementById('scanner-action-bar');
+                if (video) video.classList.add('hidden');
+
+                // Substituir onclick do botão central para usar Capacitor Camera
+                const captureBtn = actionBar?.querySelector('button:nth-child(2)');
+                if (captureBtn) {
+                    captureBtn.onclick = async () => {
+                        try {
+                            const photo = await CameraPlugin.getPhoto({
+                                quality: 85,
+                                allowEditing: false,
+                                resultType: 'base64',
+                                source: 'CAMERA',
+                                direction: this.state.cameraFacingMode === 'user' ? 'FRONT' : 'REAR'
+                            });
+                            if (photo?.base64String) {
+                                const img = document.getElementById('gallery-image');
+                                const src = `data:image/jpeg;base64,${photo.base64String}`;
+                                if (img) { img.src = src; img.classList.remove('hidden'); }
+                                if (video) video.classList.add('hidden');
+                                this.state.usingGallery = true;
+                                this.state.galleryURL = src;
+                                this.analyzeMedia();
+                            }
+                        } catch (e) {
+                            if (e?.message?.includes('cancelled') || e?.message?.includes('User cancelled')) return;
+                            console.error('Capacitor camera error:', e);
+                            this.showToast('Erro ao acessar câmera. Use a galeria.');
+                        }
+                    };
+                }
+            },
+
+            _showCapacitorCameraFallback() {
+                const overlay = document.getElementById('camera-unavailable-overlay');
+                if (overlay) {
+                    const msg = overlay.querySelector('p');
+                    if (msg) msg.textContent = 'Use a galeria para selecionar ou tirar uma foto do seu alimento.';
+                }
+                this.showCameraUnavailable();
+            },
+
             showCameraUnavailable() {
                 const overlay = document.getElementById('camera-unavailable-overlay');
                 const actionBar = document.getElementById('scanner-action-bar');
@@ -20776,11 +20887,16 @@ Rules:
                     // Esconde overlay de fallback caso estivesse visível
                     this.hideCameraUnavailable();
 
+                    // ── Capacitor native iOS: usar plugin @capacitor/camera ──
+                    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                        await this._initCameraCapacitor();
+                        return;
+                    }
+
                     // Verificação HTTPS — mobile browsers bloqueiam câmera em HTTP (exceto localhost)
                     const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
                     if (!isSecure) {
                         console.warn('Camera requires HTTPS on mobile browsers');
-                        // Mostra overlay com mensagem específica de HTTPS
                         const overlay = document.getElementById('camera-unavailable-overlay');
                         if (overlay) {
                             const msg = overlay.querySelector('p');
@@ -20843,7 +20959,7 @@ Rules:
                         video.src = '';
                         video.srcObject = stream;
                         this.state.cameraStream = stream;
-                        video.play().catch(() => {});
+                        // autoplay/playsinline attrs on <video> handle playback — explicit play() after await breaks iOS gesture context
                         try {
                             const track = stream.getVideoTracks && stream.getVideoTracks()[0];
                             const settings = track && track.getSettings ? track.getSettings() : null;

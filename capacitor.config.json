@@ -6,5 +6,10 @@
   "server": {
     "url": "https://aortype.com",
     "cleartext": false
+  },
+  "plugins": {
+    "Camera": {
+      "permissions": ["camera", "photos"]
+    }
   }
 }
