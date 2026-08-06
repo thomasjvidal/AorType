@@ -1876,14 +1876,18 @@ app.post('/api/checkins', async (req, res) => {
       const { error } = await supabase.from('checkins').upsert(upsertData, { onConflict: 'user_id,date' });
       if (error) {
         console.error('Checkin upsert error:', JSON.stringify(error));
-        // If extra columns don't exist yet (migration not run), retry with base columns only
         const isColumnError = error.code === 'PGRST204' || error.code === '42703' ||
           (error.message && (error.message.includes('column') || error.message.includes('does not exist')));
         if (isColumnError) {
           const baseData = { user_id: req.userId, date: upsertData.date, mood: upsertData.mood, workout_type: upsertData.workout_type, workout_duration: upsertData.workout_duration, workout_intensity: upsertData.workout_intensity, sleep_minutes: upsertData.sleep_minutes, water_ml: upsertData.water_ml };
           const { error: e2 } = await supabase.from('checkins').upsert(baseData, { onConflict: 'user_id,date' });
-          if (e2) console.error('Checkin base upsert error:', JSON.stringify(e2));
-          else console.log('Checkin saved (base fields only — run migrate.sql to enable full saving)');
+          if (e2) {
+            console.error('Checkin base upsert error:', JSON.stringify(e2));
+            return res.status(500).json({ error: 'Erro ao salvar checkin: ' + e2.message });
+          }
+          console.log('Checkin saved (base fields only — run migrate.sql to enable full saving)');
+        } else {
+          return res.status(500).json({ error: 'Erro ao salvar checkin: ' + error.message });
         }
       }
     }
@@ -2978,6 +2982,43 @@ app.post('/api/analyze-image', async (req, res) => {
   }
 });
 
+// ── TRANSCRIÇÃO DE ÁUDIO (Whisper via Groq) ──────────────────────
+
+app.post('/api/transcribe', requireAuth, async (req, res) => {
+  try {
+    const { audio } = req.body;
+    if (!audio) return res.status(400).json({ error: 'Audio base64 obrigatório' });
+
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) return res.status(500).json({ error: 'IA não configurada' });
+
+    const audioBuffer = Buffer.from(audio, 'base64');
+    const form = new FormData();
+    form.set('file', new File([audioBuffer], 'audio.webm', { type: 'audio/webm' }));
+    form.set('model', 'whisper-large-v3');
+    form.set('language', 'pt');
+    form.set('response_format', 'json');
+
+    const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${groqKey}` },
+      body: form,
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('Groq transcribe error:', err);
+      return res.status(500).json({ error: 'Erro na transcrição' });
+    }
+
+    const data = await response.json();
+    res.json({ text: data.text || '' });
+  } catch (e) {
+    console.error('Transcribe error:', e);
+    res.status(500).json({ error: 'Erro ao transcrever áudio' });
+  }
+});
+
 // ── CHAT COM IA ────────────────────────────────────────────────
 
 app.post('/api/chat', async (req, res) => {
@@ -3039,7 +3080,7 @@ Calories: ${m.calories?.current || 0}/${m.calories?.target || 0}kcal (${m.calori
 Protein: ${m.protein?.current || 0}/${m.protein?.target || 0}g (${m.protein?.pct || 0}%) — ${m.protein?.remaining || 0}g left
 Carbs: ${m.carbs?.current || 0}/${m.carbs?.target || 0}g | Fat: ${m.fat?.current || 0}/${m.fat?.target || 0}g
 Water: ${m.water?.current || 0}/${m.water?.target || 0}ml (${m.water?.pct || 0}%)
-Sleep: ${ctx.today?.sleep_hours || 0}h (goal: ${m.sleep?.target || 7}h)
+Sleep: ${ctx.today?.sleep_minutes ? Math.round(ctx.today.sleep_minutes / 60 * 10) / 10 : 0}h (goal: ${m.sleep?.target || 7}h)
 Mood: ${ctx.today?.mood || 'not logged'} | Workout today: ${ctx.today?.workout_done ? (ctx.today.workout_type || 'yes') : 'no'}
 
 ━━━ LAST 7 DAYS ━━━
@@ -3114,7 +3155,11 @@ const adminAuth = (req, res, next) => {
 app.post('/admin/login', (req, res) => {
   const { username, password } = req.body;
   const adminUser = process.env.ADMIN_USERNAME || 'admin';
-  const adminPass = process.env.ADMIN_PASSWORD || 'macroai@admin2025';
+  const adminPass = process.env.ADMIN_PASSWORD;
+  if (!adminPass) {
+    console.warn('[SECURITY] ADMIN_PASSWORD env var not set — admin login disabled for safety');
+    return res.status(401).json({ error: 'Admin não configurado. Defina ADMIN_PASSWORD nas variáveis de ambiente.' });
+  }
   if (username === adminUser && password === adminPass) {
     const token = jwt.sign({ admin: true }, ADMIN_JWT_SECRET, { expiresIn: '24h' });
     res.json({ token });
@@ -3164,7 +3209,7 @@ app.get('/admin/api/users/:id/metrics', adminAuth, async (req, res) => {
     const uid = req.params.id;
     const [meals, checkins, workouts, chats] = await Promise.all([
       supabase.from('meals').select('id, name, calories, protein, carbs, fat, logged_at').eq('user_id', uid).order('logged_at', { ascending: false }).limit(50),
-      supabase.from('checkins').select('date, mood, note, workout_type, workout_duration, water_ml, calories_burned, sleep_hours').eq('user_id', uid).order('date', { ascending: false }).limit(30),
+      supabase.from('checkins').select('date, mood, note, workout_type, workout_duration, water_ml, calories_burned, sleep_minutes').eq('user_id', uid).order('date', { ascending: false }).limit(30),
       supabase.from('workout_programs').select('id, name, category, is_public, created_at').or(`created_by.eq.${uid},is_assigned.eq.true`).limit(20),
       supabase.from('chat_history').select('role, message, created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(100),
     ]);
@@ -3482,7 +3527,7 @@ function switchTab(tab) {
       <div class="py-2 border-b border-gray-800 text-xs">
         <div class="flex justify-between mb-1"><span class="font-bold text-white">\${x.date}</span><span class="text-gray-400">\${x.mood||'—'}</span></div>
         <div class="flex gap-3 text-gray-500">
-          <span>😴 \${x.sleep_hours||0}h</span>
+          <span>😴 \${x.sleep_minutes ? Math.round(x.sleep_minutes/60*10)/10 : 0}h</span>
           <span>💧 \${x.water_ml||0}ml</span>
           <span>🏋️ \${x.workout_type||'—'}</span>
           <span>🔥 \${x.calories_burned||0}kcal</span>
