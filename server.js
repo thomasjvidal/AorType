@@ -2074,31 +2074,6 @@ app.post('/api/foods/suggest', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/foods/suggest', requireAuth, async (req, res) => {
-  try {
-    const { name, cal, p, c, f } = req.body;
-    if (!name) return res.status(400).json({ error: 'Nome do alimento obrigatório' });
-    const { error } = await supabase.from('food_suggestions').insert({
-      user_id: req.userId,
-      name: name.trim(),
-      calories: cal || 0,
-      protein: p || 0,
-      carbs: c || 0,
-      fat: f || 0,
-      status: 'pending',
-      created_at: new Date().toISOString()
-    });
-    if (error) {
-      // Tabela pode não existir ainda — log e retorna sucesso para não quebrar o fluxo
-      console.warn('food_suggestions table missing or error:', error.message);
-    }
-    res.json({ success: true });
-  } catch (e) {
-    console.error('foods/suggest error:', e);
-    res.status(500).json({ error: 'Erro ao enviar sugestão' });
-  }
-});
-
 // ── TREINOS ────────────────────────────────────────────────────
 
 // Lista programas disponíveis (públicos + criados pela academia do aluno)
