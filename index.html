@@ -20806,6 +20806,59 @@ Rules:
                 await this.initCamera();
             },
 
+            async _initCameraCapacitor() {
+                // No app nativo iOS, plugins estão em window.Capacitor.Plugins (registrados pela camada nativa após cap sync)
+                const CameraPlugin = window.Capacitor?.Plugins?.Camera;
+                if (!CameraPlugin) {
+                    console.warn('Capacitor Camera plugin not available — run: npm install @capacitor/camera && npx cap sync');
+                    this._showCapacitorCameraFallback();
+                    return;
+                }
+
+                // Esconde o feed de vídeo (não tem preview ao vivo no app nativo sem plugin extra)
+                const video = document.getElementById('camera-feed');
+                const actionBar = document.getElementById('scanner-action-bar');
+                if (video) video.classList.add('hidden');
+
+                // Substituir onclick do botão central para usar Capacitor Camera
+                const captureBtn = actionBar?.querySelector('button:nth-child(2)');
+                if (captureBtn) {
+                    captureBtn.onclick = async () => {
+                        try {
+                            const photo = await CameraPlugin.getPhoto({
+                                quality: 85,
+                                allowEditing: false,
+                                resultType: 'base64',
+                                source: 'CAMERA',
+                                direction: this.state.cameraFacingMode === 'user' ? 'FRONT' : 'REAR'
+                            });
+                            if (photo?.base64String) {
+                                const img = document.getElementById('gallery-image');
+                                const src = `data:image/jpeg;base64,${photo.base64String}`;
+                                if (img) { img.src = src; img.classList.remove('hidden'); }
+                                if (video) video.classList.add('hidden');
+                                this.state.usingGallery = true;
+                                this.state.galleryURL = src;
+                                this.analyzeMedia();
+                            }
+                        } catch (e) {
+                            if (e?.message?.includes('cancelled') || e?.message?.includes('User cancelled')) return;
+                            console.error('Capacitor camera error:', e);
+                            this.showToast('Erro ao acessar câmera. Use a galeria.');
+                        }
+                    };
+                }
+            },
+
+            _showCapacitorCameraFallback() {
+                const overlay = document.getElementById('camera-unavailable-overlay');
+                if (overlay) {
+                    const msg = overlay.querySelector('p');
+                    if (msg) msg.textContent = 'Use a galeria para selecionar ou tirar uma foto do seu alimento.';
+                }
+                this.showCameraUnavailable();
+            },
+
             showCameraUnavailable() {
                 const overlay = document.getElementById('camera-unavailable-overlay');
                 const actionBar = document.getElementById('scanner-action-bar');
@@ -20836,11 +20889,16 @@ Rules:
                     // Esconde overlay de fallback caso estivesse visível
                     this.hideCameraUnavailable();
 
+                    // ── Capacitor native iOS: usar plugin @capacitor/camera ──
+                    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                        await this._initCameraCapacitor();
+                        return;
+                    }
+
                     // Verificação HTTPS — mobile browsers bloqueiam câmera em HTTP (exceto localhost)
                     const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
                     if (!isSecure) {
                         console.warn('Camera requires HTTPS on mobile browsers');
-                        // Mostra overlay com mensagem específica de HTTPS
                         const overlay = document.getElementById('camera-unavailable-overlay');
                         if (overlay) {
                             const msg = overlay.querySelector('p');

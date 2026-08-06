@@ -16,10 +16,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@capacitor-community/apple-sign-in": "^1.0.1",
     "@capacitor/app": "^6.0.2",
     "@capacitor/browser": "^6.0.3",
+    "@capacitor/camera": "^8.2.2",
     "@capacitor/core": "^8.4.1",
-    "@capacitor-community/apple-sign-in": "^1.0.1",
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.49.4",
     "bcryptjs": "^2.4.3",
