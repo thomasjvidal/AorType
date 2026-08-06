@@ -1112,9 +1112,36 @@ const FOOD_DB = {
 const normalizeKey = (str) =>
   str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, '').trim();
 
+// ── FOOD DB DINÂMICO ──────────────────────────────────────────
+// Começa com FOOD_DB hardcoded, sobrescreve com alimentos do Supabase (sem redeploy)
+let _foodDbCache = { ...FOOD_DB };
+
+async function loadFoodsFromDb() {
+  try {
+    const { data, error } = await supabase
+      .from('foods')
+      .select('name, calories, protein, carbs, fat')
+      .eq('status', 'approved')
+      .limit(5000);
+    if (error || !data?.length) return;
+    const dbFoods = {};
+    data.forEach(f => {
+      const key = (f.name || '').toLowerCase().trim();
+      if (key) dbFoods[key] = { cal: f.calories || 0, p: f.protein || 0, c: f.carbs || 0, f: f.fat || 0 };
+    });
+    _foodDbCache = { ...FOOD_DB, ...dbFoods };
+    console.log(`[Foods] ${data.length} do Supabase + ${Object.keys(FOOD_DB).length} hardcoded = ${Object.keys(_foodDbCache).length} total`);
+  } catch (e) {
+    console.error('[Foods] Erro ao carregar do Supabase, usando hardcoded:', e.message);
+  }
+}
+
+loadFoodsFromDb();
+setInterval(loadFoodsFromDb, 30 * 60 * 1000); // refresh a cada 30 min
+
 const matchFood = (name) => {
   const n = normalizeKey(name);
-  for (const [key, val] of Object.entries(FOOD_DB)) {
+  for (const [key, val] of Object.entries(_foodDbCache)) {
     if (key === 'default') continue;
     if (n.includes(normalizeKey(key)) || normalizeKey(key).includes(n)) return val;
   }
@@ -2020,7 +2047,7 @@ app.post('/api/reset', async (req, res) => {
 
 // ── BANCO DE ALIMENTOS ─────────────────────────────────────────
 
-app.get('/api/foods', (req, res) => res.json(FOOD_DB));
+app.get('/api/foods', (req, res) => res.json(_foodDbCache));
 
 app.post('/api/foods/suggest', requireAuth, async (req, res) => {
   try {
