@@ -128,6 +128,7 @@ History:
 - Build 2: Google OAuth deep link
 - Build 3: Apple entitlements + `ITSAppUsesNonExemptEncryption`
 - Build 4: Apple Sign In Browser flow + register scroll fix
+- Build 5: `capacitor.config.json` → `ios.contentInset: "never"` (WKWebView now extends under the status bar; previously the default `"automatic"` inset meant `env(safe-area-inset-*)` was 0 inside the native app, so no amount of CSS safe-area padding could fix the gray bar under the status bar/above the home indicator seen only in the native app, not in Safari)
 
 ### Entitlements (`ios/App/App/App.entitlements`)
 ```xml
