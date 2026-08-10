@@ -3352,7 +3352,7 @@ ${(ctx.favorites || []).join(', ') || 'no history yet'}
     return res.json({ text: await chatWithGemini() });
   } catch (error) {
     console.error('Chat error:', error);
-    res.status(500).json({ error: 'Erro no chat' });
+    res.status(500).json({ error: 'Erro no chat: ' + (error.message || error) });
   }
 });
 
