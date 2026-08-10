@@ -7697,7 +7697,10 @@
                         return;
                     }
 
-                    // ── CASO 3: tem quantidade ou negação → processa direto ──
+                    // ── CASO 3a: negação ("não comi nada") → não manda pra IA, não anota nada ──
+                    if (negou) return;
+
+                    // ── CASO 3b: tem quantidade → processa direto ──
                     const before = (this._dayUpdateMealBuffer||[]).length;
                     await this._dayUpdateLogFoodFromUserText(text);
                     _flushWithTimestamp(stepId, before);
