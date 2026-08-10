@@ -3155,10 +3155,50 @@ app.post('/api/transcribe', requireAuth, async (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, context, history } = req.body;
+    const { message, context, history, systemOverride } = req.body;
     const groqKey = process.env.GROQ_API_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!groqKey && !geminiKey) return res.status(401).json({ error: 'Nenhum provider de IA configurado' });
+
+    // systemOverride lets simpler flows (e.g. "Atualizar meu dia") skip the
+    // full coach-context prompt below and drive the model with their own prompt.
+    if (systemOverride) {
+      const messages = [{ role: 'system', content: systemOverride }];
+      if (history?.length) {
+        history.slice(-10).forEach(h => messages.push({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.text }));
+      }
+      messages.push({ role: 'user', content: message });
+
+      const chatSimple = async () => {
+        if (groqKey) {
+          try {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+              body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 300, temperature: 0.7 })
+            });
+            if (!response.ok) throw new Error(`Groq error: ${response.status}`);
+            const json = await response.json();
+            return json.choices?.[0]?.message?.content || '';
+          } catch (groqError) {
+            if (!geminiKey) throw groqError;
+            console.warn('Groq chat (override) failed, falling back to Gemini:', groqError.message);
+          }
+        }
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const contents = [
+          { role: 'user', parts: [{ text: systemOverride }] },
+          { role: 'model', parts: [{ text: 'Entendido.' }] },
+          ...messages.slice(1).map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }))
+        ];
+        const result = await model.generateContent({ contents, generationConfig: { temperature: 0.7, maxOutputTokens: 300 } });
+        return result.response.text() || '';
+      };
+
+      return res.json({ text: await chatSimple() });
+    }
 
     const ctx = context || {};
     const m = ctx.metrics || {};
