@@ -77,6 +77,7 @@ const authMiddleware = (req, res, next) => {
     return res.status(401).json({ error: 'Token inválido' });
   }
 };
+const requireAuth = authMiddleware;
 
 // ── FOOD DATABASE ──────────────────────────────────────────────
 const FOOD_DB = {
