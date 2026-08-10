@@ -2107,7 +2107,7 @@
                 </div>
 
                 <!-- Scanner UI Overlay — z-40 para ficar acima do camera-unavailable-overlay (z-30) -->
-                <div class="absolute top-6 left-6 right-6 flex justify-between items-center pointer-events-auto z-40">
+                <div class="absolute left-6 right-6 flex justify-between items-center pointer-events-auto z-40" style="top: calc(env(safe-area-inset-top, 0px) + 1.5rem)">
                     <button onclick="app.navigate('dashboard')"
                         class="w-10 h-10 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white">
                         <i data-lucide="x" class="w-5 h-5"></i>
@@ -21043,19 +21043,18 @@ Rules:
                         video.classList.remove('hidden');
                         video.srcObject = null;
                         video.src = url;
-                        // video.onloadeddata = () => this.analyzeMedia(); // Removed auto-analyze
                         video.play().catch(() => { });
                     }
+                    this.showToast(this.t('media_loaded'));
                 } else {
                     if (video) video.classList.add('hidden');
                     if (img) {
                         img.classList.remove('hidden');
                         img.src = url;
                         img.crossOrigin = 'anonymous'; // Fix CORS/ORB
-                        // img.onload = () => this.analyzeMedia(); // Removed auto-analyze
                     }
+                    this.analyzeMedia();
                 }
-                this.showToast(this.t('media_loaded'));
             },
 
             bindMediaReady() {

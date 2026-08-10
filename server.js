@@ -3002,10 +3002,26 @@ const applyFoodDB = (result) => {
   return result;
 };
 
+async function analyzeImageWithGemini(geminiKey, image) {
+  if (!geminiKey) throw new Error('Chave Gemini não configurada');
+  const { GoogleGenerativeAI } = await import('@google/generative-ai');
+  const genAI = new GoogleGenerativeAI(geminiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const prompt = 'Você é um nutricionista. Analise a imagem e identifique os alimentos, estime o peso (em gramas) e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
+  const base64Data = image?.includes('base64,') ? image.split('base64,')[1] : image;
+  const result = await model.generateContent([prompt, { inlineData: { data: base64Data, mimeType: 'image/jpeg' } }]);
+  const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+  try { return JSON.parse(text); } catch {
+    const m = text.match(/\{[\s\S]*\}/);
+    try { return m ? JSON.parse(m[0]) : {}; } catch { return {}; }
+  }
+}
+
 app.post('/api/analyze-image', async (req, res) => {
   try {
     let { image, audio, provider } = req.body;
     let apiKey;
+    const autoSelected = !provider;
 
     if (!provider) {
       if (process.env.GROQ_API_KEY) { provider = 'groq'; apiKey = process.env.GROQ_API_KEY; }
@@ -3020,54 +3036,50 @@ app.post('/api/analyze-image', async (req, res) => {
     }
 
     if (provider === 'groq') {
-      if (!apiKey) throw new Error('Chave Groq não configurada');
-      const prompt = 'Você é um nutricionista. Analise a imagem e identifique os alimentos, estime o peso (em gramas) e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
-      const base64Data = image?.includes('base64,') ? image.split('base64,')[1] : image;
-      const imageUrl = image?.startsWith('data:') ? image : `data:image/jpeg;base64,${base64Data}`;
-
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-          messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] }],
-          max_tokens: 500
-        })
-      });
-
-      if (!response.ok) throw new Error(`Groq API error: ${response.status}`);
-      const json = await response.json();
-      const content = json.choices?.[0]?.message?.content || '{}';
-      const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
-      let parsed;
       try {
-        parsed = JSON.parse(cleaned);
-      } catch {
-        // GROQ sometimes wraps JSON in extra text — extract the first {...} block
-        const match = cleaned.match(/\{[\s\S]*\}/);
-        if (match) {
-          try { parsed = JSON.parse(match[0]); } catch { parsed = {}; }
-        } else {
-          parsed = {};
+        if (!apiKey) throw new Error('Chave Groq não configurada');
+        const prompt = 'Você é um nutricionista. Analise a imagem e identifique os alimentos, estime o peso (em gramas) e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
+        const base64Data = image?.includes('base64,') ? image.split('base64,')[1] : image;
+        const imageUrl = image?.startsWith('data:') ? image : `data:image/jpeg;base64,${base64Data}`;
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+            messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] }],
+            max_tokens: 500
+          })
+        });
+
+        if (!response.ok) throw new Error(`Groq API error: ${response.status}`);
+        const json = await response.json();
+        const content = json.choices?.[0]?.message?.content || '{}';
+        const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        let parsed;
+        try {
+          parsed = JSON.parse(cleaned);
+        } catch {
+          // GROQ sometimes wraps JSON in extra text — extract the first {...} block
+          const match = cleaned.match(/\{[\s\S]*\}/);
+          if (match) {
+            try { parsed = JSON.parse(match[0]); } catch { parsed = {}; }
+          } else {
+            parsed = {};
+          }
         }
+        return res.json({ provider: 'groq', result: applyFoodDB(parsed) });
+      } catch (groqError) {
+        // Groq key missing/invalid/rate-limited — fall back to Gemini if we auto-picked the provider
+        if (!autoSelected || !process.env.GEMINI_API_KEY) throw groqError;
+        console.warn('Groq failed, falling back to Gemini:', groqError.message);
+        const geminiParsed = await analyzeImageWithGemini(process.env.GEMINI_API_KEY, image);
+        return res.json({ provider: 'gemini', result: applyFoodDB(geminiParsed) });
       }
-      return res.json({ provider: 'groq', result: applyFoodDB(parsed) });
     }
 
     if (provider === 'gemini') {
-      if (!apiKey) throw new Error('Chave Gemini não configurada');
-      const { GoogleGenerativeAI } = await import('@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const prompt = 'Você é um nutricionista. Analise a imagem e identifique os alimentos, estime o peso (em gramas) e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
-      const base64Data = image?.includes('base64,') ? image.split('base64,')[1] : image;
-      const result = await model.generateContent([prompt, { inlineData: { data: base64Data, mimeType: 'image/jpeg' } }]);
-      const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-      let geminiParsed;
-      try { geminiParsed = JSON.parse(text); } catch {
-        const m = text.match(/\{[\s\S]*\}/);
-        try { geminiParsed = m ? JSON.parse(m[0]) : {}; } catch { geminiParsed = {}; }
-      }
+      const geminiParsed = await analyzeImageWithGemini(apiKey, image);
       return res.json({ provider: 'gemini', result: applyFoodDB(geminiParsed) });
     }
 
@@ -3239,29 +3251,39 @@ ${(ctx.favorites || []).join(', ') || 'no history yet'}
     }
     messages.push({ role: 'user', content: message });
 
-    if (groqKey) {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 600, temperature: 0.7 })
-      });
+    const chatWithGemini = async () => {
+      const { GoogleGenerativeAI } = await import('@google/generative-ai');
+      const genAI = new GoogleGenerativeAI(geminiKey);
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const contents = [
+        { role: 'user', parts: [{ text: systemPrompt }] },
+        { role: 'model', parts: [{ text: 'Entendido.' }] },
+        ...messages.slice(1).map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }))
+      ];
+      const result = await model.generateContent({ contents, generationConfig: { temperature: 0.7, maxOutputTokens: 600 } });
+      return result.response.text() || '';
+    };
 
-      if (!response.ok) throw new Error(`Groq error: ${response.status}`);
-      const json = await response.json();
-      return res.json({ text: json.choices?.[0]?.message?.content || '' });
+    if (groqKey) {
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+          body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 600, temperature: 0.7 })
+        });
+
+        if (!response.ok) throw new Error(`Groq error: ${response.status}`);
+        const json = await response.json();
+        return res.json({ text: json.choices?.[0]?.message?.content || '' });
+      } catch (groqError) {
+        if (!geminiKey) throw groqError;
+        console.warn('Groq chat failed, falling back to Gemini:', groqError.message);
+        return res.json({ text: await chatWithGemini() });
+      }
     }
 
-    // Fallback: Gemini (no Groq key configured)
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const contents = [
-      { role: 'user', parts: [{ text: systemPrompt }] },
-      { role: 'model', parts: [{ text: 'Entendido.' }] },
-      ...messages.slice(1).map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }))
-    ];
-    const result = await model.generateContent({ contents, generationConfig: { temperature: 0.7, maxOutputTokens: 600 } });
-    res.json({ text: result.response.text() || '' });
+    // No Groq key configured — use Gemini directly
+    return res.json({ text: await chatWithGemini() });
   } catch (error) {
     console.error('Chat error:', error);
     res.status(500).json({ error: 'Erro no chat' });
