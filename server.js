@@ -1115,6 +1115,7 @@ const normalizeKey = (str) =>
 // ── FOOD DB DINÂMICO ──────────────────────────────────────────
 // Começa com FOOD_DB hardcoded, sobrescreve com alimentos do Supabase (sem redeploy)
 let _foodDbCache = { ...FOOD_DB };
+let _foodDbLoaded = false;
 
 async function loadFoodsFromDb() {
   try {
@@ -1133,11 +1134,12 @@ async function loadFoodsFromDb() {
     console.log(`[Foods] ${data.length} do Supabase + ${Object.keys(FOOD_DB).length} hardcoded = ${Object.keys(_foodDbCache).length} total`);
   } catch (e) {
     console.error('[Foods] Erro ao carregar do Supabase, usando hardcoded:', e.message);
+  } finally {
+    _foodDbLoaded = true;
   }
 }
 
-loadFoodsFromDb();
-setInterval(loadFoodsFromDb, 30 * 60 * 1000); // refresh a cada 30 min
+// Não chamar no startup — serverless-safe: carrega lazy na primeira request
 
 const matchFood = (name) => {
   const n = normalizeKey(name);
@@ -2047,7 +2049,10 @@ app.post('/api/reset', async (req, res) => {
 
 // ── BANCO DE ALIMENTOS ─────────────────────────────────────────
 
-app.get('/api/foods', (req, res) => res.json(_foodDbCache));
+app.get('/api/foods', async (req, res) => {
+  if (!_foodDbLoaded) await loadFoodsFromDb();
+  res.json(_foodDbCache);
+});
 
 app.post('/api/foods/suggest', requireAuth, async (req, res) => {
   try {
