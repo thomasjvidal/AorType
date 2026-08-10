@@ -4213,6 +4213,11 @@
                 'other': 'Outro',
                 'workout_detail': 'Detalhe do Treino',
                 'username': 'Username',
+                'onb_username_title': 'Escolha seu username',
+                'onb_username_subtitle': 'Assim outras pessoas podem te encontrar no AorType.',
+                'username_too_short': 'Mínimo 3 caracteres',
+                'username_invalid_format': 'Use apenas letras, números e _',
+                'username_taken': 'Esse username já está em uso',
                 'your_name': 'Seu nome',
                 'register_progress': 'Registre seu progresso de hoje',
                 'daily_mission_description': 'Bata 120g de proteína hoje',
@@ -4802,6 +4807,11 @@
                 'other': 'Other',
                 'workout_detail': 'Workout Detail',
                 'username': 'Username',
+                'onb_username_title': 'Choose your username',
+                'onb_username_subtitle': 'This is how other people find you on AorType.',
+                'username_too_short': 'At least 3 characters',
+                'username_invalid_format': 'Use only letters, numbers and _',
+                'username_taken': 'That username is already taken',
                 'your_name': 'Your Name',
                 'register_progress': 'Record your progress today',
                 'daily_mission_description': 'Hit 120g of protein today',
@@ -5392,6 +5402,11 @@
                 'other': '其他',
                 'workout_detail': '训练详情',
                 'username': '用户名',
+                'onb_username_title': '选择你的用户名',
+                'onb_username_subtitle': '这样其他人可以在 AorType 上找到你。',
+                'username_too_short': '至少3个字符',
+                'username_invalid_format': '只能使用字母、数字和 _',
+                'username_taken': '该用户名已被使用',
                 'your_name': '你的名字',
                 'register_progress': '记录今天的进度',
                 'daily_mission_description': '今天摄入120克蛋白质',
@@ -5966,6 +5981,11 @@
                 'other': 'Otro',
                 'workout_detail': 'Detalle del Entreno',
                 'username': 'Nombre de usuario',
+                'onb_username_title': 'Elige tu nombre de usuario',
+                'onb_username_subtitle': 'Así otras personas pueden encontrarte en AorType.',
+                'username_too_short': 'Mínimo 3 caracteres',
+                'username_invalid_format': 'Usa solo letras, números y _',
+                'username_taken': 'Ese nombre de usuario ya está en uso',
                 'your_name': 'Tu nombre',
                 'register_progress': 'Registra tu progreso de hoy',
                 'daily_mission_description': 'Alcanza 120g de proteína hoy',
@@ -16192,7 +16212,7 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
 
                     if (data.isNew) {
                         this.state.onboarding.pendingReg = null;
-                        this.startOnboardingFlow();
+                        this.showSocialUsernameStep();
                     } else {
                         this.showToast(this.t('welcome_app'));
                         this.navigate('dashboard');
@@ -16206,6 +16226,106 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                 } catch (e) {
                     this.showToast(this.t('login_error'));
                 }
+            },
+
+            // ─── SOCIAL SIGNUP: USERNAME + PHONE STEP ─────────────────────
+            showSocialUsernameStep() {
+                const modal = document.getElementById('social-username-modal');
+                if (!modal) { this.startOnboardingFlow(); return; }
+                modal.style.display = 'flex';
+                modal.classList.remove('hidden');
+
+                const input = document.getElementById('social-username-input');
+                const phoneInput = document.getElementById('social-phone-input');
+                if (input) {
+                    // Suggest a starting point from the user's name/email — user can change it freely
+                    const base = (this.state.userProfile?.name || this.state.userProfile?.email?.split('@')[0] || 'user')
+                        .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9_]/g, '');
+                    input.value = '@' + (base || 'user');
+                }
+                if (phoneInput) phoneInput.value = this.state.userProfile?.phone || '';
+                this._socialUsernameValid = false;
+                this.checkSocialUsernameAvailability();
+            },
+
+            checkSocialUsernameAvailability() {
+                const input = document.getElementById('social-username-input');
+                const status = document.getElementById('social-username-status');
+                const hint = document.getElementById('social-username-hint');
+                const btn = document.getElementById('social-username-continue');
+                if (!input) return;
+
+                clearTimeout(this._socialUsernameDebounce);
+                const raw = input.value.trim();
+                this._socialUsernameValid = false;
+                if (btn) btn.disabled = true;
+                if (status) status.textContent = '';
+                if (hint) hint.textContent = '';
+
+                if (!raw || raw.length < 3) {
+                    if (hint) hint.textContent = this.t('username_too_short') || 'Mínimo 3 caracteres';
+                    return;
+                }
+
+                this._socialUsernameDebounce = setTimeout(async () => {
+                    if (status) status.textContent = '⏳';
+                    try {
+                        const res = await fetch(`/api/profile/check-username?username=${encodeURIComponent(raw)}`, {
+                            headers: AUTH.headers()
+                        });
+                        const data = await res.json();
+                        if (data.available) {
+                            this._socialUsernameValid = true;
+                            if (status) status.textContent = '✅';
+                            if (hint) hint.textContent = '';
+                            if (btn) btn.disabled = false;
+                        } else {
+                            if (status) status.textContent = '❌';
+                            if (hint) hint.textContent = data.reason === 'invalid_format'
+                                ? (this.t('username_invalid_format') || 'Use apenas letras, números e _')
+                                : (this.t('username_taken') || 'Esse username já está em uso');
+                        }
+                    } catch (e) {
+                        if (status) status.textContent = '';
+                        if (hint) hint.textContent = this.t('conn_error') || 'Erro de conexão';
+                    }
+                }, 400);
+            },
+
+            async confirmSocialUsernamePhone() {
+                if (!this._socialUsernameValid) {
+                    this.showToast(this.t('username_taken') || 'Escolha um username disponível');
+                    return;
+                }
+                const username = (document.getElementById('social-username-input')?.value || '').trim();
+                const phone = (document.getElementById('social-phone-input')?.value || '').trim();
+
+                const btn = document.getElementById('social-username-continue');
+                if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+                try {
+                    const res = await fetch('/api/profile', {
+                        method: 'POST',
+                        headers: AUTH.headers(),
+                        body: JSON.stringify({ username, phone })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        this.showToast(data.error || this.t('save_error'));
+                        if (btn) { btn.disabled = false; btn.textContent = this.t('continue') || 'Continuar'; }
+                        return;
+                    }
+                    this.state.userProfile.username = username;
+                    this.state.userProfile.phone = phone;
+                } catch (e) {
+                    this.showToast(this.t('conn_error') || 'Erro de conexão');
+                    if (btn) { btn.disabled = false; btn.textContent = this.t('continue') || 'Continuar'; }
+                    return;
+                }
+
+                const modal = document.getElementById('social-username-modal');
+                if (modal) { modal.style.display = 'none'; modal.classList.add('hidden'); }
+                this.startOnboardingFlow();
             },
 
             selectOnboardingGoal(goal, btn) {
@@ -23927,6 +24047,38 @@ Rules:
         <!-- Footer hint -->
         <div class="py-4 text-center text-gray-400 text-xs tracking-wide">
             Arraste para mover · Dois dedos para dar zoom
+        </div>
+    </div>
+
+    <!-- SOCIAL SIGNUP: USERNAME + PHONE STEP (Google/Apple new users only) -->
+    <div id="social-username-modal" class="fixed inset-0 z-[300] bg-ios-bg dark:bg-dark-bg hidden flex-col">
+        <div class="flex-1 flex flex-col px-6 pt-safe-12 pb-8 max-w-sm mx-auto w-full">
+            <h1 class="text-4xl font-black mb-3 tracking-tighter" data-translate="onb_username_title">Escolha seu username</h1>
+            <p class="text-ios-gray text-lg mb-8 font-medium" data-translate="onb_username_subtitle">Assim outras pessoas podem te encontrar no AorType.</p>
+
+            <div class="space-y-1 mb-4">
+                <label class="text-xs font-bold text-ios-gray uppercase ml-1" data-translate="username">Username</label>
+                <div class="relative">
+                    <input type="text" id="social-username-input" autocapitalize="none" autocorrect="off"
+                        class="w-full bg-white dark:bg-dark-elevated p-4 pr-10 rounded-2xl border border-transparent focus:border-brand-neon outline-none font-bold"
+                        placeholder="@usuario" oninput="app.checkSocialUsernameAvailability()">
+                    <span id="social-username-status" class="absolute right-4 top-1/2 -translate-y-1/2 text-lg"></span>
+                </div>
+                <p id="social-username-hint" class="text-xs text-ios-gray ml-1 h-4"></p>
+            </div>
+
+            <div class="space-y-1 mb-8">
+                <label class="text-xs font-bold text-ios-gray uppercase ml-1" data-translate="phone">Telefone</label>
+                <input type="tel" id="social-phone-input"
+                    class="w-full bg-white dark:bg-dark-elevated p-4 rounded-2xl border border-transparent focus:border-brand-neon outline-none font-bold"
+                    data-translate-placeholder="phone_placeholder" placeholder="+55 (11) 99999-9999">
+            </div>
+
+            <div class="mt-auto space-y-3">
+                <button id="social-username-continue" onclick="app.confirmSocialUsernamePhone()"
+                    class="w-full py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-bold text-lg shadow-lg transition-transform disabled:opacity-40"
+                    data-translate="continue">Continuar</button>
+            </div>
         </div>
     </div>
 </body>

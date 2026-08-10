@@ -1700,6 +1700,25 @@ app.use((req, res, next) => {
 
 // ── PERFIL ─────────────────────────────────────────────────────
 
+// Verifica disponibilidade de username (usado no onboarding pós login social)
+app.get('/api/profile/check-username', async (req, res) => {
+  try {
+    let username = (req.query.username || '').trim();
+    if (!username) return res.status(400).json({ error: 'Username obrigatório' });
+    if (!username.startsWith('@')) username = '@' + username;
+    username = username.toLowerCase();
+    if (!/^@[a-z0-9_]{3,20}$/.test(username)) {
+      return res.json({ available: false, reason: 'invalid_format' });
+    }
+    const { data: existing } = await supabase.from('users').select('id').eq('username', username).single();
+    const available = !existing || existing.id === req.userId;
+    res.json({ available, username });
+  } catch (e) {
+    console.error('check-username error:', e);
+    res.status(500).json({ error: 'Erro ao verificar username' });
+  }
+});
+
 app.get('/api/profile', async (req, res) => {
   try {
     const { data: user } = await supabase
@@ -1743,6 +1762,13 @@ app.post('/api/profile', async (req, res) => {
     let avatar_url = req.body.avatar_url || req.body.avatar || undefined;
     if (avatar_url && avatar_url.startsWith('data:') && avatar_url.length > 200000) {
       avatar_url = undefined; // Too large — client must compress before sending
+    }
+
+    if (username) {
+      const { data: taken } = await supabase.from('users').select('id').eq('username', username).single();
+      if (taken && taken.id !== req.userId) {
+        return res.status(409).json({ error: 'Username já está em uso' });
+      }
     }
 
     const userUpdate = { name, username, phone };
