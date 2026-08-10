@@ -13597,6 +13597,8 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                     if (dashEnergy) dashEnergy.textContent = estCalories;
 
                     this._exerciseHistoryCache = null; // D2-E: invalidar cache para próxima sessão
+                    this.updateHealthScore();
+                    this.renderHealthDiary();
                     this.showToast(this.t('toast_workout_done').replace('{calories}', estCalories));
                     setTimeout(() => this.navigate('dashboard'), 1200);
                 } catch {
