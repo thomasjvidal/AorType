@@ -3145,7 +3145,8 @@ app.post('/api/chat', async (req, res) => {
   try {
     const { message, context, history } = req.body;
     const groqKey = process.env.GROQ_API_KEY;
-    if (!groqKey) return res.status(401).json({ error: 'Chave Groq não configurada' });
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!groqKey && !geminiKey) return res.status(401).json({ error: 'Nenhum provider de IA configurado' });
 
     const ctx = context || {};
     const m = ctx.metrics || {};
@@ -3238,15 +3239,29 @@ ${(ctx.favorites || []).join(', ') || 'no history yet'}
     }
     messages.push({ role: 'user', content: message });
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 600, temperature: 0.7 })
-    });
+    if (groqKey) {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 600, temperature: 0.7 })
+      });
 
-    if (!response.ok) throw new Error(`Groq error: ${response.status}`);
-    const json = await response.json();
-    res.json({ text: json.choices?.[0]?.message?.content || '' });
+      if (!response.ok) throw new Error(`Groq error: ${response.status}`);
+      const json = await response.json();
+      return res.json({ text: json.choices?.[0]?.message?.content || '' });
+    }
+
+    // Fallback: Gemini (no Groq key configured)
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(geminiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const contents = [
+      { role: 'user', parts: [{ text: systemPrompt }] },
+      { role: 'model', parts: [{ text: 'Entendido.' }] },
+      ...messages.slice(1).map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }))
+    ];
+    const result = await model.generateContent({ contents, generationConfig: { temperature: 0.7, maxOutputTokens: 600 } });
+    res.json({ text: result.response.text() || '' });
   } catch (error) {
     console.error('Chat error:', error);
     res.status(500).json({ error: 'Erro no chat' });

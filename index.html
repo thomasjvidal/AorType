@@ -19885,6 +19885,8 @@ Instruções:
                             });
                             const data = await res.json();
                             if (data.text) response = data.text; // Override hardcoded response with real AI answer
+                            else if (!response) throw new Error(data.error || `Chat backend error (${res.status})`);
+                            else console.warn('Chat backend failed, keeping local intent response:', data.error);
                         }
                         else if (hasLocalKey) {
                             // Client-side Direct Call (Fallback)
