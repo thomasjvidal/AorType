@@ -1114,7 +1114,6 @@ const normalizeKey = (str) =>
 
 // ── FOOD DB DINÂMICO ──────────────────────────────────────────
 // Começa com FOOD_DB hardcoded, sobrescreve com alimentos do Supabase (sem redeploy)
-// Lazy: carrega na primeira chamada a /api/foods, não no startup (serverless-safe)
 let _foodDbCache = { ...FOOD_DB };
 let _foodDbLoaded = false;
 
@@ -1139,6 +1138,8 @@ async function loadFoodsFromDb() {
     _foodDbLoaded = true;
   }
 }
+
+// Não chamar no startup — serverless-safe: carrega lazy na primeira request
 
 const matchFood = (name) => {
   const n = normalizeKey(name);
