@@ -10610,7 +10610,9 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
             calculateActivity() {
                 try {
                     const today = new Date().toLocaleDateString('pt-BR');
-                    let log = JSON.parse(localStorage.getItem('wb_activity_log') || '{}');
+                    let log;
+                    try { log = JSON.parse(localStorage.getItem('wb_activity_log') || '{}'); }
+                    catch { log = {}; }
 
                     // Update today's score based on meals count
                     const mealsCount = this.state.mealsToday.length;
@@ -10647,7 +10649,9 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                     if (summary) summary.textContent = this.t('you_registered_meals').replace('{count}', mealsCount);
 
                     // Social screen: workout challenge — count workout checkins this week
-                    const checkins = JSON.parse(localStorage.getItem('aortype_checkins') || '{}');
+                    let checkins;
+                    try { checkins = JSON.parse(localStorage.getItem('aortype_checkins') || '{}'); }
+                    catch { checkins = {}; }
                     let workoutsThisWeek = 0;
                     for (let i = 0; i < 7; i++) {
                         const d = new Date();
@@ -18748,7 +18752,16 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                     if (document.getElementById('edit-username')) document.getElementById('edit-username').value = p.username || '';
                     if (document.getElementById('edit-phone')) document.getElementById('edit-phone').value = p.phone || '';
                     if (document.getElementById('edit-email')) document.getElementById('edit-email').value = p.email || '';
-                    if (document.getElementById('edit-profile-preview')) document.getElementById('edit-profile-preview').src = p.avatar || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%232a2a2a'/><stop offset='1' stop-color='%231f1f1f'/></linearGradient></defs><circle cx='64' cy='64' r='64' fill='url(%23g)'/><circle cx='64' cy='48' r='22' fill='none' stroke='%23fff' stroke-width='6'/><path d='M20 104c10-24 36-34 44-34s34 10 44 34' fill='none' stroke='%23fff' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/></svg>";
+                    const editPreview = document.getElementById('edit-profile-preview');
+                    if (editPreview) {
+                        // p.avatar may still be empty if the async /api/profile/avatar fetch hasn't
+                        // resolved yet — fall back to whatever the header/profile avatar already loaded.
+                        const knownAvatar = p.avatar
+                            || document.getElementById('profile-screen-avatar')?.src
+                            || document.getElementById('user-avatar')?.src;
+                        const isPlaceholder = !knownAvatar || knownAvatar.includes('svg+xml');
+                        editPreview.src = !isPlaceholder ? knownAvatar : "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%232a2a2a'/><stop offset='1' stop-color='%231f1f1f'/></linearGradient></defs><circle cx='64' cy='64' r='64' fill='url(%23g)'/><circle cx='64' cy='48' r='22' fill='none' stroke='%23fff' stroke-width='6'/><path d='M20 104c10-24 36-34 44-34s34 10 44 34' fill='none' stroke='%23fff' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/></svg>";
+                    }
 
                     this.state.tempProfileImage = null; // Reset temp image
                 }
