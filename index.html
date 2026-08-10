@@ -218,6 +218,12 @@
         .h-safe-top {
             height: env(safe-area-inset-top);
         }
+        .notif-toggle.active {
+            background-color: #43AD97;
+        }
+        .notif-toggle.active span {
+            transform: translateX(20px);
+        }
         .pt-safe-12 {
             padding-top: calc(env(safe-area-inset-top) + 3rem) !important;
         }
@@ -1920,7 +1926,7 @@
                         </div>
                         <i data-lucide="chevron-right" class="w-5 h-5 text-ios-gray"></i>
                     </button>
-                    <button
+                    <button onclick="app.openNotificationsModal()"
                         class="w-full px-5 py-4 flex items-center justify-between border-b border-ios-separator/30 dark:border-gray-800 btn-press">
                         <div class="flex items-center gap-3">
                             <i data-lucide="bell" class="w-5 h-5 text-ios-gray"></i>
@@ -4104,11 +4110,92 @@
             </form>
         </div>
     </div>
+
+    <!-- NOTIFICATIONS PREFS MODAL -->
+    <div id="notifications-modal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="app.closeNotificationsModal()"></div>
+        <div class="absolute bottom-0 left-0 right-0 bg-ios-bg dark:bg-dark-card rounded-t-[32px] p-6 space-y-2 transform transition-transform duration-300 translate-y-full"
+            id="notifications-modal-content">
+            <div class="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-2"></div>
+
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-black" data-translate="notifications">Notificações</h2>
+                <button onclick="app.closeNotificationsModal()" class="p-2 bg-gray-200 dark:bg-gray-800 rounded-full">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="bg-white dark:bg-dark-elevated rounded-2xl overflow-hidden divide-y divide-ios-separator/20 dark:divide-gray-700 mb-4">
+                <div class="px-4 py-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <i data-lucide="utensils" class="w-5 h-5 text-ios-gray flex-shrink-0"></i>
+                        <div class="min-w-0">
+                            <div class="font-semibold text-sm" data-translate="notif_meal_title">Lembrete de refeição</div>
+                            <div class="text-xs text-ios-gray" data-translate="notif_meal_desc">Avisa quando a janela da próxima refeição abrir</div>
+                        </div>
+                    </div>
+                    <button onclick="app.toggleNotificationPref('meal_reminders')" id="notif-toggle-meal_reminders"
+                        class="notif-toggle relative w-12 h-7 rounded-full transition-colors flex-shrink-0 bg-gray-300 dark:bg-gray-600">
+                        <span class="absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform"></span>
+                    </button>
+                </div>
+                <div class="px-4 py-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <i data-lucide="dumbbell" class="w-5 h-5 text-ios-gray flex-shrink-0"></i>
+                        <div class="min-w-0">
+                            <div class="font-semibold text-sm" data-translate="notif_workout_title">Lembrete de treino</div>
+                            <div class="text-xs text-ios-gray" data-translate="notif_workout_desc">Avisa no horário do seu treino do dia</div>
+                        </div>
+                    </div>
+                    <button onclick="app.toggleNotificationPref('workout_reminders')" id="notif-toggle-workout_reminders"
+                        class="notif-toggle relative w-12 h-7 rounded-full transition-colors flex-shrink-0 bg-gray-300 dark:bg-gray-600">
+                        <span class="absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform"></span>
+                    </button>
+                </div>
+                <div class="px-4 py-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <i data-lucide="droplet" class="w-5 h-5 text-ios-gray flex-shrink-0"></i>
+                        <div class="min-w-0">
+                            <div class="font-semibold text-sm" data-translate="notif_water_title">Lembrete de água</div>
+                            <div class="text-xs text-ios-gray" data-translate="notif_water_desc">Avisa quando você está atrasado na meta de hidratação</div>
+                        </div>
+                    </div>
+                    <button onclick="app.toggleNotificationPref('water_reminders')" id="notif-toggle-water_reminders"
+                        class="notif-toggle relative w-12 h-7 rounded-full transition-colors flex-shrink-0 bg-gray-300 dark:bg-gray-600">
+                        <span class="absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform"></span>
+                    </button>
+                </div>
+                <div class="px-4 py-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <i data-lucide="bar-chart-3" class="w-5 h-5 text-ios-gray flex-shrink-0"></i>
+                        <div class="min-w-0">
+                            <div class="font-semibold text-sm" data-translate="notif_summary_title">Resumo diário</div>
+                            <div class="text-xs text-ios-gray" data-translate="notif_summary_desc">Um resumo do seu dia à noite</div>
+                        </div>
+                    </div>
+                    <button onclick="app.toggleNotificationPref('daily_summary')" id="notif-toggle-daily_summary"
+                        class="notif-toggle relative w-12 h-7 rounded-full transition-colors flex-shrink-0 bg-gray-300 dark:bg-gray-600">
+                        <span class="absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform"></span>
+                    </button>
+                </div>
+            </div>
+            <p class="text-xs text-ios-gray text-center px-4 pb-2" data-translate="notif_disclaimer">Suas preferências ficam salvas na sua conta.</p>
+        </div>
+    </div>
     <script>
         const translations = {
             'pt': {
                 'language': 'Idioma',
                 'notifications': 'Notificações',
+                'notif_meal_title': 'Lembrete de refeição',
+                'notif_meal_desc': 'Avisa quando a janela da próxima refeição abrir',
+                'notif_workout_title': 'Lembrete de treino',
+                'notif_workout_desc': 'Avisa no horário do seu treino do dia',
+                'notif_water_title': 'Lembrete de água',
+                'notif_water_desc': 'Avisa quando você está atrasado na meta de hidratação',
+                'notif_summary_title': 'Resumo diário',
+                'notif_summary_desc': 'Um resumo do seu dia à noite',
+                'notif_disclaimer': 'Suas preferências ficam salvas na sua conta.',
                 'privacy': 'Privacidade',
                 'logout': 'Sair',
                 'home': 'Início',
@@ -4703,6 +4790,15 @@
             'en': {
                 'language': 'Language',
                 'notifications': 'Notifications',
+                'notif_meal_title': 'Meal reminder',
+                'notif_meal_desc': 'Notifies you when the next meal window opens',
+                'notif_workout_title': 'Workout reminder',
+                'notif_workout_desc': "Notifies you at your workout's scheduled time",
+                'notif_water_title': 'Water reminder',
+                'notif_water_desc': "Notifies you when you're behind on your hydration goal",
+                'notif_summary_title': 'Daily summary',
+                'notif_summary_desc': 'A recap of your day in the evening',
+                'notif_disclaimer': 'Your preferences are saved to your account.',
                 'privacy': 'Privacy',
                 'logout': 'Log Out',
                 'home': 'Home',
@@ -5298,6 +5394,15 @@
             'zh': {
                 'language': '语言',
                 'notifications': '通知',
+                'notif_meal_title': '用餐提醒',
+                'notif_meal_desc': '下一餐时间窗口开启时提醒你',
+                'notif_workout_title': '训练提醒',
+                'notif_workout_desc': '在你的训练时间提醒你',
+                'notif_water_title': '喝水提醒',
+                'notif_water_desc': '当你的饮水量落后于目标时提醒你',
+                'notif_summary_title': '每日总结',
+                'notif_summary_desc': '晚上给你一份当天的总结',
+                'notif_disclaimer': '你的偏好设置会保存在你的账户中。',
                 'privacy': '隐私',
                 'logout': '退出',
                 'home': '首页',
@@ -5877,6 +5982,15 @@
             'es': {
                 'language': 'Idioma',
                 'notifications': 'Notificaciones',
+                'notif_meal_title': 'Recordatorio de comida',
+                'notif_meal_desc': 'Avisa cuando se abre la ventana de la próxima comida',
+                'notif_workout_title': 'Recordatorio de entrenamiento',
+                'notif_workout_desc': 'Avisa a la hora de tu entrenamiento del día',
+                'notif_water_title': 'Recordatorio de agua',
+                'notif_water_desc': 'Avisa cuando vas atrasado con tu meta de hidratación',
+                'notif_summary_title': 'Resumen diario',
+                'notif_summary_desc': 'Un resumen de tu día por la noche',
+                'notif_disclaimer': 'Tus preferencias se guardan en tu cuenta.',
                 'privacy': 'Privacidad',
                 'logout': 'Cerrar Sesión',
                 'home': 'Inicio',
@@ -18934,6 +19048,58 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                     setTimeout(() => {
                         modal.classList.add('hidden');
                     }, 300);
+                }
+            },
+
+            async openNotificationsModal() {
+                const modal = document.getElementById('notifications-modal');
+                const content = document.getElementById('notifications-modal-content');
+                if (!modal || !content) return;
+                modal.classList.remove('hidden');
+                setTimeout(() => content.classList.remove('translate-y-full'), 10);
+
+                try {
+                    const res = await fetch('/api/notification-prefs', { headers: AUTH.headers() });
+                    const prefs = await res.json();
+                    this._notificationPrefs = prefs;
+                    Object.keys(prefs).forEach(key => {
+                        const btn = document.getElementById('notif-toggle-' + key);
+                        if (btn) btn.classList.toggle('active', !!prefs[key]);
+                    });
+                } catch (e) {
+                    console.error('Load notification prefs error:', e);
+                }
+            },
+
+            closeNotificationsModal() {
+                const modal = document.getElementById('notifications-modal');
+                const content = document.getElementById('notifications-modal-content');
+                if (modal && content) {
+                    content.classList.add('translate-y-full');
+                    setTimeout(() => modal.classList.add('hidden'), 300);
+                }
+            },
+
+            async toggleNotificationPref(key) {
+                const btn = document.getElementById('notif-toggle-' + key);
+                if (!btn) return;
+                const newValue = !btn.classList.contains('active');
+                btn.classList.toggle('active', newValue);
+                if (!this._notificationPrefs) this._notificationPrefs = {};
+                this._notificationPrefs[key] = newValue;
+
+                try {
+                    const res = await fetch('/api/notification-prefs', {
+                        method: 'POST',
+                        headers: AUTH.headers(),
+                        body: JSON.stringify({ [key]: newValue })
+                    });
+                    if (!res.ok) throw new Error('save failed');
+                } catch (e) {
+                    // Reverte o toggle se o servidor não confirmar
+                    btn.classList.toggle('active', !newValue);
+                    this._notificationPrefs[key] = !newValue;
+                    this.showToast(this.t('conn_error') || 'Erro de conexão');
                 }
             },
 

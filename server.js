@@ -2293,6 +2293,46 @@ app.post('/api/workouts/unsubscribe', async (req, res) => {
   }
 });
 
+// ── PREFERÊNCIAS DE NOTIFICAÇÃO ──────────────────────────────────
+
+const DEFAULT_NOTIFICATION_PREFS = {
+  meal_reminders: true,
+  workout_reminders: true,
+  water_reminders: true,
+  daily_summary: true
+};
+
+app.get('/api/notification-prefs', async (req, res) => {
+  try {
+    const { data: profile } = await supabase
+      .from('profiles').select('onboarding_data').eq('user_id', req.userId).single();
+    const saved = profile?.onboarding_data?.notification_prefs || {};
+    res.json({ ...DEFAULT_NOTIFICATION_PREFS, ...saved });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao buscar preferências' });
+  }
+});
+
+app.post('/api/notification-prefs', async (req, res) => {
+  try {
+    const { data: profile } = await supabase
+      .from('profiles').select('onboarding_data').eq('user_id', req.userId).single();
+    const od = profile?.onboarding_data || {};
+    const current = od.notification_prefs || {};
+    const allowedKeys = Object.keys(DEFAULT_NOTIFICATION_PREFS);
+    const updates = {};
+    for (const key of allowedKeys) {
+      if (typeof req.body[key] === 'boolean') updates[key] = req.body[key];
+    }
+    od.notification_prefs = { ...DEFAULT_NOTIFICATION_PREFS, ...current, ...updates };
+
+    await supabase.from('profiles').update({ onboarding_data: od }).eq('user_id', req.userId);
+    res.json({ success: true, prefs: od.notification_prefs });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao salvar preferências' });
+  }
+});
+
 // Progresso de treino do usuário
 app.get('/api/workouts/progress', async (req, res) => {
   try {
