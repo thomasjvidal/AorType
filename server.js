@@ -3005,6 +3005,70 @@ app.delete('/api/academia/programs/:id', async (req, res) => {
   }
 });
 
+// ── AVALIAÇÕES DE PERSONAL TRAINER ──────────────────────────────
+
+// Busca avaliações reais + agregado (média, contagem, breakdown por estrela)
+app.get('/api/trainer-reviews/:author', async (req, res) => {
+  try {
+    const trainerAuthor = req.params.author;
+    const { data: reviews, error } = await supabase
+      .from('trainer_reviews')
+      .select('user_name, stars, review_text, created_at')
+      .eq('trainer_author', trainerAuthor)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) return res.status(500).json({ error: error.message });
+
+    const list = reviews || [];
+    const count = list.length;
+    const avgStars = count > 0 ? Math.round((list.reduce((s, r) => s + r.stars, 0) / count) * 10) / 10 : 0;
+    // breakdown[0] = % de 5 estrelas, breakdown[4] = % de 1 estrela
+    const breakdown = [5, 4, 3, 2, 1].map(star => {
+      if (count === 0) return 0;
+      const n = list.filter(r => r.stars === star).length;
+      return Math.round((n / count) * 100);
+    });
+
+    res.json({
+      reviews: list.map(r => ({ name: r.user_name, stars: r.stars, text: r.review_text || '', created_at: r.created_at })),
+      count,
+      avgStars,
+      breakdown
+    });
+  } catch (e) {
+    console.error('Get trainer reviews error:', e);
+    res.status(500).json({ error: 'Erro ao buscar avaliações' });
+  }
+});
+
+// Envia (ou atualiza) a avaliação do usuário logado para um trainer
+app.post('/api/trainer-reviews', async (req, res) => {
+  try {
+    const { trainer_author, stars, text } = req.body;
+    if (!trainer_author) return res.status(400).json({ error: 'trainer_author obrigatório' });
+    const starsNum = parseInt(stars);
+    if (!starsNum || starsNum < 1 || starsNum > 5) return res.status(400).json({ error: 'stars deve ser de 1 a 5' });
+
+    const { data: user } = await supabase.from('users').select('name').eq('id', req.userId).single();
+    const userName = user?.name || 'Usuário AorType';
+
+    const { error } = await supabase.from('trainer_reviews').upsert({
+      trainer_author,
+      user_id: req.userId,
+      user_name: userName,
+      stars: starsNum,
+      review_text: (text || '').slice(0, 500),
+      created_at: new Date().toISOString()
+    }, { onConflict: 'trainer_author,user_id' });
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Post trainer review error:', e);
+    res.status(500).json({ error: 'Erro ao salvar avaliação' });
+  }
+});
+
 // ── ANÁLISE DE IMAGEM (IA) ─────────────────────────────────────
 
 const applyFoodDB = (result) => {

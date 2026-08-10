@@ -111,6 +111,19 @@ create table if not exists academia_students (
   unique(academia_id, student_id)
 );
 
+create table if not exists trainer_reviews (
+  id             uuid default gen_random_uuid() primary key,
+  trainer_author text not null,
+  user_id        uuid references users(id) on delete cascade not null,
+  user_name      text not null,
+  stars          integer not null check (stars between 1 and 5),
+  review_text    text,
+  created_at     timestamptz default now(),
+  unique(trainer_author, user_id)
+);
+
+create index if not exists trainer_reviews_author on trainer_reviews(trainer_author, created_at desc);
+
 insert into workout_programs (name, category, description, is_public, exercises) values
 ('Peito & Tríceps', 'chest-triceps', 'Treino focado em peitoral e tríceps', true, '[{"name":"Supino Reto","sets":4,"reps":"8-12","target_weight":60,"video_url":"https://www.youtube.com/embed/gRVjAtPip0Y","rest_seconds":90},{"name":"Supino Inclinado Halteres","sets":3,"reps":"10-12","target_weight":24,"video_url":"https://www.youtube.com/embed/8iPEnn-ltC8","rest_seconds":90},{"name":"Crucifixo Máquina","sets":3,"reps":"12-15","target_weight":40,"video_url":"https://www.youtube.com/embed/Iwe6AmxVf7o","rest_seconds":60},{"name":"Tríceps Corda","sets":4,"reps":"12-15","target_weight":20,"video_url":"https://www.youtube.com/embed/vB5OHsJ3EME","rest_seconds":60},{"name":"Tríceps Francês","sets":3,"reps":"10-12","target_weight":18,"video_url":"https://www.youtube.com/embed/d_KZxkY_0cM","rest_seconds":60}]'),
 ('Costas & Bíceps', 'back-biceps', 'Treino focado em costas e bíceps', true, '[{"name":"Puxada Frente","sets":4,"reps":"8-12","target_weight":50,"video_url":"https://www.youtube.com/embed/CAwf7n6Luuc","rest_seconds":90},{"name":"Remada Curvada","sets":4,"reps":"8-10","target_weight":60,"video_url":"https://www.youtube.com/embed/9efgcAjQe7E","rest_seconds":90},{"name":"Pulldown","sets":3,"reps":"12-15","target_weight":25,"video_url":"https://www.youtube.com/embed/sSAYDEZFVUs","rest_seconds":60},{"name":"Rosca Direta","sets":4,"reps":"10-12","target_weight":15,"video_url":"https://www.youtube.com/embed/kwG2ipFRgfo","rest_seconds":60},{"name":"Rosca Martelo","sets":3,"reps":"12","target_weight":14,"video_url":"https://www.youtube.com/embed/zC3nLlEvin4","rest_seconds":60}]'),
