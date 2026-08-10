@@ -11086,10 +11086,11 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                 setVal('body-val-water', todayWater > 0 ? `${todayWater}ml / ${goalWater}ml` : 'Não registrado');
 
                 // Humor → dot lateral
-                const moodColors = {great:'#22c55e',good:'#86efac',ok:'#f59e0b',bad:'#f97316',terrible:'#ef4444'};
+                const moodColors = {great:'#22c55e',good:'#86efac',neutral:'#f59e0b',ok:'#f59e0b',bad:'#f97316',terrible:'#ef4444'};
+                const moodLabels = {great:'Ótimo',good:'Bom',neutral:'Neutro',ok:'Neutro',bad:'Ruim',terrible:'Péssimo'};
                 const moodColor = ciToday.mood ? (moodColors[ciToday.mood] || '#a78bfa') : C.gray;
                 setDot('body-dot-mood', moodColor);
-                setVal('body-val-mood', ciToday.mood || 'Não registrado');
+                setVal('body-val-mood', ciToday.mood ? (moodLabels[ciToday.mood] || ciToday.mood) : 'Não registrado');
 
                 // ── SCORE BREAKDOWN — "Por que X/100?" ──
                 const scoreWhyEl = document.getElementById('health-score-why');
