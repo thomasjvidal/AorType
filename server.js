@@ -2090,6 +2090,36 @@ app.post('/api/reset', async (req, res) => {
   }
 });
 
+// Exclusão de conta — obrigatório pela App Store Guideline 5.1.1(v).
+// A tabela `users` é a raiz de todas as FKs com "on delete cascade" (profiles,
+// meals, checkins, chat_history, workout_sessions, academia_students,
+// trainer_reviews), então apagar essa linha já limpa todo o resto sozinho.
+app.delete('/api/account', async (req, res) => {
+  try {
+    const { password } = req.body;
+
+    const { data: user } = await supabase
+      .from('users').select('password_hash').eq('id', req.userId).single();
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    // Contas com senha (não social) exigem confirmação de senha antes de apagar
+    const isSocialAccount = (user.password_hash || '').startsWith('social_');
+    if (!isSocialAccount) {
+      if (!password) return res.status(400).json({ error: 'Senha obrigatória para confirmar exclusão' });
+      const valid = await bcrypt.compare(password, user.password_hash);
+      if (!valid) return res.status(401).json({ error: 'Senha incorreta' });
+    }
+
+    const { error } = await supabase.from('users').delete().eq('id', req.userId);
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Delete account error:', e);
+    res.status(500).json({ error: 'Erro ao excluir conta' });
+  }
+});
+
 // ── BANCO DE ALIMENTOS ─────────────────────────────────────────
 
 app.get('/api/foods', async (req, res) => {

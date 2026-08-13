@@ -1943,10 +1943,17 @@
                         <i data-lucide="chevron-right" class="w-5 h-5 text-ios-gray"></i>
                     </button>
                     <button onclick="app.logout()"
-                        class="w-full px-5 py-4 flex items-center justify-between btn-press text-red-500">
+                        class="w-full px-5 py-4 flex items-center justify-between border-b border-ios-separator/30 dark:border-gray-800 btn-press text-red-500">
                         <div class="flex items-center gap-3">
                             <i data-lucide="log-out" class="w-5 h-5"></i>
                             <span class="font-semibold" data-translate="logout">Sair</span>
+                        </div>
+                    </button>
+                    <button onclick="app.openDeleteAccountModal()"
+                        class="w-full px-5 py-4 flex items-center justify-between btn-press text-red-500">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i>
+                            <span class="font-semibold" data-translate="delete_account">Excluir conta</span>
                         </div>
                     </button>
                 </div>
@@ -4182,6 +4189,43 @@
             <p class="text-xs text-ios-gray text-center px-4 pb-2" data-translate="notif_disclaimer">Suas preferências ficam salvas na sua conta.</p>
         </div>
     </div>
+
+    <!-- DELETE ACCOUNT MODAL -->
+    <div id="delete-account-modal" class="fixed inset-0 z-[110] hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="app.closeDeleteAccountModal()"></div>
+        <div class="absolute bottom-0 left-0 right-0 bg-ios-bg dark:bg-dark-card rounded-t-[32px] p-6 space-y-4 transform transition-transform duration-300 translate-y-full"
+            id="delete-account-modal-content">
+            <div class="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-2"></div>
+
+            <div class="flex flex-col items-center text-center gap-2 mb-2">
+                <div class="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mb-1">
+                    <i data-lucide="triangle-alert" class="w-7 h-7 text-red-500"></i>
+                </div>
+                <h2 class="text-xl font-black" data-translate="delete_account_title">Excluir sua conta</h2>
+                <p class="text-sm text-ios-gray" data-translate="delete_account_warning">
+                    Isso apaga permanentemente sua conta, perfil, refeições, treinos, check-ins e conversas com a IA. Essa ação não pode ser desfeita.
+                </p>
+            </div>
+
+            <div id="delete-account-password-wrap" class="space-y-1">
+                <label class="text-xs font-bold text-ios-gray uppercase ml-1" data-translate="password">Senha</label>
+                <input type="password" id="delete-account-password"
+                    class="w-full bg-white dark:bg-dark-elevated p-4 rounded-2xl border border-transparent focus:border-red-500 outline-none"
+                    data-translate-placeholder="delete_account_password_placeholder" placeholder="Digite sua senha para confirmar">
+            </div>
+
+            <p id="delete-account-error" class="hidden text-xs text-red-500 text-center"></p>
+
+            <div class="space-y-2 pt-1">
+                <button id="delete-account-confirm-btn" onclick="app.confirmDeleteAccount()"
+                    class="w-full py-4 bg-red-500 text-white rounded-2xl font-bold text-base disabled:opacity-50"
+                    data-translate="delete_account_confirm">Excluir permanentemente</button>
+                <button onclick="app.closeDeleteAccountModal()"
+                    class="w-full py-4 bg-gray-100 dark:bg-dark-elevated rounded-2xl font-bold text-base"
+                    data-translate="cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
     <script>
         const translations = {
             'pt': {
@@ -4322,6 +4366,15 @@
                 'open_status': 'Em Aberto',
                 'scan_now': 'Escanear agora',
                 'password': 'Senha',
+                'cancel': 'Cancelar',
+                'delete_account': 'Excluir conta',
+                'delete_account_title': 'Excluir sua conta',
+                'delete_account_warning': 'Isso apaga permanentemente sua conta, perfil, refeições, treinos, check-ins e conversas com a IA. Essa ação não pode ser desfeita.',
+                'delete_account_password_placeholder': 'Digite sua senha para confirmar',
+                'delete_account_confirm': 'Excluir permanentemente',
+                'delete_account_error': 'Erro ao excluir conta',
+                'delete_account_success': 'Sua conta foi excluída.',
+                'deleting': 'Excluindo...',
                 'i_am': 'Eu sou',
                 'student': 'Aluno',
                 'nutrition_workouts': 'Nutrição + Treinos',
@@ -4925,6 +4978,15 @@
                 'open_status': 'Open',
                 'scan_now': 'Scan Now',
                 'password': 'Password',
+                'cancel': 'Cancel',
+                'delete_account': 'Delete account',
+                'delete_account_title': 'Delete your account',
+                'delete_account_warning': 'This permanently deletes your account, profile, meals, workouts, check-ins and AI conversations. This cannot be undone.',
+                'delete_account_password_placeholder': 'Enter your password to confirm',
+                'delete_account_confirm': 'Delete permanently',
+                'delete_account_error': 'Error deleting account',
+                'delete_account_success': 'Your account has been deleted.',
+                'deleting': 'Deleting...',
                 'i_am': 'I am',
                 'student': 'Student',
                 'nutrition_workouts': 'Nutrition + Workouts',
@@ -5529,6 +5591,15 @@
                 'open_status': '开放',
                 'scan_now': '立即扫描',
                 'password': '密码',
+                'cancel': '取消',
+                'delete_account': '删除账户',
+                'delete_account_title': '删除你的账户',
+                'delete_account_warning': '这将永久删除你的账户、个人资料、餐食记录、训练记录、打卡记录和与AI的对话。此操作无法撤销。',
+                'delete_account_password_placeholder': '输入密码以确认',
+                'delete_account_confirm': '永久删除',
+                'delete_account_error': '删除账户时出错',
+                'delete_account_success': '你的账户已被删除。',
+                'deleting': '正在删除...',
                 'i_am': '我是',
                 'student': '学员',
                 'nutrition_workouts': '营养 + 训练',
@@ -6117,6 +6188,15 @@
                 'open_status': 'Abierto',
                 'scan_now': 'Escanear ahora',
                 'password': 'Contraseña',
+                'cancel': 'Cancelar',
+                'delete_account': 'Eliminar cuenta',
+                'delete_account_title': 'Eliminar tu cuenta',
+                'delete_account_warning': 'Esto elimina permanentemente tu cuenta, perfil, comidas, entrenamientos, check-ins y conversaciones con la IA. Esta acción no se puede deshacer.',
+                'delete_account_password_placeholder': 'Ingresa tu contraseña para confirmar',
+                'delete_account_confirm': 'Eliminar permanentemente',
+                'delete_account_error': 'Error al eliminar la cuenta',
+                'delete_account_success': 'Tu cuenta ha sido eliminada.',
+                'deleting': 'Eliminando...',
                 'i_am': 'Soy',
                 'student': 'Alumno',
                 'nutrition_workouts': 'Nutrición + Entrenamientos',
@@ -19100,6 +19180,55 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                     btn.classList.toggle('active', !newValue);
                     this._notificationPrefs[key] = !newValue;
                     this.showToast(this.t('conn_error') || 'Erro de conexão');
+                }
+            },
+
+            openDeleteAccountModal() {
+                const modal = document.getElementById('delete-account-modal');
+                const content = document.getElementById('delete-account-modal-content');
+                if (!modal || !content) return;
+                const pwInput = document.getElementById('delete-account-password');
+                if (pwInput) pwInput.value = '';
+                const errEl = document.getElementById('delete-account-error');
+                if (errEl) errEl.classList.add('hidden');
+                modal.classList.remove('hidden');
+                setTimeout(() => content.classList.remove('translate-y-full'), 10);
+            },
+
+            closeDeleteAccountModal() {
+                const modal = document.getElementById('delete-account-modal');
+                const content = document.getElementById('delete-account-modal-content');
+                if (modal && content) {
+                    content.classList.add('translate-y-full');
+                    setTimeout(() => modal.classList.add('hidden'), 300);
+                }
+            },
+
+            async confirmDeleteAccount() {
+                const password = document.getElementById('delete-account-password')?.value || '';
+                const btn = document.getElementById('delete-account-confirm-btn');
+                const errEl = document.getElementById('delete-account-error');
+                if (errEl) errEl.classList.add('hidden');
+                if (btn) { btn.disabled = true; btn.textContent = this.t('deleting') || 'Excluindo...'; }
+
+                try {
+                    const res = await fetch('/api/account', {
+                        method: 'DELETE',
+                        headers: AUTH.headers(),
+                        body: JSON.stringify({ password })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        if (errEl) { errEl.textContent = data.error || this.t('delete_account_error') || 'Erro ao excluir conta'; errEl.classList.remove('hidden'); }
+                        if (btn) { btn.disabled = false; btn.textContent = this.t('delete_account_confirm') || 'Excluir permanentemente'; }
+                        return;
+                    }
+                    this.closeDeleteAccountModal();
+                    this.logout();
+                    this.showToast(this.t('delete_account_success') || 'Sua conta foi excluída.');
+                } catch (e) {
+                    if (errEl) { errEl.textContent = this.t('conn_error') || 'Erro de conexão'; errEl.classList.remove('hidden'); }
+                    if (btn) { btn.disabled = false; btn.textContent = this.t('delete_account_confirm') || 'Excluir permanentemente'; }
                 }
             },
 
