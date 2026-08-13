@@ -119,6 +119,10 @@ app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manif
 app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, 'logo.png')));
 app.get('/privacidade', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
+app.get('/privacy.html', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
+app.get('/termos', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
+app.get('/terms.html', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
 app.get('/suporte', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
 app.get('/support', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));

@@ -26,6 +26,7 @@
     color: #324856;
     margin: 40px 0 12px;
   }
+  h3 { font-size: 15px; font-weight: 800; color: #324856; margin: 20px 0 8px; }
   p, li { font-size: 15px; color: #2b2f33; }
   ul { padding-left: 20px; margin: 8px 0; }
   li { margin-bottom: 6px; }
@@ -37,6 +38,17 @@
     padding: 20px 22px;
     margin: 16px 0;
   }
+  .highlight {
+    background: #FFF4E5;
+    border: 1px solid #F0C989;
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin: 16px 0;
+  }
+  .highlight p { margin: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid rgba(50,72,86,0.1); vertical-align: top; }
+  th { color: #324856; font-weight: 800; }
   footer { margin-top: 56px; font-size: 13px; color: #8a8f96; }
 </style>
 </head>
@@ -48,28 +60,39 @@
   </header>
   <p class="updated">Política de Privacidade — última atualização: agosto de 2026</p>
 
-  <p>Esta política explica quais dados o AorType coleta, para que servem, e como você pode
-  controlá-los. Ao criar uma conta e usar o app, você concorda com o que está descrito aqui.</p>
+  <p>Esta política explica quais dados o AorType coleta, para que servem, com quem compartilhamos
+  e como você pode controlá-los, em conformidade com a Lei Geral de Proteção de Dados
+  (Lei nº 13.709/2018 — LGPD). Ao criar uma conta e usar o app, você concorda com o que está
+  descrito aqui.</p>
+
+  <div class="highlight">
+    <p><strong>Aviso sobre dados sensíveis de saúde:</strong> o AorType coleta dados sobre seu
+    peso, altura, alimentação, treinos e condição física, classificados pela LGPD (art. 5º, II)
+    como <strong>dado pessoal sensível</strong>. Ao concluir seu cadastro, pedimos seu consentimento
+    explícito e destacado para tratar esses dados, exclusivamente para fornecer os recursos de
+    nutrição, treino e saúde do app. Você pode retirar esse consentimento a qualquer momento —
+    veja a seção 6.</p>
+  </div>
 
   <h2>1. Quem somos</h2>
   <p>O AorType é um aplicativo de nutrição, treino e acompanhamento de saúde com IA, operado por
-  Nicollas Beltrao LLC. Dúvidas sobre privacidade podem ser enviadas para
-  <a href="mailto:contato@aortype.com">contato@aortype.com</a>.</p>
+  Nicollas Beltrao LLC, na qualidade de controladora dos dados pessoais tratados no app.</p>
 
   <h2>2. Dados que coletamos</h2>
   <div class="card">
     <p><strong>Dados de conta</strong></p>
     <ul>
-      <li>Nome, e-mail e senha (a senha é armazenada de forma criptografada, nunca em texto puro)</li>
+      <li>Nome, e-mail, telefone/usuário e senha (a senha é armazenada de forma criptografada,
+      nunca em texto puro)</li>
       <li>Se você entrar com Apple ou Google, recebemos o nome e e-mail associados a essa conta</li>
     </ul>
   </div>
   <div class="card">
-    <p><strong>Dados de saúde e perfil</strong></p>
+    <p><strong>Dados de saúde e perfil (dados sensíveis)</strong></p>
     <ul>
-      <li>Peso, altura, idade, objetivos, restrições e lesões que você informa</li>
+      <li>Peso, altura, idade, gênero, objetivos, biotipo, restrições e lesões que você informa</li>
       <li>Refeições registradas (incluindo fotos de alimentos), macros e calorias</li>
-      <li>Treinos, séries, check-ins diários de humor, sono e água</li>
+      <li>Treinos, séries, cargas, check-ins diários de humor, sono e água</li>
     </ul>
   </div>
   <div class="card">
@@ -94,31 +117,89 @@
     <li>Calcular e acompanhar suas metas de nutrição, treino e saúde</li>
     <li>Identificar alimentos e macros a partir de fotos, usando inteligência artificial</li>
     <li>Gerar respostas do assistente de IA e planos de treino personalizados</li>
-    <li>Manter sua conta segura (login, recuperação de senha)</li>
+    <li>Manter sua conta segura (login, recuperação de senha, prevenção de fraude e abuso)</li>
     <li>Se você usa o app através de uma academia/personal, seus dados de treino e evolução ficam
     visíveis para o profissional responsável por você dentro do app</li>
   </ul>
+  <p>A base legal para o tratamento dos seus dados, incluindo os dados sensíveis de saúde, é o seu
+  consentimento (art. 7º, I e art. 11, I da LGPD), dado no momento do cadastro, além da execução
+  do contrato de uso do app (art. 7º, V) para dados estritamente necessários ao funcionamento do
+  serviço.</p>
 
   <h2>4. Com quem compartilhamos</h2>
-  <p>Não vendemos seus dados. Compartilhamos apenas com prestadores de serviço necessários para o
-  app funcionar:</p>
+  <p>Não vendemos seus dados. Compartilhamos apenas com prestadores de serviço (operadores, nos
+  termos da LGPD) necessários para o app funcionar, cada um sob obrigação contratual de proteger
+  seus dados:</p>
+  <table>
+    <tr><th>Empresa</th><th>Finalidade</th><th>Dados envolvidos</th></tr>
+    <tr><td>Supabase</td><td>Banco de dados e autenticação</td><td>Todos os dados de conta, saúde e uso do app</td></tr>
+    <tr><td>Groq</td><td>Assistente de IA e leitura de fotos de alimentos (processamento principal)</td><td>Mensagens de chat, fotos de refeições</td></tr>
+    <tr><td>Google (Gemini)</td><td>Assistente de IA e leitura de fotos de alimentos (reserva, quando o Groq está indisponível)</td><td>Mensagens de chat, fotos de refeições</td></tr>
+    <tr><td>OpenAI</td><td>Assistente de IA e leitura de fotos de alimentos (reserva adicional)</td><td>Mensagens de chat, fotos de refeições</td></tr>
+    <tr><td>Apple / Google</td><td>Login social, apenas se você optar por entrar com essas contas</td><td>Nome e e-mail da conta</td></tr>
+  </table>
+  <p>Esses provedores de IA e de infraestrutura operam servidores fora do Brasil (Estados Unidos).
+  Isso significa que seus dados podem ser transferidos internacionalmente para processamento,
+  sempre limitado ao necessário para gerar a resposta ou análise solicitada, e protegido por
+  cláusulas contratuais desses fornecedores.</p>
+
+  <h2>5. Segurança dos dados</h2>
   <ul>
-    <li><strong>Supabase</strong> — banco de dados e autenticação</li>
-    <li><strong>Google (Gemini API)</strong> — análise de fotos de alimentos e respostas de IA</li>
-    <li><strong>Apple / Google</strong> — apenas se você optar por entrar com essas contas</li>
+    <li>Senhas são armazenadas com hash criptográfico (bcrypt), nunca em texto puro</li>
+    <li>Toda comunicação entre o app e nossos servidores é feita por HTTPS</li>
+    <li>O acesso à API é protegido por autenticação e limitado contra tentativas abusivas
+    (rate limiting)</li>
+    <li>Apenas dados necessários ao funcionamento do app são coletados</li>
   </ul>
 
-  <h2>5. Seus direitos</h2>
-  <p>Você pode pedir a exclusão da sua conta e dos seus dados a qualquer momento, escrevendo para
-  <a href="mailto:contato@aortype.com">contato@aortype.com</a>. Atendemos o pedido em até 30 dias.</p>
+  <h2>6. Seus direitos (art. 18 da LGPD)</h2>
+  <p>Você pode exercer, a qualquer momento, os seguintes direitos sobre seus dados pessoais:</p>
+  <ul>
+    <li><strong>Confirmação e acesso</strong> — saber se tratamos seus dados e quais são eles</li>
+    <li><strong>Correção</strong> — corrigir dados incompletos, inexatos ou desatualizados
+    (disponível diretamente em Perfil → Editar perfil)</li>
+    <li><strong>Anonimização, bloqueio ou eliminação</strong> — de dados desnecessários,
+    excessivos ou tratados em desconformidade com a lei</li>
+    <li><strong>Portabilidade</strong> — receber uma cópia dos seus dados em formato estruturado,
+    mediante solicitação</li>
+    <li><strong>Eliminação dos dados tratados com consentimento</strong> — exclusão da sua conta e
+    de todos os dados associados, disponível diretamente no app em <strong>Perfil → Excluir
+    conta</strong>, com efeito imediato, ou por e-mail</li>
+    <li><strong>Informação sobre compartilhamento</strong> — saber com quais entidades públicas ou
+    privadas compartilhamos seus dados (veja a seção 4)</li>
+    <li><strong>Informação sobre a possibilidade de não consentir</strong> e as consequências
+    disso — sem o consentimento para dados de saúde, não é possível usar os recursos de nutrição,
+    treino e IA do app</li>
+    <li><strong>Revogação do consentimento</strong> — a qualquer momento, pelos canais de contato
+    abaixo; a revogação pode significar a exclusão da conta, já que os dados de saúde são
+    essenciais ao funcionamento do app</li>
+    <li><strong>Revisão de decisões automatizadas</strong> — as análises feitas por IA (como
+    identificação de alimentos em fotos) são um auxílio; você pode sempre revisar, corrigir
+    manualmente ou contestar qualquer valor calculado dentro do app</li>
+  </ul>
+  <p>Para exercer qualquer um desses direitos, escreva para
+  <a href="mailto:contato@aortype.com">contato@aortype.com</a>. Respondemos em até 15 dias e,
+  quando aplicável, atendemos o pedido em até 30 dias.</p>
 
-  <h2>6. Crianças</h2>
+  <h2>7. Encarregado de Dados (DPO)</h2>
+  <p>Em conformidade com o art. 41 da LGPD, o encarregado pelo tratamento de dados pessoais do
+  AorType pode ser contatado em
+  <a href="mailto:contato@aortype.com">contato@aortype.com</a> para dúvidas, reclamações ou
+  solicitações relacionadas à privacidade e proteção de dados.</p>
+
+  <h2>8. Retenção dos dados</h2>
+  <p>Mantemos seus dados enquanto sua conta estiver ativa. Ao excluir sua conta pelo app ou por
+  solicitação por e-mail, seus dados de perfil, refeições, treinos, check-ins e histórico de
+  conversas com a IA são apagados permanentemente do nosso banco de dados.</p>
+
+  <h2>9. Crianças</h2>
   <p>O AorType não é destinado a menores de 18 anos e não coletamos intencionalmente dados de
   crianças.</p>
 
-  <h2>7. Alterações nesta política</h2>
+  <h2>10. Alterações nesta política</h2>
   <p>Podemos atualizar este texto conforme o app evolui. A data no topo da página sempre indica a
-  versão mais recente.</p>
+  versão mais recente. Mudanças relevantes na forma como tratamos dados sensíveis serão
+  comunicadas dentro do app.</p>
 
   <footer>AorType — Nicollas Beltrao LLC</footer>
 </div>

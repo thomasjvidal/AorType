@@ -1017,6 +1017,18 @@
                             </div>
                         </div>
 
+                        <label class="flex items-start gap-3 px-1 cursor-pointer select-none">
+                            <input type="checkbox" id="reg-consent"
+                                class="mt-0.5 w-5 h-5 rounded-md border-2 border-gray-300 dark:border-zinc-700 text-brand-neon focus:ring-brand-neon shrink-0">
+                            <span class="text-xs text-gray-500 dark:text-zinc-400 leading-relaxed">
+                                <span data-translate="consent_prefix">Li e concordo com os</span>
+                                <a href="/termos" target="_blank" onclick="event.stopPropagation()" class="font-bold text-brand-neon underline" data-translate="terms_of_use">Termos de Uso</a>
+                                <span data-translate="consent_and">e a</span>
+                                <a href="/privacidade" target="_blank" onclick="event.stopPropagation()" class="font-bold text-brand-neon underline" data-translate="privacy_policy">Política de Privacidade</a>,
+                                <span data-translate="consent_health_data">incluindo o tratamento dos meus dados de saúde (peso, alimentação, treinos) para uso no app</span>.
+                            </span>
+                        </label>
+
                         <button onclick="app.handleAuth('register')"
                             class="w-full bg-gradient-to-br from-[#6E9458] to-[#378E7C] text-white font-black py-4 rounded-2xl shadow-neon hover:shadow-xl hover:scale-[1.02]  transition-all duration-300 text-lg tracking-wide uppercase mt-4"
                             data-translate="create_account">
@@ -4240,6 +4252,12 @@
                 'notif_summary_title': 'Resumo diário',
                 'notif_summary_desc': 'Um resumo do seu dia à noite',
                 'notif_disclaimer': 'Suas preferências ficam salvas na sua conta.',
+                'consent_prefix': 'Li e concordo com os',
+                'terms_of_use': 'Termos de Uso',
+                'consent_and': 'e a',
+                'privacy_policy': 'Política de Privacidade',
+                'consent_health_data': 'incluindo o tratamento dos meus dados de saúde (peso, alimentação, treinos) para uso no app',
+                'consent_required': 'Você precisa aceitar os Termos de Uso e a Política de Privacidade para criar sua conta',
                 'privacy': 'Privacidade',
                 'logout': 'Sair',
                 'home': 'Início',
@@ -4852,6 +4870,12 @@
                 'notif_summary_title': 'Daily summary',
                 'notif_summary_desc': 'A recap of your day in the evening',
                 'notif_disclaimer': 'Your preferences are saved to your account.',
+                'consent_prefix': 'I have read and agree to the',
+                'terms_of_use': 'Terms of Use',
+                'consent_and': 'and',
+                'privacy_policy': 'Privacy Policy',
+                'consent_health_data': 'including the processing of my health data (weight, meals, workouts) for use in the app',
+                'consent_required': 'You need to accept the Terms of Use and Privacy Policy to create your account',
                 'privacy': 'Privacy',
                 'logout': 'Log Out',
                 'home': 'Home',
@@ -5465,6 +5489,12 @@
                 'notif_summary_title': '每日总结',
                 'notif_summary_desc': '晚上给你一份当天的总结',
                 'notif_disclaimer': '你的偏好设置会保存在你的账户中。',
+                'consent_prefix': '我已阅读并同意',
+                'terms_of_use': '使用条款',
+                'consent_and': '和',
+                'privacy_policy': '隐私政策',
+                'consent_health_data': '包括处理我的健康数据（体重、饮食、训练）以在应用中使用',
+                'consent_required': '你需要同意使用条款和隐私政策才能创建账户',
                 'privacy': '隐私',
                 'logout': '退出',
                 'home': '首页',
@@ -6062,6 +6092,12 @@
                 'notif_summary_title': 'Resumen diario',
                 'notif_summary_desc': 'Un resumen de tu día por la noche',
                 'notif_disclaimer': 'Tus preferencias se guardan en tu cuenta.',
+                'consent_prefix': 'Leí y acepto los',
+                'terms_of_use': 'Términos de Uso',
+                'consent_and': 'y la',
+                'privacy_policy': 'Política de Privacidad',
+                'consent_health_data': 'incluyendo el tratamiento de mis datos de salud (peso, alimentación, entrenamientos) para su uso en la app',
+                'consent_required': 'Debes aceptar los Términos de Uso y la Política de Privacidad para crear tu cuenta',
                 'privacy': 'Privacidad',
                 'logout': 'Cerrar Sesión',
                 'home': 'Inicio',
@@ -16060,6 +16096,9 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
                     if (!email || !pass) { this.showToast(this.t('fill_email_pass')); return; }
 
                     if (type === 'register') {
+                        const consentChecked = document.getElementById('reg-consent')?.checked;
+                        if (!consentChecked) { this.showToast(this.t('consent_required')); return; }
+
                         if (!username) username = '@' + (email.split('@')[0] || 'user').toLowerCase().replace(/[^a-z0-9_]/g, '');
                         if (!username.startsWith('@')) username = '@' + username;
                         if (!name) { name = email.split('@')[0] || 'Usuário'; name = name.charAt(0).toUpperCase() + name.slice(1); }
@@ -16528,6 +16567,10 @@ PRÓXIMO PASSO: ${deveConcluir ? `CONCLUIR` : mencionouRefeicaoSemAlimento ? `pe
             async confirmSocialUsernamePhone() {
                 if (!this._socialUsernameValid) {
                     this.showToast(this.t('username_taken') || 'Escolha um username disponível');
+                    return;
+                }
+                if (!document.getElementById('social-consent')?.checked) {
+                    this.showToast(this.t('consent_required'));
                     return;
                 }
                 const username = (document.getElementById('social-username-input')?.value || '').trim();
@@ -24427,6 +24470,17 @@ Rules:
             </div>
 
             <div class="mt-auto space-y-3">
+                <label class="flex items-start gap-3 px-1 cursor-pointer select-none">
+                    <input type="checkbox" id="social-consent"
+                        class="mt-0.5 w-5 h-5 rounded-md border-2 border-gray-300 dark:border-zinc-700 text-brand-neon focus:ring-brand-neon shrink-0">
+                    <span class="text-xs text-ios-gray leading-relaxed">
+                        <span data-translate="consent_prefix">Li e concordo com os</span>
+                        <a href="/termos" target="_blank" onclick="event.stopPropagation()" class="font-bold text-brand-neon underline" data-translate="terms_of_use">Termos de Uso</a>
+                        <span data-translate="consent_and">e a</span>
+                        <a href="/privacidade" target="_blank" onclick="event.stopPropagation()" class="font-bold text-brand-neon underline" data-translate="privacy_policy">Política de Privacidade</a>,
+                        <span data-translate="consent_health_data">incluindo o tratamento dos meus dados de saúde (peso, alimentação, treinos) para uso no app</span>.
+                    </span>
+                </label>
                 <button id="social-username-continue" onclick="app.confirmSocialUsernamePhone()"
                     class="w-full py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-bold text-lg shadow-lg transition-transform disabled:opacity-40"
                     data-translate="continue">Continuar</button>
