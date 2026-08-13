@@ -3147,6 +3147,29 @@ async function analyzeImageWithGemini(geminiKey, image) {
   }
 }
 
+async function analyzeImageWithOpenAI(openaiKey, image) {
+  if (!openaiKey) throw new Error('Chave OpenAI não configurada');
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: [
+        { type: 'text', text: 'Identifique os alimentos e retorne JSON: {"items":[{"name":"","grams":0,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}' },
+        { type: 'image_url', image_url: { url: image } }
+      ]}],
+      max_tokens: 500
+    })
+  });
+  if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
+  const json = await response.json();
+  const rawContent = (json.choices?.[0]?.message?.content || '{}').replace(/```json/g, '').replace(/```/g, '').trim();
+  try { return JSON.parse(rawContent); } catch {
+    const m = rawContent.match(/\{[\s\S]*\}/);
+    try { return m ? JSON.parse(m[0]) : {}; } catch { return {}; }
+  }
+}
+
 app.post('/api/analyze-image', async (req, res) => {
   try {
     let { image, audio, provider } = req.body;
@@ -3200,11 +3223,24 @@ app.post('/api/analyze-image', async (req, res) => {
         }
         return res.json({ provider: 'groq', result: applyFoodDB(parsed) });
       } catch (groqError) {
-        // Groq key missing/invalid/rate-limited — fall back to Gemini if we auto-picked the provider
-        if (!autoSelected || !process.env.GEMINI_API_KEY) throw groqError;
-        console.warn('Groq failed, falling back to Gemini:', groqError.message);
-        const geminiParsed = await analyzeImageWithGemini(process.env.GEMINI_API_KEY, image);
-        return res.json({ provider: 'gemini', result: applyFoodDB(geminiParsed) });
+        // Groq's vision model is preview-only (low/unpredictable rate limits, per Groq's own
+        // docs) — key missing, invalid, rate-limited (429) or the model itself deprecated (404)
+        // all land here. Fall back to another real provider, in order, when auto-selecting.
+        if (!autoSelected) throw groqError;
+        console.warn('Groq vision failed, trying fallback providers:', groqError.message);
+        if (process.env.GEMINI_API_KEY) {
+          try {
+            const geminiParsed = await analyzeImageWithGemini(process.env.GEMINI_API_KEY, image);
+            return res.json({ provider: 'gemini', result: applyFoodDB(geminiParsed) });
+          } catch (geminiError) {
+            console.warn('Gemini fallback also failed:', geminiError.message);
+          }
+        }
+        if (process.env.OPENAI_API_KEY) {
+          const openaiParsed = await analyzeImageWithOpenAI(process.env.OPENAI_API_KEY, image);
+          return res.json({ provider: 'openai', result: applyFoodDB(openaiParsed) });
+        }
+        throw groqError;
       }
     }
 
@@ -3214,26 +3250,7 @@ app.post('/api/analyze-image', async (req, res) => {
     }
 
     if (provider === 'openai') {
-      if (!apiKey) throw new Error('Chave OpenAI não configurada');
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: [
-            { type: 'text', text: 'Identifique os alimentos e retorne JSON: {"items":[{"name":"","grams":0,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}' },
-            { type: 'image_url', image_url: { url: image } }
-          ]}],
-          max_tokens: 500
-        })
-      });
-      const json = await response.json();
-      const rawContent = (json.choices?.[0]?.message?.content || '{}').replace(/```json/g, '').replace(/```/g, '').trim();
-      let openaiParsed;
-      try { openaiParsed = JSON.parse(rawContent); } catch {
-        const m = rawContent.match(/\{[\s\S]*\}/);
-        try { openaiParsed = m ? JSON.parse(m[0]) : {}; } catch { openaiParsed = {}; }
-      }
+      const openaiParsed = await analyzeImageWithOpenAI(apiKey, image);
       return res.json({ provider: 'openai', result: applyFoodDB(openaiParsed) });
     }
 
