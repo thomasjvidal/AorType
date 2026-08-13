@@ -21321,8 +21321,15 @@ Rules:
             },
 
             async _initCameraCapacitor() {
-                // No app nativo iOS, plugins estão em window.Capacitor.Plugins (registrados pela camada nativa após cap sync)
-                const CameraPlugin = window.Capacitor?.Plugins?.Camera;
+                // No app nativo iOS, plugins estão em window.Capacitor.Plugins (registrados pela camada nativa após cap sync).
+                // Como o app carrega a página direto de aortype.com (server.url), o registro nativo dos
+                // plugins pode não ter terminado ainda no exato instante em que o usuário abre o scanner
+                // (sobretudo logo após abrir o app) — por isso tenta algumas vezes antes de desistir.
+                let CameraPlugin = window.Capacitor?.Plugins?.Camera;
+                for (let i = 0; !CameraPlugin && i < 5; i++) {
+                    await new Promise(r => setTimeout(r, 250));
+                    CameraPlugin = window.Capacitor?.Plugins?.Camera;
+                }
                 if (!CameraPlugin) {
                     console.warn('Capacitor Camera plugin not available — run: npm install @capacitor/camera && npx cap sync');
                     this._showCapacitorCameraFallback();
