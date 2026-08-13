@@ -3236,11 +3236,20 @@ const applyFoodDB = (result) => {
   return result;
 };
 
+// Um item com nome mas todos os macros zerados normalmente significa que o
+// provider "respondeu" sem realmente analisar a foto (erro silencioso do
+// modelo) — não é um resultado confiável para mostrar ao usuário.
+const isEmptyResult = (result) => {
+  const items = result?.items;
+  if (!Array.isArray(items) || items.length === 0) return true;
+  return items.every(it => !it.calories && !it.protein && !it.carbs && !it.fat);
+};
+
 async function analyzeImageWithGemini(geminiKey, image) {
   if (!geminiKey) throw new Error('Chave Gemini não configurada');
   const { GoogleGenerativeAI } = await import('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(geminiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   const prompt = 'Você é um nutricionista. Analise a imagem e identifique os alimentos, estime o peso (em gramas) e calcule calorias e macros. Retorne APENAS um JSON: {"items":[{"name":"Alimento","grams":100,"calories":0,"protein":0,"carbs":0,"fat":0}],"confidence":0.9}';
   const base64Data = image?.includes('base64,') ? image.split('base64,')[1] : image;
   const result = await model.generateContent([prompt, { inlineData: { data: base64Data, mimeType: 'image/jpeg' } }]);
@@ -3325,24 +3334,35 @@ app.post('/api/analyze-image', async (req, res) => {
             parsed = {};
           }
         }
-        return res.json({ provider: 'groq', result: applyFoodDB(parsed) });
+        const groqApplied = applyFoodDB(parsed);
+        if (isEmptyResult(groqApplied)) throw new Error('Groq retornou itens sem valores nutricionais');
+        return res.json({ provider: 'groq', result: groqApplied });
       } catch (groqError) {
         // Groq's vision model is preview-only (low/unpredictable rate limits, per Groq's own
-        // docs) — key missing, invalid, rate-limited (429) or the model itself deprecated (404)
-        // all land here. Fall back to another real provider, in order, when auto-selecting.
+        // docs) — key missing, invalid, rate-limited (429), the model itself deprecated (404),
+        // or a "successful" response with every macro zeroed out (isEmptyResult) all land here.
+        // Fall back to another real provider, in order, when auto-selecting.
         if (!autoSelected) throw groqError;
         console.warn('Groq vision failed, trying fallback providers:', groqError.message);
         if (process.env.GEMINI_API_KEY) {
           try {
             const geminiParsed = await analyzeImageWithGemini(process.env.GEMINI_API_KEY, image);
-            return res.json({ provider: 'gemini', result: applyFoodDB(geminiParsed) });
+            const geminiApplied = applyFoodDB(geminiParsed);
+            if (!isEmptyResult(geminiApplied)) return res.json({ provider: 'gemini', result: geminiApplied });
+            console.warn('Gemini fallback also returned empty macros');
           } catch (geminiError) {
             console.warn('Gemini fallback also failed:', geminiError.message);
           }
         }
         if (process.env.OPENAI_API_KEY) {
-          const openaiParsed = await analyzeImageWithOpenAI(process.env.OPENAI_API_KEY, image);
-          return res.json({ provider: 'openai', result: applyFoodDB(openaiParsed) });
+          try {
+            const openaiParsed = await analyzeImageWithOpenAI(process.env.OPENAI_API_KEY, image);
+            const openaiApplied = applyFoodDB(openaiParsed);
+            if (!isEmptyResult(openaiApplied)) return res.json({ provider: 'openai', result: openaiApplied });
+            console.warn('OpenAI fallback also returned empty macros');
+          } catch (openaiError) {
+            console.warn('OpenAI fallback also failed:', openaiError.message);
+          }
         }
         throw groqError;
       }
@@ -3438,7 +3458,7 @@ app.post('/api/chat', async (req, res) => {
         }
         const { GoogleGenerativeAI } = await import('@google/generative-ai');
         const genAI = new GoogleGenerativeAI(geminiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
         const contents = [
           { role: 'user', parts: [{ text: systemOverride }] },
           { role: 'model', parts: [{ text: 'Entendido.' }] },
@@ -3545,7 +3565,7 @@ ${(ctx.favorites || []).join(', ') || 'no history yet'}
     const chatWithGemini = async () => {
       const { GoogleGenerativeAI } = await import('@google/generative-ai');
       const genAI = new GoogleGenerativeAI(geminiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
       const contents = [
         { role: 'user', parts: [{ text: systemPrompt }] },
         { role: 'model', parts: [{ text: 'Entendido.' }] },

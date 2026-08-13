@@ -4831,6 +4831,7 @@
                 'capture_error': 'Não foi possível capturar imagem',
                 'analyzing_plate': 'Analisando prato...',
                 'analyze_image_error': '❌ Falha ao analisar imagem: ',
+                'analyze_busy': '⏳ A IA está com muitas análises ao mesmo tempo. Aguarde alguns segundos e tente escanear de novo.',
                 'meal_registered': 'Refeição registrada!',
                 'item_added': '✅ {name} adicionado!',
                 'photo_rejected': 'Foto rejeitada. Tente novamente.',
@@ -5450,6 +5451,7 @@
                 'capture_error': 'Could not capture image',
                 'analyzing_plate': 'Analyzing plate...',
                 'analyze_image_error': '❌ Failed to analyze image: ',
+                'analyze_busy': '⏳ The AI has too many analyses running right now. Wait a few seconds and try scanning again.',
                 'meal_registered': 'Meal registered!',
                 'item_added': '✅ {name} added!',
                 'photo_rejected': 'Photo rejected. Please try again.',
@@ -6053,6 +6055,7 @@
                 'capture_error': '无法捕获图像',
                 'analyzing_plate': '正在分析餐盘...',
                 'analyze_image_error': '❌ 分析图像失败：',
+                'analyze_busy': '⏳ AI 当前分析请求过多。请等几秒后再试一次扫描。',
                 'meal_registered': '餐食已记录！',
                 'item_added': '✅ {name} 已添加！',
                 'photo_rejected': '照片被拒绝，请重试。',
@@ -6639,6 +6642,7 @@
                 'capture_error': 'No se pudo capturar la imagen',
                 'analyzing_plate': 'Analizando plato...',
                 'analyze_image_error': '❌ Error al analizar imagen: ',
+                'analyze_busy': '⏳ La IA tiene demasiados análisis en este momento. Espera unos segundos e intenta escanear de nuevo.',
                 'meal_registered': '¡Comida registrada!',
                 'item_added': '✅ ¡{name} añadido!',
                 'photo_rejected': 'Foto rechazada. Intenta nuevamente.',
@@ -22500,7 +22504,10 @@ Rules:
                             this.renderRecents();
                         }
                     }
-                    this.showToast(this.t('analyze_image_error') + (e.message || this.t('try_again')), 4000);
+                    const friendlyMsg = /429|rate.?limit/i.test(e.message || '')
+                        ? this.t('analyze_busy')
+                        : (this.t('analyze_image_error') + (e.message || this.t('try_again')));
+                    this.showToast(friendlyMsg, 4000);
                 }
             },
 
