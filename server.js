@@ -11,7 +11,14 @@ import { createClient } from '@supabase/supabase-js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const JWT_SECRET = process.env.JWT_SECRET || 'macroai_secret_change_in_production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  // Never fall back to a hardcoded secret — it's visible to anyone reading this
+  // source file, so a silent fallback would let an attacker forge valid tokens
+  // (including admin, since ADMIN_JWT_SECRET derives from this). Fail loudly
+  // instead of signing tokens with a known-weak default.
+  throw new Error('JWT_SECRET environment variable is not set. Refusing to start.');
+}
 
 // Supabase client — criado de forma lazy para não crashar se env vars ausentes
 const getSupabase = (() => {
