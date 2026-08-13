@@ -144,6 +144,9 @@ const FOOD_DB = {
   'calabresa': { cal: 320, p: 15, c: 3, f: 28 },
   'mortadela': { cal: 315, p: 14, c: 3, f: 28 },
   'copa': { cal: 380, p: 18, c: 1, f: 34 },
+  'salame': { cal: 407, p: 22.6, c: 1.6, f: 33.7 },
+  'salaminho': { cal: 407, p: 22.6, c: 1.6, f: 33.7 },
+  'salame italiano': { cal: 407, p: 22.6, c: 1.6, f: 33.7 },
   'bisteca suína': { cal: 220, p: 26, c: 0, f: 13 },
   'bisteca suina': { cal: 220, p: 26, c: 0, f: 13 },
   'carré': { cal: 280, p: 24, c: 0, f: 20 },
@@ -1142,11 +1145,17 @@ async function loadFoodsFromDb() {
 
 // Não chamar no startup — serverless-safe: carrega lazy na primeira request
 
+// Remove plural "s" per word (ex: "batatas fritas" -> "batata frita") so matches
+// against singular DB keys aren't missed just because of grammatical number.
+const singularize = (str) =>
+  str.split(' ').map(w => (w.length > 3 && w.endsWith('s')) ? w.slice(0, -1) : w).join(' ');
+
 const matchFood = (name) => {
-  const n = normalizeKey(name);
+  const n = singularize(normalizeKey(name));
   for (const [key, val] of Object.entries(_foodDbCache)) {
     if (key === 'default') continue;
-    if (n.includes(normalizeKey(key)) || normalizeKey(key).includes(n)) return val;
+    const k = singularize(normalizeKey(key));
+    if (n.includes(k) || k.includes(n)) return val;
   }
   return null;
 };
@@ -3114,17 +3123,17 @@ app.post('/api/trainer-reviews', async (req, res) => {
 const applyFoodDB = (result) => {
   if (result?.items && Array.isArray(result.items)) {
     result.items = result.items.map(item => {
-      // Only use FoodDB as fallback — never override values the AI already calculated
-      const aiHasMacros = (item.calories > 0) || (item.protein > 0) || (item.carbs > 0) || (item.fat > 0);
-      if (!aiHasMacros) {
-        const dbMatch = matchFood(item.name);
-        if (dbMatch) {
-          const grams = item.grams || 100;
-          item.calories = Math.round(dbMatch.cal * grams / 100);
-          item.protein = Math.round(dbMatch.p * grams / 100);
-          item.carbs = Math.round(dbMatch.c * grams / 100);
-          item.fat = Math.round(dbMatch.f * grams / 100);
-        }
+      // Prefer real, verified nutrition data over the vision model's own guess whenever
+      // we have a match — the AI can misjudge macros a lot for foods it doesn't "know"
+      // well (e.g. cured meats), while the DB values are actual nutrition facts.
+      // Only trust the AI's own numbers when nothing in the DB matches this item at all.
+      const dbMatch = matchFood(item.name);
+      if (dbMatch) {
+        const grams = item.grams || 100;
+        item.calories = Math.round(dbMatch.cal * grams / 100);
+        item.protein = Math.round(dbMatch.p * grams / 100);
+        item.carbs = Math.round(dbMatch.c * grams / 100);
+        item.fat = Math.round(dbMatch.f * grams / 100);
       }
       return item;
     });
