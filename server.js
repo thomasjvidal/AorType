@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
+import rateLimit from 'express-rate-limit';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,7 +42,35 @@ const supabase = new Proxy({}, {
 
 const app = express();
 app.set('etag', false); // Desabilita ETags globalmente — evita respostas 304 com dados antigos
-app.use(cors());
+
+// Só o próprio site/app tem motivo legítimo de chamar essa API — o app iOS
+// carrega direto de aortype.com (mesma origem dentro da WKWebView), então
+// não existe front-end de terceiros que precise de acesso.
+const ALLOWED_ORIGINS = [
+  'https://aortype.com',
+  'https://www.aortype.com',
+  'capacitor://localhost',
+  'ionic://localhost',
+  'http://localhost',
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    // Sem header Origin (apps nativos, curl, requisições same-origin do servidor) — permite
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
+
+// Headers básicos de segurança em todas as respostas
+app.use((req, res, next) => {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'DENY');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
+
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -52,6 +81,31 @@ app.use('/api', (req, res, next) => {
   res.set('Expires', '0');
   next();
 });
+
+// Limita tentativas de login/registro/reset de senha — protege contra força bruta
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
+});
+
+// Limite geral para toda a API — mais permissivo, só evita abuso/flood
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas requisições. Tente novamente em alguns minutos.' },
+});
+app.use('/api', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/register-complete', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/reset-password', authLimiter);
+app.use('/api/auth/social-login', authLimiter);
 
 const PORT = process.env.PORT || 3000;
 
