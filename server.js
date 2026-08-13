@@ -2795,6 +2795,32 @@ app.delete('/api/academia/students/:studentId', async (req, res) => {
   }
 });
 
+// Hoje o Groq é o único provider de IA configurado no app — sem Gemini/OpenAI
+// como reserva, uma resposta 429 (limite de taxa) merece uma nova tentativa
+// com espera antes de desistir, em vez de falhar na primeira.
+async function fetchGroqChat(apiKey, body, { retries = 2, baseDelayMs = 1500 } = {}) {
+  let lastStatus;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify(body)
+    });
+    if (response.ok) return response.json();
+    lastStatus = response.status;
+    if (response.status === 429 && attempt < retries) {
+      const retryAfterHeader = Number(response.headers.get('retry-after'));
+      const delay = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
+        ? retryAfterHeader * 1000
+        : baseDelayMs * Math.pow(2, attempt);
+      await new Promise(r => setTimeout(r, delay));
+      continue;
+    }
+    break;
+  }
+  throw new Error(`Groq API error: ${lastStatus}`);
+}
+
 // Programas criados pela academia
 // ── IA: interpreta treino colado em texto livre e retorna exercícios estruturados
 app.post('/api/academia/programs/parse-ai', async (req, res) => {
@@ -2863,18 +2889,12 @@ REGRAS OBRIGATÓRIAS:
 - "exercises" raiz = TODOS os exercícios de TODOS os dias juntos numa lista plana (fallback de compatibilidade)
 - Retorne APENAS o JSON, absolutamente nada mais`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1,
-        max_tokens: 8000
-      })
+    const aiData = await fetchGroqChat(groqKey, {
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+      max_tokens: 8000
     });
-
-    const aiData = await response.json();
     const raw = aiData.choices?.[0]?.message?.content || '';
     console.log('[parse-ai] finish_reason:', aiData.choices?.[0]?.finish_reason, '| raw length:', raw.length);
 
@@ -3308,18 +3328,11 @@ app.post('/api/analyze-image', async (req, res) => {
         const base64Data = image?.includes('base64,') ? image.split('base64,')[1] : image;
         const imageUrl = image?.startsWith('data:') ? image : `data:image/jpeg;base64,${base64Data}`;
 
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: 'qwen/qwen3.6-27b',
-            messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] }],
-            max_tokens: 500
-          })
+        const json = await fetchGroqChat(apiKey, {
+          model: 'qwen/qwen3.6-27b',
+          messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrl } }] }],
+          max_tokens: 500
         });
-
-        if (!response.ok) throw new Error(`Groq API error: ${response.status}`);
-        const json = await response.json();
         const content = json.choices?.[0]?.message?.content || '{}';
         const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
         let parsed;
@@ -3402,11 +3415,16 @@ app.post('/api/transcribe', requireAuth, async (req, res) => {
     form.set('language', 'pt');
     form.set('response_format', 'json');
 
-    const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${groqKey}` },
-      body: form,
-    });
+    let response;
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${groqKey}` },
+        body: form,
+      });
+      if (response.ok || response.status !== 429 || attempt === 2) break;
+      await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
+    }
 
     if (!response.ok) {
       const err = await response.text();
@@ -3443,13 +3461,7 @@ app.post('/api/chat', async (req, res) => {
       const chatSimple = async () => {
         if (groqKey) {
           try {
-            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-              body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 300, temperature: 0.7 })
-            });
-            if (!response.ok) throw new Error(`Groq error: ${response.status}`);
-            const json = await response.json();
+            const json = await fetchGroqChat(groqKey, { model: 'llama-3.3-70b-versatile', messages, max_tokens: 300, temperature: 0.7 });
             return json.choices?.[0]?.message?.content || '';
           } catch (groqError) {
             if (!geminiKey) throw groqError;
@@ -3577,14 +3589,7 @@ ${(ctx.favorites || []).join(', ') || 'no history yet'}
 
     if (groqKey) {
       try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-          body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 600, temperature: 0.7 })
-        });
-
-        if (!response.ok) throw new Error(`Groq error: ${response.status}`);
-        const json = await response.json();
+        const json = await fetchGroqChat(groqKey, { model: 'llama-3.3-70b-versatile', messages, max_tokens: 600, temperature: 0.7 });
         return res.json({ text: json.choices?.[0]?.message?.content || '' });
       } catch (groqError) {
         if (!geminiKey) throw groqError;

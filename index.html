@@ -22511,7 +22511,7 @@ Rules:
                             this.renderRecents();
                         }
                     }
-                    const friendlyMsg = /429|rate.?limit/i.test(e.message || '')
+                    const friendlyMsg = /429|rate.?limit|sem valores nutricionais/i.test(e.message || '')
                         ? this.t('analyze_busy')
                         : (this.t('analyze_image_error') + (e.message || this.t('try_again')));
                     this.showToast(friendlyMsg, 4000);
